@@ -15,13 +15,8 @@ private:
 	NodePath skeleton_path;
 
 	GraphEvaluationContext graph_context = {};
-	SyncedAnimationNode* root_node = nullptr;
-
-	void set_animation_player(const NodePath &p_path);
-	NodePath get_animation_player() const;
-
-	void set_skeleton(const NodePath &p_path);
-	NodePath get_skeleton() const;
+	Ref<SyncedAnimationNode> graph_root_node = nullptr;
+	AnimationData graph_output;
 
 protected:
 	void _notification(int p_what);
@@ -37,10 +32,19 @@ protected:
 
 public:
 	void _process_graph(double p_delta, bool p_update_only = false);
-	void _apply_animation_data(AnimationData output_data) const;
+	void _apply_animation_data(const AnimationData& output_data) const;
 
 	void set_active(bool p_active);
 	bool is_active() const;
+
+	void set_animation_player(const NodePath &p_path);
+	NodePath get_animation_player() const;
+
+	void set_skeleton(const NodePath &p_path);
+	NodePath get_skeleton() const;
+
+	void set_graph_root_node(const Ref<SyncedAnimationNode> &p_animation_node);
+	Ref<SyncedAnimationNode> get_graph_root_node() const;
 
 	void set_callback_mode_process(AnimationMixer::AnimationCallbackModeProcess p_mode);
 	AnimationMixer::AnimationCallbackModeProcess get_callback_mode_process() const;
@@ -60,5 +64,4 @@ private:
 	void _cleanup_evaluation_context();
 
 	void _setup_graph();
-	void _cleanup_graph();
 };

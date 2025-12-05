@@ -2,6 +2,7 @@
 
 #include "scene/animation/animation_player.h"
 
+#include "core/io/resource.h"
 #include "scene/3d/skeleton_3d.h"
 
 #include <cassert>
@@ -79,7 +80,9 @@ struct SyncTrack {
 
 };
 
-class SyncedAnimationNode {
+class SyncedAnimationNode: public Resource {
+	GDCLASS(SyncedAnimationNode, Resource);
+
 	friend class SyncedAnimationGraph;
 
 public:
@@ -141,6 +144,8 @@ private:
 };
 
 class AnimationSamplerNode : public SyncedAnimationNode {
+	GDCLASS(AnimationSamplerNode, SyncedAnimationNode);
+
 public:
 	StringName animation_name;
 

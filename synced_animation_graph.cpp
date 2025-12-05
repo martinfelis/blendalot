@@ -5,8 +5,6 @@
 #include "scene/animation/animation_player.h"
 
 void SyncedAnimationGraph::_bind_methods() {
-	print_line(vformat("binding methods"));
-
 	ClassDB::bind_method(D_METHOD("set_active", "active"), &SyncedAnimationGraph::set_active);
 	ClassDB::bind_method(D_METHOD("is_active"), &SyncedAnimationGraph::is_active);
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "active"), "set_active", "is_active");
@@ -50,6 +48,15 @@ void SyncedAnimationGraph::_notification(int p_what) {
 				_process_graph(get_physics_process_delta_time());
 			}
 		} break;
+
+		case Node::NOTIFICATION_EXIT_TREE: {
+			_cleanup_evaluation_context();
+			break;
+		}
+
+		default: {
+			break;
+		}
 	}
 }
 
@@ -115,6 +122,9 @@ void SyncedAnimationGraph::set_animation_player(const NodePath &p_path) {
 	}
 	graph_context.animation_player = Object::cast_to<AnimationPlayer>(get_node_or_null(animation_player_path));
 
+	_setup_evaluation_context();
+	_setup_graph();
+
 	emit_signal(SNAME("animation_player_changed")); // Needs to unpin AnimationPlayerEditor.
 }
 
@@ -132,6 +142,9 @@ void SyncedAnimationGraph::set_skeleton(const NodePath &p_path) {
 	}
 	graph_context.skeleton_3d = Object::cast_to<Skeleton3D>(get_node_or_null(skeleton_path));
 
+	_setup_evaluation_context();
+	_setup_graph();
+
 	emit_signal(SNAME("skeleton_changed")); // Needs to unpin AnimationPlayerEditor.
 }
 
@@ -139,22 +152,32 @@ NodePath SyncedAnimationGraph::get_skeleton() const {
 	return skeleton_path;
 }
 
+void SyncedAnimationGraph::set_graph_root_node(const Ref<SyncedAnimationNode> &p_animation_node) {
+	if (graph_root_node != p_animation_node) {
+		graph_root_node = p_animation_node;
+		_setup_graph();
+	}
+}
+
+Ref<SyncedAnimationNode> SyncedAnimationGraph::get_graph_root_node() const {
+	return graph_root_node;
+}
+
 void SyncedAnimationGraph::_process_graph(double p_delta, bool p_update_only) {
-	if (root_node == nullptr) {
+	if (!graph_root_node.is_valid()) {
 		return;
 	}
 
-	root_node->activate_inputs();
-	root_node->calculate_sync_track();
-	root_node->update_time(p_delta);
-	AnimationData output_data;
-	root_node->evaluate(graph_context, output_data);
+	graph_root_node->activate_inputs();
+	graph_root_node->calculate_sync_track();
+	graph_root_node->update_time(p_delta);
+	graph_root_node->evaluate(graph_context, graph_output);
 
-	_apply_animation_data(output_data);
+	_apply_animation_data(graph_output);
 }
 
-void SyncedAnimationGraph::_apply_animation_data(AnimationData output_data) const {
-	for (KeyValue<Animation::TypeHash, AnimationData::TrackValue *> &K : output_data.track_values) {
+void SyncedAnimationGraph::_apply_animation_data(const AnimationData& output_data) const {
+	for (const KeyValue<Animation::TypeHash, AnimationData::TrackValue *> &K : output_data.track_values) {
 		const AnimationData::TrackValue *track_value = K.value;
 		switch (track_value->type) {
 			case AnimationData::TrackType::TYPE_POSITION_3D: {
@@ -219,24 +242,11 @@ void SyncedAnimationGraph::_cleanup_evaluation_context() {
 }
 
 void SyncedAnimationGraph::_setup_graph() {
-	if (root_node != nullptr) {
-		_cleanup_graph();
-	}
-
-	AnimationSamplerNode *sampler_node = memnew(AnimationSamplerNode);
-	sampler_node->animation_name = "animation_library/Walk-InPlace";
-
-	root_node = sampler_node;
-
-	root_node->initialize(graph_context);
-}
-
-void SyncedAnimationGraph::_cleanup_graph() {
-	if (root_node == nullptr) {
+	if (graph_context.animation_player == nullptr || graph_context.skeleton_3d == nullptr || !graph_root_node.is_valid()) {
 		return;
 	}
 
-	memfree(root_node);
+	graph_root_node->initialize(graph_context);
 }
 
 SyncedAnimationGraph::SyncedAnimationGraph() {
