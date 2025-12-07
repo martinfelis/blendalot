@@ -9,15 +9,50 @@ acts.
 Animation Data represents a sampled animation for a given time. For each track in an animation it contains the sampled
 values, e.g. a Vector3 for a position, a Quaternion for a rotation, a function name and its parameters, etc.
 
+A skeletal animation in Godot is specified by a set of animation Tracks that influence the position, rotation, and/or
+scale of a bone in a skeleton. A pose can be obtained by sampling all tracks to get the local bone transforms that then
+have to be applied on the skeleton.
+
+## Animation Blending
+
+Animation blending combines two or more Animation Data objects to create to create a newly blended Animation Data.
+Common animation blending performs a linear blend from Animation Data `A` to Animation Data `B` as specified by a weight
+factor `w`. For `w = 0.0` the result is `A` and for `w = 0.5` the resulting Animation Data is halfway between `A` and
+`B`. For floating point value animation Tracks or 3D position animation Tracks this is straight forward, for a method
+Track one has to define what a blend actually means.
+
+### Synchronized or Phase-Space-Warped Animation Blending
+
+Blending two poses `A` and `B` can be done use linear interpolation on the bone transformations (translation, rotation,
+scale). However, when blending a humanoid walk and a run animation this generally does not work well as the input poses
+must semantically match to produce sensible result. If input `A` has the left foot on the ground and `B` the right foot
+the resulting pose is confusing at best.
+
+Instead, by annotating animations using a "SyncTrack" the phase space (e.g. `left foot contact phase` in the time
+interval [0.0s, 1.2s] and
+`right foot contact phase` form from [1.2s, 2.4s] the additional information can be used for blending. To produce
+plausible poses one has to blend poses from matching fractional positions within the phase spaces.
+
+#### Example
+
+Given two animations `W` (a walking animation) and `R` (a running animation) annotated with SyncTracks on phases
+`LeftFoot` and `RightFoot` phases. Then blending a pose of `W` that is 64% through the `LeftFoot` phase with a pose of
+`R`
+that is 64% through its `LeftFoot` phase results in a plausible pose.
+
+Both animations do not need to have matching durations and neither do each phases
+have to be of the same duration. However, both have to have the same phases (number and order).
+
 ## Blend Trees
 
-A Blend Tree is a directed acyclic graph consisting of nodes with sockets and connections. Input sockets are on the left
-side of a node and output sockets on the right. Nodes produce or process "AnimationData" and the connections transport "
+A Blend Tree is a directed acyclic graph consisting of nodes with ports and connections. Input ports are on the left
+side of a node and output ports on the right. Nodes produce or process "AnimationData" and the connections transport "
 AnimationData".
 
-Connections can be represented as spaghetti lines from a socket of node A to a socket of node B. The graph is acyclic
-meaning there must not be a loop (e.g. output of node A influences an
-input socket of node A). Such a connection is invalid.
+Connections can be represented as spaghetti lines from an output port of node A to an input port of node B. The graph is
+acyclic
+meaning there must not be a loop (e.g. output of node A never influences an input port of node A). Such a connection is
+invalid.
 
 ### Example:
 
@@ -51,22 +86,26 @@ Some nodes have special names in the Blend Tree:
 
 * **Root node** The output node is also called the root node of the graph.
 * **Leaf nodes** These are the nodes that have no inputs. In the example these are the nodes AnimationA and AnimationB.
-* **Parent and child node** For two nodes A and B where B is the node that is connected to the Animation Data output socket of A
-  is called the parent node. The output socket has no parent and in the example above The Blend2 node is the parent of
+* **Parent and child node** For two nodes A and B where B is the node that is connected to the Animation Data output
+  port of A
+  is called the parent node. The output port has no parent and in the example above The Blend2 node is the parent of
   both AnimationA and TimeScale. Conversely, AnimationA and TimeScale are child nodes of the Blend2 node.
 
 ## Blend Tree Evaluation Process
 
 ### Description
 
-Evaluation of a node happens in multiple phases:
+Evaluation of the Blend Tree happens in multiple phases to ensure we have syncing dependent timing information available
+before performing the actual evaluation. Essentially the Blend Tree has to call the following function on all nodes:
 
 1. ActivateInputs(): right to left (i.e. from the root node via depth first to the leave nodes)
 2. CalculateSyncTracks(): left to right (leave nodes to root node)
 3. UpdateTime(): right to left
 4. Evaluate(): left to right
 
-One question here is how to transport the actual data from one node to another. There are essentially two options:
+To simplify implementation of nodes we enforce the following rule: all nodes only operate on data they own and any other
+data (e.g. inputs and outputs) are specified via arguments. This keeps the nodes dumb and pushes bookkeeping of data
+that is only needed during evaluation to the Blend Tree.
 
 ### Blend Tree Evaluation
 
@@ -75,7 +114,7 @@ One question here is how to transport the actual data from one node to another. 
 void BlendTree::initialize_tree() {
     for (int i = 0; ci < num_connections; i++) {
         const Connection& connection = connections[i];
-        connection.target_node->set_input_node(connection.target_socket_name, connection.source_node);
+        connection.target_node->set_input_node(connection.target_port_name, connection.source_node);
     }
 }
 
@@ -149,8 +188,8 @@ void Blend2Node::update_time(SyncedAnimationNode::NodeTimeInfo time_info) {
     }
 }
 
-void Blend2Node::evaluate(AnimationData& output) {
-    output = lerp(input_node_0->get_output(), input_node_1_data->get_output(), blend_weight);
+void Blend2Node::evaluate(const Array<const AnimationData>& inputs, AnimationData& output) {
+    output = lerp(inputs[0]->get_output(), inputs[1], blend_weight);
 }
 
 // TimeScaleNode.cpp
@@ -171,7 +210,7 @@ void TimeScaleNode::update_time(SyncedAnimationNode::NodeTimeInfo time_info) {
     }
 }
 
-void TimeScaleNode::evaluate(AnimationData& output) {
+void TimeScaleNode::evaluate(const Array<const AnimationData>& inputs, AnimationData& output) {
     std::swap(output, input_node_0->output);
 }
 
@@ -217,7 +256,7 @@ We use the term "value data" to distinguish from Animation Data.
 
 * Enables animators to add custom math for blend inputs or to adjust other inputs (e.g. LookAt or IK
   targets).
-* Together with "Support of multiple output sockets" this can be used to add input parameters that affect multiple node
+* Together with "Support of multiple output ports" this can be used to add input parameters that affect multiple node
   inputs.
 
 ### Effects on the graph topology
@@ -228,11 +267,11 @@ We use the term "value data" to distinguish from Animation Data.
       to data that is not animation data dependent?
     * b) Processing nodes, e.g. for extracted bones.
 
-## 2. Support of multiple output sockets
+## 2. Support of multiple output ports
 
 ### Description
 
-Current AnimationTree nodes have a single designated output socket. A node cannot extract a value that then gets used as
+Current AnimationTree nodes have a single designated output port. A node cannot extract a value that then gets used as
 input at a laters tage in the graph.
 
 **Depends on**: "Generalized data connections".
@@ -430,7 +469,7 @@ when a node becomes active/deactivated.
 
 ### Decision
 
-Re-use of animation data sockets
+Re-use of animation data ports
 
 ## 5. Inputs into Subgraphs
 

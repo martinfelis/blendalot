@@ -98,12 +98,12 @@ public:
 	};
 	NodeTimeInfo node_time_info;
 
-	struct InputSocket {
+	struct InputPort {
 		StringName name;
 		SyncedAnimationNode *node;
 	};
 
-	Vector<InputSocket> input_sockets;
+	Vector<InputPort> input_port;
 
 	virtual ~SyncedAnimationNode() = default;
 	virtual void initialize(GraphEvaluationContext &context) {}
