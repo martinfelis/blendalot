@@ -171,7 +171,7 @@ void SyncedAnimationGraph::_process_graph(double p_delta, bool p_update_only) {
 	graph_root_node->activate_inputs();
 	graph_root_node->calculate_sync_track();
 	graph_root_node->update_time(p_delta);
-	graph_root_node->evaluate(graph_context, graph_output);
+	graph_root_node->evaluate(graph_context, Vector<AnimationData*>(), graph_output);
 
 	_apply_animation_data(graph_output);
 }

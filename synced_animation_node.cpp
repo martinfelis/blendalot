@@ -10,7 +10,9 @@ void AnimationSamplerNode::initialize(GraphEvaluationContext &context) {
 	node_time_info.loop_mode = Animation::LOOP_LINEAR;
 }
 
-void AnimationSamplerNode::evaluate(GraphEvaluationContext &context, AnimationData &output) {
+void AnimationSamplerNode::evaluate(GraphEvaluationContext &context, const Vector<AnimationData*>& inputs, AnimationData &output) {
+	assert(inputs.size() == 0);
+
 	const Vector<Animation::Track *> tracks = animation->get_tracks();
 	Animation::Track *const *tracks_ptr = tracks.ptr();
 

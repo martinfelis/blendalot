@@ -56,27 +56,14 @@ invalid.
 
 ### Example:
 
-```plantuml
-@startuml
-
-left to right direction
-
-abstract Output {}
-abstract Blend2 {
-bool is_synced
-
-float weight()
-}
-abstract AnimationA {}
-abstract TimeScale {}
-abstract AnimationB {}
-
-AnimationA --> Blend2
-AnimationB --> TimeScale
-TimeScale --> Blend2
-Blend2 --> Output
-
-@enduml
+```mermaid
+flowchart LR
+    AnimationB --> TimeScale("TimeScale
+    ----
+    *scale*")
+    AnimationA --> Blend2
+    TimeScale --> Blend2
+    Blend2 --> Output
 ```
 
 A Blend Tree always has a designated output node where the time delta is specified as an input and after the Blend Tree
@@ -110,6 +97,18 @@ that is only needed during evaluation to the Blend Tree.
 ### Blend Tree Evaluation
 
 ```c++
+// BlendTree.h
+class BlendTree: public SyncedAnimationNode {
+private:
+    Vector<SyncedAnimationNode*> nodes;
+    Vector<int> node_parent;  // node_parent[i] is the index of the parent of node i.
+    Vector<AnimationData*> node_output; // output for each node
+    Vector<Vector<SyncedAnimationNode*>> node_input_nodes;
+    Vector<Vector<AnimationData*>> node_input_data; // list of inputs for all nodes. 
+
+    int get_index_for_node(const SyncedAnimationNode& node);
+};
+
 // BlendTree.cpp
 void BlendTree::initialize_tree() {
     for (int i = 0; ci < num_connections; i++) {
@@ -119,9 +118,11 @@ void BlendTree::initialize_tree() {
 }
 
 void BlendTree::activate_inputs() {
-    for (int i = 0; i < nodes.size(); i++) {
-        if (nodes[i].is_active()) {
-            nodes[i].activate_inputs()
+    nodes[0]->activate_inputs();
+    
+    for (int i = 1; i < nodes.size(); i++) {
+        if (nodes[i]->is_active()) {
+            nodes[i]->activate_inputs(node_input_nodes[i]);
         }
     }
 }
@@ -146,15 +147,15 @@ void BlendTree::update_time() {
    }
 }
 
-void BlendTree::evaluate(AnimationData& output) {
+void BlendTree::evaluate(GraphEvaluationContext &context, const Vector<AnimationData*>& inputs, AnimationData &output) {
     for (int i = nodes.size() - 1; i > 0; i--) {
         if (nodes[i]->is_active()) {
-            nodes[i]->output = AnimationDataPool::allocate();
-            nodes[i]->evaluate();
+            node_output[i] = AnimationDataPool::allocate();
+            nodes[i]->evaluate(context, node_inputs[i], node_output[i]);
             
             // node[i] is done, so we can deallocate the output handles of all input nodes of node[i].
             for (AnimationGraphnNode& input_node: input_nodes[i]) {
-                AnimationDataPool::deallocate(input_node.output);
+                AnimationDataPool::deallocate(node_output[input_node.index]);
             }
             
             nodes[i]->set_active(false);
@@ -188,7 +189,8 @@ void Blend2Node::update_time(SyncedAnimationNode::NodeTimeInfo time_info) {
     }
 }
 
-void Blend2Node::evaluate(const Array<const AnimationData>& inputs, AnimationData& output) {
+void Blend2Node::evaluate(GraphEvaluationContext &context, const Vector<AnimationData*>& inputs, AnimationData &output) {
+    assert(inputs.size() == 2);
     output = lerp(inputs[0]->get_output(), inputs[1], blend_weight);
 }
 
@@ -210,8 +212,9 @@ void TimeScaleNode::update_time(SyncedAnimationNode::NodeTimeInfo time_info) {
     }
 }
 
-void TimeScaleNode::evaluate(const Array<const AnimationData>& inputs, AnimationData& output) {
-    std::swap(output, input_node_0->output);
+void TimeScaleNode::evaluate(GraphEvaluationContext &context, const Vector<AnimationData*>& inputs, AnimationData &output) {
+    assert(inputs.size() == 1);
+    output = inputs[0]->duplicate();
 }
 
 ```
@@ -261,7 +264,7 @@ We use the term "value data" to distinguish from Animation Data.
 
 ### Effects on the graph topology
 
-* Need to generalize Output Sockets to different types instead of only "Animation Data".
+* Need to generalize Input and Output Ports to different types instead of only "Animation Data".
 * How to evaluate? Two types of subgraphs:
     * a) Data/value inputs (e.g. for blend weights) that have to be evaluated before UpdateConnections. Maybe restrict
       to data that is not animation data dependent?
@@ -471,7 +474,7 @@ when a node becomes active/deactivated.
 
 Re-use of animation data ports
 
-## 5. Inputs into Subgraphs
+## 5. Inputs into embedded subgraphs
 
 ### Description
 

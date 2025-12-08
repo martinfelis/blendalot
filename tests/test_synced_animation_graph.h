@@ -6,42 +6,56 @@
 
 #include "tests/test_macros.h"
 
-namespace TestSyncedAnimationGraph {
-TEST_CASE("[SceneTree][SyncedAnimationGraph] Simple") {
-	Node* character_node = memnew(Node);
-	character_node->set_name("CharacterNode");
-	SceneTree::get_singleton()->get_root()->add_child(character_node);
+struct SyncedAnimationGraphFixture {
+	Node* character_node;
+	Skeleton3D* skeleton_node;
+	AnimationPlayer* player_node;
 
-	Skeleton3D *skeleton_node = memnew(Skeleton3D);
-	skeleton_node->set_name("Skeleton");
-	character_node->add_child(skeleton_node);
+	int hip_bone_index = -1;
 
-	skeleton_node->add_bone("Root");
-	int hip_bone_index = skeleton_node->add_bone("Hips");
-
-	AnimationPlayer *player_node = memnew(AnimationPlayer);
-	player_node->set_name("AnimationPlayer");
-
-	Ref<Animation> animation = memnew(Animation);
-	const int track_index = animation->add_track(Animation::TYPE_POSITION_3D);
-	CHECK(track_index == 0);
-	animation->track_insert_key(track_index, 0.0, Vector3(0., 0., 0.));
-	animation->track_insert_key(track_index, 1.0, Vector3(1., 2., 3.));
-	animation->track_set_path(track_index, NodePath(vformat("%s:%s", skeleton_node->get_path().get_concatenated_names(),"Hips")));
-
+	Ref<Animation> test_animation;
 	Ref<AnimationLibrary> animation_library;
-	animation_library.instantiate();
-	animation_library->add_animation("TestAnimation", animation);
 
-	player_node->add_animation_library("animation_library", animation_library);
-	SceneTree::get_singleton()->get_root()->add_child(player_node);
+	SyncedAnimationGraph* synced_animation_graph;
+	SyncedAnimationGraphFixture() {
+		character_node = memnew(Node);
+		character_node->set_name("CharacterNode");
+		SceneTree::get_singleton()->get_root()->add_child(character_node);
 
-	SyncedAnimationGraph *synced_animation_graph = memnew(SyncedAnimationGraph);
-	SceneTree::get_singleton()->get_root()->add_child(synced_animation_graph);
+		skeleton_node = memnew(Skeleton3D);
+		skeleton_node->set_name("Skeleton");
+		character_node->add_child(skeleton_node);
 
-	synced_animation_graph->set_animation_player(player_node->get_path());
-	synced_animation_graph->set_skeleton(skeleton_node->get_path());
+		skeleton_node->add_bone("Root");
+		hip_bone_index = skeleton_node->add_bone("Hips");
 
+		player_node = memnew(AnimationPlayer);
+		player_node->set_name("AnimationPlayer");
+
+		test_animation = memnew(Animation);
+		const int track_index = test_animation->add_track(Animation::TYPE_POSITION_3D);
+		CHECK(track_index == 0);
+		test_animation->track_insert_key(track_index, 0.0, Vector3(0., 0., 0.));
+		test_animation->track_insert_key(track_index, 1.0, Vector3(1., 2., 3.));
+		test_animation->track_set_path(track_index, NodePath(vformat("%s:%s", skeleton_node->get_path().get_concatenated_names(),"Hips")));
+
+		animation_library.instantiate();
+		animation_library->add_animation("TestAnimation", test_animation);
+
+		player_node->add_animation_library("animation_library", animation_library);
+		SceneTree::get_singleton()->get_root()->add_child(player_node);
+
+		synced_animation_graph = memnew(SyncedAnimationGraph);
+		SceneTree::get_singleton()->get_root()->add_child(synced_animation_graph);
+
+		synced_animation_graph->set_animation_player(player_node->get_path());
+		synced_animation_graph->set_skeleton(skeleton_node->get_path());
+	}
+};
+
+namespace TestSyncedAnimationGraph {
+
+TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph] SimpleAnimationSamplerTest") {
 	Ref<AnimationSamplerNode> animation_sampler_node;
 	animation_sampler_node.instantiate();
 	animation_sampler_node->animation_name = "animation_library/TestAnimation";
@@ -62,4 +76,35 @@ TEST_CASE("[SceneTree][SyncedAnimationGraph] Simple") {
 	CHECK(hip_bone_position.y == doctest::Approx(0.02));
 	CHECK(hip_bone_position.z == doctest::Approx(0.03));
 }
+
+TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph] SimpleBlendTreeTest") {
+	Ref<SyncedBlendTree> synced_blend_tree_node;
+	synced_blend_tree_node.instantiate();
+
+	Ref<AnimationSamplerNode> animation_sampler_node;
+	animation_sampler_node.instantiate();
+	animation_sampler_node->animation_name = "animation_library/TestAnimation";
+	synced_blend_tree_node->add_node(animation_sampler_node);
+
+
+	synced_blend_tree_node->connect_nodes(animation_sampler_node, synced_blend_tree_node->get_output_node(), "Input");
+
+	synced_animation_graph->set_graph_root_node(synced_blend_tree_node);
+
+	Vector3 hip_bone_position = skeleton_node->get_bone_global_pose(hip_bone_index).origin;
+
+	CHECK(hip_bone_position.x == doctest::Approx(0.0));
+	CHECK(hip_bone_position.y == doctest::Approx(0.0));
+	CHECK(hip_bone_position.z == doctest::Approx(0.0));
+
+	SceneTree::get_singleton()->process(0.01);
+
+	hip_bone_position = skeleton_node->get_bone_global_pose(hip_bone_index).origin;
+
+	CHECK(hip_bone_position.x == doctest::Approx(0.01));
+	CHECK(hip_bone_position.y == doctest::Approx(0.02));
+	CHECK(hip_bone_position.z == doctest::Approx(0.03));
+}
+
+
 }
