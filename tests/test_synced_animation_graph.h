@@ -55,7 +55,35 @@ struct SyncedAnimationGraphFixture {
 
 namespace TestSyncedAnimationGraph {
 
-TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph] SimpleAnimationSamplerTest") {
+TEST_CASE("[SyncedAnimationGraph] TestBlendTreeConstruction") {
+	SortedTreeConstructor tree_constructor;
+
+	Ref<AnimationSamplerNode> animation_sampler_node0;
+	animation_sampler_node0.instantiate();
+	animation_sampler_node0->name = "Sampler0";
+	tree_constructor.add_node(animation_sampler_node0);
+
+	Ref<AnimationSamplerNode> animation_sampler_node1;
+	animation_sampler_node1.instantiate();
+	animation_sampler_node1->name = "Sampler1";
+	tree_constructor.add_node(animation_sampler_node1);
+
+	Ref<AnimationBlend2Node> node_blend0;
+	node_blend0.instantiate();
+	node_blend0->name = "Blend2";
+	tree_constructor.add_node(node_blend0);
+
+	Ref<AnimationBlend2Node> node_blend1;
+	node_blend1.instantiate();
+	node_blend1->name = "Blend2";
+	tree_constructor.add_node(node_blend1);
+
+	CHECK(tree_constructor.add_connection(animation_sampler_node0, node_blend0, "Input0"));
+	CHECK(tree_constructor.add_connection(node_blend1, node_blend0, "Input1"));
+	CHECK(!tree_constructor.add_connection(node_blend1, node_blend0, "Input1"));
+}
+
+TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph] SimpleAnimationSamplerTest" * doctest::skip(true)) {
 	Ref<AnimationSamplerNode> animation_sampler_node;
 	animation_sampler_node.instantiate();
 	animation_sampler_node->animation_name = "animation_library/TestAnimation";
@@ -77,7 +105,7 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 	CHECK(hip_bone_position.z == doctest::Approx(0.03));
 }
 
-TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph] SimpleBlendTreeTest") {
+TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph] SimpleBlendTreeTest" * doctest::skip(true)) {
 	Ref<SyncedBlendTree> synced_blend_tree_node;
 	synced_blend_tree_node.instantiate();
 

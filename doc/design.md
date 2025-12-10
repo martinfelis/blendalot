@@ -60,10 +60,10 @@ invalid.
 flowchart LR
     AnimationB --> TimeScale("TimeScale
     ----
-    *scale*")
-    AnimationA --> Blend2
-    TimeScale --> Blend2
-    Blend2 --> Output
+*scale*")
+AnimationA --> Blend2
+TimeScale --> Blend2
+Blend2 --> Output
 ```
 
 A Blend Tree always has a designated output node where the time delta is specified as an input and after the Blend Tree
@@ -90,9 +90,24 @@ before performing the actual evaluation. Essentially the Blend Tree has to call 
 3. UpdateTime(): right to left
 4. Evaluate(): left to right
 
-To simplify implementation of nodes we enforce the following rule: all nodes only operate on data they own and any other
-data (e.g. inputs and outputs) are specified via arguments. This keeps the nodes dumb and pushes bookkeeping of data
-that is only needed during evaluation to the Blend Tree.
+### Ownership of evaluation data (inputs and outputs)
+
+Except for the output node of a Blend Tree the following properties hold: 
+
+* all Blend Tree nodes only operate on properties they own and any other data (e.g. inputs and outputs) are specified via arguments to `SyncedAnimationNode::evaluate(context, inputs, output)`
+function of the node.
+* 
+
+Advantages:
+
+* Simplifies nodes and pushes complexities to the Blend Tree and State Machine class.
+* Simplifies testing of nodes
+* Resulting API could be exposed to GDScript such that custom nodes could be implemented in GDScript.
+
+Disadvantages:
+
+* Data has to be managed by the Blend Tree => additional bookkeeping
+*
 
 ### Blend Tree Evaluation
 
