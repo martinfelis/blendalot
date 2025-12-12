@@ -7,16 +7,16 @@
 #include "tests/test_macros.h"
 
 struct SyncedAnimationGraphFixture {
-	Node* character_node;
-	Skeleton3D* skeleton_node;
-	AnimationPlayer* player_node;
+	Node *character_node;
+	Skeleton3D *skeleton_node;
+	AnimationPlayer *player_node;
 
 	int hip_bone_index = -1;
 
 	Ref<Animation> test_animation;
 	Ref<AnimationLibrary> animation_library;
 
-	SyncedAnimationGraph* synced_animation_graph;
+	SyncedAnimationGraph *synced_animation_graph;
 	SyncedAnimationGraphFixture() {
 		character_node = memnew(Node);
 		character_node->set_name("CharacterNode");
@@ -37,7 +37,7 @@ struct SyncedAnimationGraphFixture {
 		CHECK(track_index == 0);
 		test_animation->track_insert_key(track_index, 0.0, Vector3(0., 0., 0.));
 		test_animation->track_insert_key(track_index, 1.0, Vector3(1., 2., 3.));
-		test_animation->track_set_path(track_index, NodePath(vformat("%s:%s", skeleton_node->get_path().get_concatenated_names(),"Hips")));
+		test_animation->track_set_path(track_index, NodePath(vformat("%s:%s", skeleton_node->get_path().get_concatenated_names(), "Hips")));
 
 		animation_library.instantiate();
 		animation_library->add_animation("TestAnimation", test_animation);
@@ -68,19 +68,61 @@ TEST_CASE("[SyncedAnimationGraph] TestBlendTreeConstruction") {
 	animation_sampler_node1->name = "Sampler1";
 	tree_constructor.add_node(animation_sampler_node1);
 
+	Ref<AnimationSamplerNode> animation_sampler_node2;
+	animation_sampler_node2.instantiate();
+	animation_sampler_node2->name = "Sampler2";
+	tree_constructor.add_node(animation_sampler_node2);
+
 	Ref<AnimationBlend2Node> node_blend0;
 	node_blend0.instantiate();
-	node_blend0->name = "Blend2";
+	node_blend0->name = "Blend0";
 	tree_constructor.add_node(node_blend0);
 
 	Ref<AnimationBlend2Node> node_blend1;
 	node_blend1.instantiate();
-	node_blend1->name = "Blend2";
+	node_blend1->name = "Blend1";
 	tree_constructor.add_node(node_blend1);
 
+	// Tree
+	// Sampler0 -\
+	// Sampler1 -+- Blend0 -\
+	// Sampler2 ------------+ Blend1 - Output
+
 	CHECK(tree_constructor.add_connection(animation_sampler_node0, node_blend0, "Input0"));
-	CHECK(tree_constructor.add_connection(node_blend1, node_blend0, "Input1"));
+
+	// Ensure that subtree is properly updated
+	int sampler0_index = tree_constructor.get_node_index(animation_sampler_node0);
+	int blend0_index = tree_constructor.get_node_index(node_blend0);
+	CHECK(tree_constructor.node_connection_info[blend0_index].input_subtree_node_indices.has(sampler0_index));
+
+	// Connect blend0 to blend1
+	CHECK(tree_constructor.add_connection(node_blend0, node_blend1, "Input0"));
+
+	// Connecting to an already connected port must fail
+	CHECK(!tree_constructor.add_connection(animation_sampler_node1, node_blend0, "Input0"));
+	// Correct connection of Sampler1 to Blend0
+	CHECK(tree_constructor.add_connection(animation_sampler_node1, node_blend0, "Input1"));
+
+	// Ensure that subtree is properly updated
+	int sampler1_index = tree_constructor.get_node_index(animation_sampler_node0);
+	int blend1_index = tree_constructor.get_node_index(node_blend1);
+	CHECK(tree_constructor.node_connection_info[blend1_index].input_subtree_node_indices.has(sampler1_index));
+	CHECK(tree_constructor.node_connection_info[blend1_index].input_subtree_node_indices.has(sampler0_index));
+	CHECK(tree_constructor.node_connection_info[blend1_index].input_subtree_node_indices.has(blend0_index));
+
+	// Creating a loop must fail
 	CHECK(!tree_constructor.add_connection(node_blend1, node_blend0, "Input1"));
+
+	// Perform remaining connections
+	CHECK(tree_constructor.add_connection(node_blend1, tree_constructor.get_output_node(), "Input"));
+	CHECK(tree_constructor.add_connection(animation_sampler_node2, node_blend1, "Input1"));
+
+	// Output node must have all nodes in its subtree:
+	CHECK(tree_constructor.node_connection_info[0].input_subtree_node_indices.has(1));
+	CHECK(tree_constructor.node_connection_info[0].input_subtree_node_indices.has(2));
+	CHECK(tree_constructor.node_connection_info[0].input_subtree_node_indices.has(3));
+	CHECK(tree_constructor.node_connection_info[0].input_subtree_node_indices.has(4));
+	CHECK(tree_constructor.node_connection_info[0].input_subtree_node_indices.has(5));
 }
 
 TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph] SimpleAnimationSamplerTest" * doctest::skip(true)) {
@@ -105,6 +147,7 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 	CHECK(hip_bone_position.z == doctest::Approx(0.03));
 }
 
+// Currently disabled!
 TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph] SimpleBlendTreeTest" * doctest::skip(true)) {
 	Ref<SyncedBlendTree> synced_blend_tree_node;
 	synced_blend_tree_node.instantiate();
@@ -113,9 +156,6 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 	animation_sampler_node.instantiate();
 	animation_sampler_node->animation_name = "animation_library/TestAnimation";
 	synced_blend_tree_node->add_node(animation_sampler_node);
-
-
-	synced_blend_tree_node->connect_nodes(animation_sampler_node, synced_blend_tree_node->get_output_node(), "Input");
 
 	synced_animation_graph->set_graph_root_node(synced_blend_tree_node);
 
@@ -134,5 +174,4 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 	CHECK(hip_bone_position.z == doctest::Approx(0.03));
 }
 
-
-}
+} //namespace TestSyncedAnimationGraph

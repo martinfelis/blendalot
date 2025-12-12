@@ -76,10 +76,9 @@ protected:
 };
 
 struct SyncTrack {
-
 };
 
-class SyncedAnimationNode: public Resource {
+class SyncedAnimationNode : public Resource {
 	GDCLASS(SyncedAnimationNode, Resource);
 
 	friend class SyncedAnimationGraph;
@@ -133,11 +132,22 @@ public:
 			}
 		}
 	}
-	virtual void evaluate(GraphEvaluationContext &context, const Vector<AnimationData*>& inputs, AnimationData &output) {}
+	virtual void evaluate(GraphEvaluationContext &context, const Vector<AnimationData *> &inputs, AnimationData &output) {}
 
 	bool is_active() const { return active; }
 	bool set_input_node(const StringName &socket_name, SyncedAnimationNode *node);
-	virtual void get_input_names(Vector<StringName> &inputs) {};
+	virtual void get_input_names(Vector<StringName> &inputs) const {}
+
+	int get_node_input_index(const StringName &port_name) const {
+		Vector<StringName> inputs;
+		get_input_names(inputs);
+		return inputs.find(port_name);
+	}
+	int get_node_input_count() const {
+		Vector<StringName> inputs;
+		get_input_names(inputs);
+		return inputs.size();
+	}
 
 private:
 	bool active = false;
@@ -153,19 +163,19 @@ private:
 	Ref<Animation> animation;
 
 	void initialize(GraphEvaluationContext &context) override;
-	void evaluate(GraphEvaluationContext &context, const Vector<AnimationData*>& inputs, AnimationData &output) override;
+	void evaluate(GraphEvaluationContext &context, const Vector<AnimationData *> &inputs, AnimationData &output) override;
 };
 
 class OutputNode : public SyncedAnimationNode {
 public:
-	void get_input_names(Vector<StringName> &inputs) override {
+	void get_input_names(Vector<StringName> &inputs) const override {
 		inputs.push_back("Input");
 	}
 };
 
 class AnimationBlend2Node : public SyncedAnimationNode {
 public:
-	void get_input_names(Vector<StringName> &inputs) override {
+	void get_input_names(Vector<StringName> &inputs) const override {
 		inputs.push_back("Input0");
 		inputs.push_back("Input1");
 	}
@@ -178,8 +188,37 @@ struct BlendTreeConnection {
 };
 
 struct SortedTreeConstructor {
-	Vector<HashSet<SyncedAnimationNode*>> node_subgraph;
-	Vector<Ref<SyncedAnimationNode>> nodes;
+	struct NodeConnectionInfo {
+		int parent_node_index = -1;
+		HashSet<int> input_subtree_node_indices;
+		LocalVector<int> connected_child_node_index_at_port;
+
+		NodeConnectionInfo() = default;
+
+		explicit NodeConnectionInfo(const SyncedAnimationNode *node) {
+			parent_node_index = -1;
+			for (int i = 0; i < node->get_node_input_count(); i++) {
+				connected_child_node_index_at_port.push_back(-1);
+			}
+		}
+
+		void _print_subtree() const {
+			String result = vformat("subtree node indices (%d): ", input_subtree_node_indices.size());
+			bool is_first = true;
+			for (int index : input_subtree_node_indices) {
+				if (is_first) {
+					result += vformat("%d", index);
+					is_first = false;
+				} else {
+					result += vformat(", %d", index);
+				}
+			}
+			print_line(result);
+		}
+	};
+
+	Vector<Ref<SyncedAnimationNode>> nodes; // All added nodes
+	LocalVector<NodeConnectionInfo> node_connection_info;
 	Vector<BlendTreeConnection> connections;
 
 	SortedTreeConstructor() {
@@ -189,11 +228,11 @@ struct SortedTreeConstructor {
 		add_node(output_node);
 	}
 
-	Ref<SyncedAnimationNode> get_output_node() {
+	Ref<SyncedAnimationNode> get_output_node() const {
 		return nodes[0];
 	}
 
-	int get_node_index(const Ref<SyncedAnimationNode> node) {
+	int get_node_index(const Ref<SyncedAnimationNode> &node) const {
 		for (int i = 0; i < nodes.size(); i++) {
 			if (nodes[i] == node) {
 				return i;
@@ -203,35 +242,56 @@ struct SortedTreeConstructor {
 		return -1;
 	}
 
-	void add_node(const Ref<SyncedAnimationNode>& node) {
+	void add_node(const Ref<SyncedAnimationNode> &node) {
 		nodes.push_back(node);
-		node_subgraph.push_back(HashSet<SyncedAnimationNode*>());
+		node_connection_info.push_back(NodeConnectionInfo(node.ptr()));
 	}
 
-	bool add_connection(const Ref<SyncedAnimationNode>& source_node, const Ref<SyncedAnimationNode>& target_node, const StringName& target_port_name) {
+	void add_index_and_update_subtrees_recursive(int node, int node_parent) {
+		if (node_parent == -1) {
+			return;
+		}
+
+		node_connection_info[node_parent].input_subtree_node_indices.insert(node);
+
+		for (int index : node_connection_info[node].input_subtree_node_indices) {
+			node_connection_info[node_parent].input_subtree_node_indices.insert(index);
+		}
+
+		add_index_and_update_subtrees_recursive(node_parent, node_connection_info[node_parent].parent_node_index);
+	}
+
+	bool add_connection(const Ref<SyncedAnimationNode> &source_node, const Ref<SyncedAnimationNode> &target_node, const StringName &target_port_name) {
 		if (!is_connection_valid(source_node, target_node, target_port_name)) {
 			return false;
 		}
 
-		// check for loops
 		int source_node_index = get_node_index(source_node);
-		if (node_subgraph.get(source_node_index).has(target_node.ptr())) {
-			return false;
-		}
-
 		int target_node_index = get_node_index(target_node);
-		node_subgraph.get(target_node_index).insert(source_node.ptr());
+		int target_input_port_index = target_node->get_node_input_index(target_port_name);
+
+		node_connection_info[source_node_index].parent_node_index = target_node_index;
+		node_connection_info[target_node_index].connected_child_node_index_at_port[target_input_port_index] = source_node_index;
+
+		add_index_and_update_subtrees_recursive(source_node_index, target_node_index);
 
 		return true;
 	}
 
-	bool is_connection_valid(const Ref<SyncedAnimationNode>& source_node, const Ref<SyncedAnimationNode>& target_node, StringName target_port_name) {
-		if (get_node_index(source_node) == -1) {
+	bool is_connection_valid(const Ref<SyncedAnimationNode> &source_node, const Ref<SyncedAnimationNode> &target_node, StringName target_port_name) {
+		int source_node_index = get_node_index(source_node);
+		if (source_node_index == -1) {
 			print_error("Cannot connect nodes: source node not found.");
 			return false;
 		}
 
-		if (get_node_index(target_node) == -1) {
+		if (node_connection_info[source_node_index].parent_node_index != -1) {
+			print_error("Cannot connect node: source node already has a parent.");
+			return false;
+		}
+
+		int target_node_index = get_node_index(target_node);
+		if (target_node_index == -1) {
 			print_error("Cannot connect nodes: target node not found.");
 			return false;
 		}
@@ -249,12 +309,22 @@ struct SortedTreeConstructor {
 			return false;
 		}
 
+		int target_input_port_index = target_node->get_node_input_index(target_port_name);
+		if (node_connection_info[target_node_index].connected_child_node_index_at_port[target_input_port_index] != -1) {
+			print_error("Cannot connect node: target port already connected");
+			return false;
+		}
+
+		if (node_connection_info[source_node_index].input_subtree_node_indices.has(target_node_index)) {
+			print_error("Cannot connect node: connection would create loop.");
+			return false;
+		}
+
 		return true;
 	}
 };
 
 class SyncedBlendTree : public SyncedAnimationNode {
-
 	Vector<Ref<SyncedAnimationNode>> tree_nodes;
 	Vector<Vector<int>> tree_node_subgraph;
 
@@ -268,7 +338,6 @@ class SyncedBlendTree : public SyncedAnimationNode {
 	Vector<Ref<AnimationData>> node_output_data;
 
 	void _setup_graph_evaluation() {
-
 		// After this functions we must have:
 		// * nodes sorted by evaluation order
 		// * node_parent filled
@@ -297,45 +366,10 @@ public:
 		return -1;
 	}
 
-	int add_node(const Ref<SyncedAnimationNode>& node) {
+	int add_node(const Ref<SyncedAnimationNode> &node) {
 		nodes.push_back(node);
 		int node_index = nodes.size() - 1;
 		return node_index;
-	}
-
-	bool connect_nodes(const Ref<SyncedAnimationNode>& source_node, const Ref<SyncedAnimationNode>& target_node, StringName target_socket_name) {
-		if (!is_connection_valid(source_node, target_node, target_socket_name)) {
-			return false;
-		}
-
-		return false;
-	}
-
-	bool is_connection_valid(const Ref<SyncedAnimationNode>& source_node, const Ref<SyncedAnimationNode>& target_node, StringName target_socket_name) {
-		if (get_node_index(source_node) == -1) {
-			print_error("Cannot connect nodes: source node not found.");
-			return false;
-		}
-
-		if (get_node_index(target_node) == -1) {
-			print_error("Cannot connect nodes: target node not found.");
-			return false;
-		}
-
-		if (target_node == get_output_node() && tree_connections.size() > 0) {
-			print_error("Cannot add connection to output node: output node is already connected");
-			return false;
-		}
-
-		Vector<StringName> target_inputs;
-		target_node->get_input_names(target_inputs);
-
-		if (!target_inputs.has(target_socket_name)) {
-			print_error("Cannot connect nodes: target socket not found.");
-			return false;
-		}
-
-		return true;
 	}
 
 	// overrides from SyncedAnimationNode
@@ -346,18 +380,14 @@ public:
 	}
 
 	void activate_inputs() override {
-
 	}
 
 	void calculate_sync_track() override {
-
 	}
 
 	void update_time(double p_delta) override {
-
 	}
 
-	void evaluate(GraphEvaluationContext &context, const Vector<AnimationData*>& inputs, AnimationData &output) override {
-
+	void evaluate(GraphEvaluationContext &context, const Vector<AnimationData *> &inputs, AnimationData &output) override {
 	}
 };
