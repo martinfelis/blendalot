@@ -56,7 +56,7 @@ struct SyncedAnimationGraphFixture {
 namespace TestSyncedAnimationGraph {
 
 TEST_CASE("[SyncedAnimationGraph] TestBlendTreeConstruction") {
-	SortedTreeConstructor tree_constructor;
+	BlendTreeBuilder tree_constructor;
 
 	Ref<AnimationSamplerNode> animation_sampler_node0;
 	animation_sampler_node0.instantiate();
@@ -123,6 +123,34 @@ TEST_CASE("[SyncedAnimationGraph] TestBlendTreeConstruction") {
 	CHECK(tree_constructor.node_connection_info[0].input_subtree_node_indices.has(3));
 	CHECK(tree_constructor.node_connection_info[0].input_subtree_node_indices.has(4));
 	CHECK(tree_constructor.node_connection_info[0].input_subtree_node_indices.has(5));
+
+	print_line("-- Unsorted Nodes:");
+	for (unsigned int i = 0; i < tree_constructor.nodes.size(); i++) {
+		print_line(vformat("%d: node %10s", i, tree_constructor.nodes[i]->name));
+		tree_constructor.node_connection_info[i]._print_subtree();
+	}
+
+	LocalVector<int> mapping = tree_constructor.get_sorted_node_indices();
+	for (unsigned int i = 0; i < mapping.size(); i++) {
+		print_line(vformat("%2d -> %2d", i, mapping[i]));
+	}
+	print_line(vformat("node %d is at index %d", 4, mapping.find(4)));
+
+	tree_constructor.sort_nodes_and_references();
+
+	print_line("-- Sorted Nodes");
+	for (unsigned int i = 0; i < tree_constructor.nodes.size(); i++) {
+		print_line(vformat("%d: node %10s", i,  tree_constructor.nodes[i]->name));
+		tree_constructor.node_connection_info[i]._print_subtree();
+	}
+
+	// Check that for node i all input nodes have a node index j > i.
+	for (unsigned int i = 0; i < tree_constructor.nodes.size(); i++) {
+		for (int input_index: tree_constructor.node_connection_info[i].input_subtree_node_indices) {
+			CHECK(input_index > i);
+		}
+	}
+
 }
 
 TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph] SimpleAnimationSamplerTest" * doctest::skip(true)) {
