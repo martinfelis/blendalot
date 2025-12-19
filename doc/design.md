@@ -28,20 +28,43 @@ scale). However, when blending a humanoid walk and a run animation this generall
 must semantically match to produce sensible result. If input `A` has the left foot on the ground and `B` the right foot
 the resulting pose is confusing at best.
 
-Instead, by annotating animations using a "SyncTrack" the phase space (e.g. `left foot contact phase` in the time
-interval [0.0s, 1.2s] and
-`right foot contact phase` form from [1.2s, 2.4s] the additional information can be used for blending. To produce
-plausible poses one has to blend poses from matching fractional positions within the phase spaces.
+A solution to this problem is presented by Bobby Anguelov at https://www.youtube.com/watch?v=Jkv0pbp0ckQ&t=7998s.
+
+In short: animations are using a "SyncTrack" to annotate the periods (or phases) of an animation (e.g. `left foot down`,
+`right foot cross`, `right foot down`, `left foot cross`). Two animations that are blended must have the same order of
+these periods, however each animation may have different durations for these phases. SyncTracks can then be blended and
+used to determine for each animation the actual sampling time.
 
 #### Example
 
-Given two animations `W` (a walking animation) and `R` (a running animation) annotated with SyncTracks on phases
-`LeftFoot` and `RightFoot` phases. Then blending a pose of `W` that is 64% through the `LeftFoot` phase with a pose of
-`R`
-that is 64% through its `LeftFoot` phase results in a plausible pose.
+Given two animations:
 
-Both animations do not need to have matching durations and neither do each phases
-have to be of the same duration. However, both have to have the same phases (number and order).
+* `Walk` with SyncTrack
+    * `left foot down` [0.0, 1.2], duration = `1.2`
+    * `right foot down` [1.2, 2.4], duration = `1.2`
+* `ZombieWalk` with SyncTrack
+    * `left foot down` [0.0, 1.8], duration = `1.8`
+    * `right foot down` [1.8, 1.9], duration = `0.1`
+
+Then blending these two animations, e.g. with a blend weight `w=0.2` we obtain the following SyncTrack:
+
+* `left foot down` [0.0, 1.32] (`1.32 = (1-w) * 1.2 + w * 1.8`), duration = 1.32
+* `right foot down` [1.32, 2.3] (`2.3 = (1-w) * 2.4 + w * 1.9`), duration = 0.98
+
+A blend factor of `w=0.0` results in the `Walk` animation's SyncTrack, similarly `w=1.0` results in the `ZombieWalk`
+SyncTrack.
+
+Time progresses normally in the blended SyncTrack. However, the resulting time is then interpreted relative to the
+phases of the SyncTrack. E.g. for the blended SyncTrack with `w=0.2`, a time at 1.5 would be in the `right foot down`
+phase with a relative progression of `(1.5-1.32)/0.98 =~ 0.18 = 18%` through the `right foot down` phase.
+
+When sampling the `Walk` or the `ZombieWalk` animation the relative phase progression is used to sample the inputs. For
+each animation we sample at 18% of the `right foot down` phase. For the `Walk` animation we would sample at
+`1.2 + 1.2*0.18 = 1.416 ~= 1.42` and for the `ZombieWalk` we sample at `1.8 + 0.1*0.18 = 1.818 ~= 1.82`.
+
+What is crucial to note here is that for synchronized blending one first has to have the blended SyncTrack, progress
+time there and then use the relative phase progression when sampling the actual animation that serve as input for the
+blend operation.
 
 ## Blend Trees
 
@@ -80,23 +103,12 @@ Some nodes have special names in the Blend Tree:
 
 ## Blend Tree Evaluation Process
 
-### Description
-
-Evaluation of the Blend Tree happens in multiple phases to ensure we have syncing dependent timing information available
-before performing the actual evaluation. Essentially the Blend Tree has to call the following function on all nodes:
-
-1. ActivateInputs(): right to left (i.e. from the root node via depth first to the leave nodes)
-2. CalculateSyncTracks(): left to right (leave nodes to root node)
-3. UpdateTime(): right to left
-4. Evaluate(): left to right
-
 ### Ownership of evaluation data (inputs and outputs)
 
-Except for the output node of a Blend Tree the following properties hold: 
+Except for the output node of a Blend Tree the following properties hold:
 
-* all Blend Tree nodes only operate on properties they own and any other data (e.g. inputs and outputs) are specified via arguments to `SyncedAnimationNode::evaluate(context, inputs, output)`
-function of the node.
-* 
+* all Blend Tree nodes only operate on properties they own and any other data (e.g. inputs and outputs) are specified
+  via arguments to `SyncedAnimationNode::evaluate(context, inputs, output)` function of the node.
 
 Advantages:
 
@@ -106,10 +118,17 @@ Advantages:
 
 Disadvantages:
 
-* Data has to be managed by the Blend Tree => additional bookkeeping
-*
+* Data has to be managed by the Blend Tree => additional bookkeeping there.
 
-### Blend Tree Evaluation
+### Evaluation
+
+Evaluation of the Blend Tree happens in multiple phases to ensure we have syncing dependent timing information available
+before performing the actual evaluation. Essentially the Blend Tree has to call the following function on all nodes:
+
+1. ActivateInputs(): right to left (i.e. from the root node via depth first to the leaf nodes)
+2. CalculateSyncTracks(): left to right (leaf nodes to root node)
+3. UpdateTime(): right to left
+4. Evaluate(): left to right
 
 ```c++
 // BlendTree.h
