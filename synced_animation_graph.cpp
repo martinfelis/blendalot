@@ -168,15 +168,15 @@ void SyncedAnimationGraph::_process_graph(double p_delta, bool p_update_only) {
 		return;
 	}
 
-	graph_root_node->activate_inputs();
-	graph_root_node->calculate_sync_track();
+	graph_root_node->activate_inputs(Vector<Ref<SyncedAnimationNode>>());
+	graph_root_node->calculate_sync_track(Vector<Ref<SyncedAnimationNode>>());
 	graph_root_node->update_time(p_delta);
-	graph_root_node->evaluate(graph_context, Vector<AnimationData*>(), graph_output);
+	graph_root_node->evaluate(graph_context, Vector<AnimationData *>(), graph_output);
 
 	_apply_animation_data(graph_output);
 }
 
-void SyncedAnimationGraph::_apply_animation_data(const AnimationData& output_data) const {
+void SyncedAnimationGraph::_apply_animation_data(const AnimationData &output_data) const {
 	for (const KeyValue<Animation::TypeHash, AnimationData::TrackValue *> &K : output_data.track_values) {
 		const AnimationData::TrackValue *track_value = K.value;
 		switch (track_value->type) {

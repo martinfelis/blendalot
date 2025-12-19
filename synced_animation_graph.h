@@ -32,7 +32,7 @@ protected:
 
 public:
 	void _process_graph(double p_delta, bool p_update_only = false);
-	void _apply_animation_data(const AnimationData& output_data) const;
+	void _apply_animation_data(const AnimationData &output_data) const;
 
 	void set_active(bool p_active);
 	bool is_active() const;
@@ -54,6 +54,10 @@ public:
 
 	void set_callback_mode_discrete(AnimationMixer::AnimationCallbackModeDiscrete p_mode);
 	AnimationMixer::AnimationCallbackModeDiscrete get_callback_mode_discrete() const;
+
+	GraphEvaluationContext &get_context() {
+		return graph_context;
+	}
 
 	SyncedAnimationGraph();
 

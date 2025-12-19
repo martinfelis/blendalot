@@ -2,7 +2,6 @@
 
 #include "../synced_animation_graph.h"
 #include "scene/main/window.h"
-#include "servers/rendering/rendering_server_default.h"
 
 #include "tests/test_macros.h"
 
@@ -85,8 +84,8 @@ TEST_CASE("[SyncedAnimationGraph] TestBlendTreeConstruction") {
 
 	// Tree
 	// Sampler0 -\
-	// Sampler1 -+- Blend0 -\
-	// Sampler2 ------------+ Blend1 - Output
+	// Sampler1 -+ Blend0 -\
+	// Sampler2 -----------+ Blend1 - Output
 
 	CHECK(tree_constructor.add_connection(animation_sampler_node0, node_blend0, "Input0"));
 
@@ -124,36 +123,17 @@ TEST_CASE("[SyncedAnimationGraph] TestBlendTreeConstruction") {
 	CHECK(tree_constructor.node_connection_info[0].input_subtree_node_indices.has(4));
 	CHECK(tree_constructor.node_connection_info[0].input_subtree_node_indices.has(5));
 
-	print_line("-- Unsorted Nodes:");
-	for (unsigned int i = 0; i < tree_constructor.nodes.size(); i++) {
-		print_line(vformat("%d: node %10s", i, tree_constructor.nodes[i]->name));
-		tree_constructor.node_connection_info[i]._print_subtree();
-	}
-
-	LocalVector<int> mapping = tree_constructor.get_sorted_node_indices();
-	for (unsigned int i = 0; i < mapping.size(); i++) {
-		print_line(vformat("%2d -> %2d", i, mapping[i]));
-	}
-	print_line(vformat("node %d is at index %d", 4, mapping.find(4)));
-
 	tree_constructor.sort_nodes_and_references();
-
-	print_line("-- Sorted Nodes");
-	for (unsigned int i = 0; i < tree_constructor.nodes.size(); i++) {
-		print_line(vformat("%d: node %10s", i,  tree_constructor.nodes[i]->name));
-		tree_constructor.node_connection_info[i]._print_subtree();
-	}
 
 	// Check that for node i all input nodes have a node index j > i.
 	for (unsigned int i = 0; i < tree_constructor.nodes.size(); i++) {
-		for (int input_index: tree_constructor.node_connection_info[i].input_subtree_node_indices) {
+		for (int input_index : tree_constructor.node_connection_info[i].input_subtree_node_indices) {
 			CHECK(input_index > i);
 		}
 	}
-
 }
 
-TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph] SimpleAnimationSamplerTest" * doctest::skip(true)) {
+TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph] SyncedAnimationGraph with an AnimationSampler as root node") {
 	Ref<AnimationSamplerNode> animation_sampler_node;
 	animation_sampler_node.instantiate();
 	animation_sampler_node->animation_name = "animation_library/TestAnimation";
@@ -175,15 +155,18 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 	CHECK(hip_bone_position.z == doctest::Approx(0.03));
 }
 
-// Currently disabled!
-TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph] SimpleBlendTreeTest" * doctest::skip(true)) {
+TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph][BlendTree] BlendTree with a AnimationSamplerNode connected to the output") {
 	Ref<SyncedBlendTree> synced_blend_tree_node;
 	synced_blend_tree_node.instantiate();
 
 	Ref<AnimationSamplerNode> animation_sampler_node;
 	animation_sampler_node.instantiate();
 	animation_sampler_node->animation_name = "animation_library/TestAnimation";
+
 	synced_blend_tree_node->add_node(animation_sampler_node);
+	REQUIRE(synced_blend_tree_node->add_connection(animation_sampler_node, synced_blend_tree_node->get_output_node(), "Input"));
+
+	synced_blend_tree_node->initialize(synced_animation_graph->get_context());
 
 	synced_animation_graph->set_graph_root_node(synced_blend_tree_node);
 

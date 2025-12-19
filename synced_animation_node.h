@@ -7,11 +7,6 @@
 
 #include <cassert>
 
-struct GraphEvaluationContext {
-	AnimationPlayer *animation_player = nullptr;
-	Skeleton3D *skeleton_3d = nullptr;
-};
-
 struct AnimationData {
 	enum TrackType : uint8_t {
 		TYPE_VALUE, // Set a value in a property, can be interpolated.
@@ -78,6 +73,11 @@ protected:
 struct SyncTrack {
 };
 
+struct GraphEvaluationContext {
+	AnimationPlayer *animation_player = nullptr;
+	Skeleton3D *skeleton_3d = nullptr;
+};
+
 class SyncedAnimationNode : public Resource {
 	GDCLASS(SyncedAnimationNode, Resource);
 
@@ -90,6 +90,7 @@ public:
 		double sync_position = 0.0;
 		double delta = 0.0;
 		double sync_delta = 0.0;
+		bool is_synced = false;
 
 		Animation::LoopMode loop_mode = Animation::LOOP_NONE;
 		SyncTrack sync_track;
@@ -109,7 +110,7 @@ public:
 	virtual void initialize(GraphEvaluationContext &context) {}
 	virtual void activate_inputs(Vector<Ref<SyncedAnimationNode>> input_nodes) {
 		// By default, all inputs nodes are activated.
-		for (Ref<SyncedAnimationNode> node: input_nodes) {
+		for (const Ref<SyncedAnimationNode>& node : input_nodes) {
 			node->active = true;
 		}
 	}
@@ -246,7 +247,7 @@ struct BlendTreeBuilder {
 			// Map connected subtrees
 			HashSet<int> old_indices = input_subtree_node_indices;
 			input_subtree_node_indices.clear();
-			for (int old_index: old_indices) {
+			for (int old_index : old_indices) {
 				input_subtree_node_indices.insert(node_index_mapping.find(old_index));
 			}
 		}
@@ -298,7 +299,7 @@ struct BlendTreeBuilder {
 		}
 		nodes = sorted_nodes;
 
-		for (NodeConnectionInfo& connection_info: node_connection_info) {
+		for (NodeConnectionInfo &connection_info : node_connection_info) {
 			connection_info.apply_node_mapping(sorted_node_indices);
 		}
 	}
@@ -314,7 +315,9 @@ struct BlendTreeBuilder {
 
 	void sort_nodes_recursive(int node_index, LocalVector<int> &result) {
 		for (int input_node_index : node_connection_info[node_index].connected_child_node_index_at_port) {
-			sort_nodes_recursive(input_node_index, result);
+			if (input_node_index >= 0) {
+				sort_nodes_recursive(input_node_index, result);
+			}
 		}
 		result.push_back(node_index);
 	}
@@ -406,7 +409,7 @@ class SyncedBlendTree : public SyncedAnimationNode {
 
 	struct NodeRuntimeData {
 		Vector<Ref<SyncedAnimationNode>> input_nodes;
-		Vector<AnimationData*> input_data;
+		Vector<AnimationData *> input_data;
 		AnimationData *output_data = nullptr;
 	};
 	LocalVector<NodeRuntimeData> _node_runtime_data;
@@ -422,7 +425,7 @@ class SyncedBlendTree : public SyncedAnimationNode {
 
 		// Add nodes and allocate runtime data
 		for (int i = 0; i < tree_builder.nodes.size(); i++) {
-			Ref<SyncedAnimationNode> node = tree_builder.nodes[i];
+			const Ref<SyncedAnimationNode> node = tree_builder.nodes[i];
 			nodes.push_back(node);
 
 			NodeRuntimeData node_runtime_data;
@@ -437,10 +440,11 @@ class SyncedBlendTree : public SyncedAnimationNode {
 		// Populate runtime data (only now is this.nodes populated to retrieve the nodes)
 		for (int i = 0; i < nodes.size(); i++) {
 			Ref<SyncedAnimationNode> node = nodes[i];
-			NodeRuntimeData& node_runtime_data = _node_runtime_data[i];
+			NodeRuntimeData &node_runtime_data = _node_runtime_data[i];
 
 			for (int port_index = 0; port_index < node->get_node_input_count(); port_index++) {
-				node_runtime_data.input_nodes.push_back(nodes[tree_builder.node_connection_info[i].connected_child_node_index_at_port[port_index]]);
+				const int connected_node_index = tree_builder.node_connection_info[i].connected_child_node_index_at_port[port_index];
+				node_runtime_data.input_nodes.push_back(nodes[connected_node_index]);
 			}
 		}
 
@@ -448,18 +452,11 @@ class SyncedBlendTree : public SyncedAnimationNode {
 	}
 
 public:
-	SyncedBlendTree() {
-		Ref<OutputNode> output_node;
-		output_node.instantiate();
-		output_node->name = "Output";
-		nodes.push_back(output_node);
+	Ref<SyncedAnimationNode> get_output_node() const {
+		return tree_builder.nodes[0];
 	}
 
-	Ref<SyncedAnimationNode> get_output_node() {
-		return nodes[0];
-	}
-
-	int get_node_index(const Ref<SyncedAnimationNode> node) {
+	int get_node_index(const Ref<SyncedAnimationNode>& node) const {
 		for (int i = 0; i < nodes.size(); i++) {
 			if (nodes[i] == node) {
 				return i;
@@ -489,6 +486,8 @@ public:
 
 	// overrides from SyncedAnimationNode
 	void initialize(GraphEvaluationContext &context) override {
+		setup_tree();
+
 		for (Ref<SyncedAnimationNode> node : nodes) {
 			node->initialize(context);
 		}
@@ -503,9 +502,7 @@ public:
 				continue;
 			}
 
-			NodeRuntimeData& node_runtime_data = _node_runtime_data[i];
-			node_runtime_data.output_data = memnew(AnimationData);
-
+			const NodeRuntimeData &node_runtime_data = _node_runtime_data[i];
 			node->activate_inputs(node_runtime_data.input_nodes);
 		}
 	}
@@ -518,28 +515,53 @@ public:
 				continue;
 			}
 
-			NodeRuntimeData& node_runtime_data = _node_runtime_data[i];
-			node_runtime_data.output_data = memnew(AnimationData);
+			const NodeRuntimeData &node_runtime_data = _node_runtime_data[i];
 
 			node->calculate_sync_track(node_runtime_data.input_nodes);
 		}
 	}
 
 	void update_time(double p_delta) override {
-		for (int i = 0; i < nodes.size(); i++) {
+		nodes[0]->node_time_info.delta = p_delta;
+		nodes[0]->node_time_info.position += p_delta;
+
+		for (int i = 1; i < nodes.size(); i++) {
 			Ref<SyncedAnimationNode> node = nodes[i];
 
 			if (!node->active) {
 				continue;
 			}
 
-			NodeRuntimeData& node_runtime_data = _node_runtime_data[i];
-			node_runtime_data.output_data = memnew(AnimationData);
+			Ref<SyncedAnimationNode> node_parent = nodes[tree_builder.node_connection_info[i].parent_node_index];
 
-			node->update_time(node_runtime_data.input_nodes);
+			if (node->node_time_info.is_synced) {
+				node->update_time(node_parent->node_time_info.position);
+			} else {
+				node->update_time(node_parent->node_time_info.delta);
+			}
 		}
 	}
 
 	void evaluate(GraphEvaluationContext &context, const Vector<AnimationData *> &input_datas, AnimationData &output_data) override {
+		for (int i = nodes.size() - 1; i > 0; i--) {
+			const Ref<SyncedAnimationNode>& node = nodes[i];
+
+			if (!node->active) {
+				continue;
+			}
+
+			NodeRuntimeData &node_runtime_data = _node_runtime_data[i];
+
+			if (i == 1) {
+				node_runtime_data.output_data = &output_data;
+			} else {
+				node_runtime_data.output_data = memnew(AnimationData);
+			}
+			node->evaluate(context, node_runtime_data.input_data, *node_runtime_data.output_data);
+
+			for (int child_index : tree_builder.node_connection_info[i].connected_child_node_index_at_port) {
+				memfree(_node_runtime_data[child_index].output_data);
+			}
+		}
 	}
 };
