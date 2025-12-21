@@ -29,18 +29,81 @@ struct AnimationData {
 	struct TrackValue {
 		Animation::Track *track = nullptr;
 		TrackType type = TYPE_ANIMATION;
+
+		virtual ~TrackValue() = default;
+
+		virtual void blend(const TrackValue &to_value, const float lambda) {
+			print_error(vformat("Blending of TrackValue of type %d with TrackValue of type %d not yet implemented.", type, to_value.type));
+		}
+
+		virtual bool operator==(const TrackValue &other_value) const {
+			print_error(vformat("Comparing TrackValue of type %d with TrackValue of type %d not yet implemented.", type, other_value.type));
+			return false;
+		}
+		bool operator!=(const TrackValue &other_value) const {
+			return !(*this == other_value);
+		}
+
+		virtual TrackValue *clone() const {
+			print_error(vformat("Cannot clone TrackValue of type %d: not yet implemented.", type));
+			return nullptr;
+		}
 	};
 
 	struct PositionTrackValue : public TrackValue {
 		int bone_idx = -1;
 		Vector3 position = Vector3(0, 0, 0);
 		PositionTrackValue() { type = TYPE_POSITION_3D; }
+
+		void blend(const TrackValue &to_value, const float lambda) override {
+			const PositionTrackValue *to_value_casted = &static_cast<const PositionTrackValue &>(to_value);
+			assert(bone_idx == to_value_casted->bone_idx);
+			position = (1. - lambda) * position + lambda * to_value_casted->position;
+		}
+
+		bool operator==(const TrackValue &other_value) const override {
+			if (type != other_value.type) {
+				return false;
+			}
+
+			const PositionTrackValue *other_value_casted = &static_cast<const PositionTrackValue &>(other_value);
+			return bone_idx == other_value_casted->bone_idx && position == other_value_casted->position;
+		}
+
+		TrackValue *clone() const override {
+			PositionTrackValue *result = memnew(PositionTrackValue);
+			result->bone_idx = bone_idx;
+			result->position = position;
+			return result;
+		}
 	};
 
 	struct RotationTrackValue : public TrackValue {
 		int bone_idx = -1;
 		Quaternion rotation = Quaternion(0, 0, 0, 1);
 		RotationTrackValue() { type = TYPE_ROTATION_3D; }
+
+		void blend(const TrackValue &to_value, const float lambda) override {
+			const RotationTrackValue *to_value_casted = &static_cast<const RotationTrackValue &>(to_value);
+			assert(bone_idx == to_value_casted->bone_idx);
+			rotation = rotation.slerp(to_value_casted->rotation, lambda);
+		}
+
+		bool operator==(const TrackValue &other_value) const override {
+			if (type != other_value.type) {
+				return false;
+			}
+
+			const RotationTrackValue *other_value_casted = &static_cast<const RotationTrackValue &>(other_value);
+			return bone_idx == other_value_casted->bone_idx && rotation == other_value_casted->rotation;
+		}
+
+		TrackValue *clone() const override {
+			RotationTrackValue *result = memnew(RotationTrackValue);
+			result->bone_idx = bone_idx;
+			result->rotation = rotation;
+			return result;
+		}
 	};
 
 	struct ScaleTrackValue : public TrackValue {
@@ -53,8 +116,26 @@ struct AnimationData {
 	~AnimationData() {
 		_clear_values();
 	}
+	AnimationData(const AnimationData &other) {
+		for (const KeyValue<Animation::TypeHash, TrackValue *> &K : other.track_values) {
+			track_values.insert(K.key, K.value->clone());
+		}
+	}
+	AnimationData(AnimationData &&other) noexcept :
+			track_values(std::exchange(other.track_values, AHashMap<Animation::TypeHash, TrackValue *, HashHasher>())) {
+	}
+	AnimationData &operator=(const AnimationData &other) {
+		AnimationData temp(other);
+		std::swap(track_values, temp.track_values);
+		return *this;
+	}
+	AnimationData &operator=(AnimationData &&other) noexcept {
+		std::swap(track_values, other.track_values);
+		return *this;
+	}
 
-	void set_value(Animation::TypeHash thash, TrackValue *value) {
+	void
+	set_value(const Animation::TypeHash& thash, TrackValue *value) {
 		if (!track_values.has(thash)) {
 			track_values.insert(thash, value);
 		} else {
@@ -65,6 +146,39 @@ struct AnimationData {
 	void clear() {
 		_clear_values();
 	}
+
+	bool has_same_tracks(const AnimationData &other) const {
+		HashSet<Animation::TypeHash> valid_track_hashes;
+		for (const KeyValue<Animation::TypeHash, TrackValue *> &K : track_values) {
+			valid_track_hashes.insert(K.key);
+		}
+
+		for (const KeyValue<Animation::TypeHash, TrackValue *> &K : other.track_values) {
+			if (HashSet<Animation::TypeHash>::Iterator entry = valid_track_hashes.find(K.key)) {
+				valid_track_hashes.remove(entry);
+			} else {
+				return false;
+			}
+		}
+
+		return valid_track_hashes.size() == 0;
+	}
+
+	void blend(const AnimationData &to_data, const float lambda) {
+		if (!has_same_tracks(to_data)) {
+			print_error("Cannot blend AnimationData: tracks do not match.");
+			return;
+		}
+
+		for (const KeyValue<Animation::TypeHash, TrackValue *> &K : track_values) {
+			TrackValue *track_value = K.value;
+			TrackValue *other_track_value = to_data.track_values[K.key];
+
+			track_value->blend(*other_track_value, lambda);
+		}
+	}
+
+	void sample_from_animation(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d, double p_time);
 
 	AHashMap<Animation::TypeHash, TrackValue *, HashHasher> track_values; // Animation::Track to TrackValue
 
@@ -192,10 +306,14 @@ public:
 
 class AnimationBlend2Node : public SyncedAnimationNode {
 public:
+	float blend_weight = 0.0f;
+
 	void get_input_names(Vector<StringName> &inputs) const override {
 		inputs.push_back("Input0");
 		inputs.push_back("Input1");
 	}
+
+	void evaluate(GraphEvaluationContext &context, const Vector<AnimationData *> &inputs, AnimationData &output) override;
 };
 
 struct BlendTreeConnection {

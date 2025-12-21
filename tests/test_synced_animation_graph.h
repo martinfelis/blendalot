@@ -54,7 +54,7 @@ struct SyncedAnimationGraphFixture {
 
 namespace TestSyncedAnimationGraph {
 
-TEST_CASE("[SyncedAnimationGraph] TestBlendTreeConstruction") {
+TEST_CASE("[SyncedAnimationGraph] Test BlendTree construction") {
 	BlendTreeBuilder tree_constructor;
 
 	Ref<AnimationSamplerNode> animation_sampler_node0;
@@ -130,6 +130,34 @@ TEST_CASE("[SyncedAnimationGraph] TestBlendTreeConstruction") {
 		for (int input_index : tree_constructor.node_connection_info[i].input_subtree_node_indices) {
 			CHECK(input_index > i);
 		}
+	}
+}
+
+TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph] Test AnimationData blending") {
+	AnimationData data_t0;
+	data_t0.sample_from_animation(test_animation, skeleton_node, 0.0);
+
+	AnimationData data_t1;
+	data_t1.sample_from_animation(test_animation, skeleton_node, 1.0);
+
+	AnimationData data_t0_5;
+	data_t0_5.sample_from_animation(test_animation, skeleton_node, 0.5);
+
+	AnimationData data_blended = data_t0;
+	data_blended.blend(data_t1, 0.5);
+
+	REQUIRE(data_blended.has_same_tracks(data_t0_5));
+	for (const KeyValue<Animation::TypeHash, AnimationData::TrackValue *> &K : data_blended.track_values) {
+		CHECK(K.value->operator==(*data_t0_5.track_values.find(K.key)->value));
+	}
+
+	// And also check that values do not match
+	data_blended = data_t0;
+	data_blended.blend(data_t1, 0.3);
+
+	REQUIRE(data_blended.has_same_tracks(data_t0_5));
+	for (const KeyValue<Animation::TypeHash, AnimationData::TrackValue *> &K : data_blended.track_values) {
+		CHECK(K.value->operator!=(*data_t0_5.track_values.find(K.key)->value));
 	}
 }
 

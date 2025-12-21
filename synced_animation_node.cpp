@@ -4,15 +4,7 @@
 
 #include "synced_animation_node.h"
 
-void AnimationSamplerNode::initialize(GraphEvaluationContext &context) {
-	animation = context.animation_player->get_animation(animation_name);
-	node_time_info.length = animation->get_length();
-	node_time_info.loop_mode = Animation::LOOP_LINEAR;
-}
-
-void AnimationSamplerNode::evaluate(GraphEvaluationContext &context, const Vector<AnimationData*>& inputs, AnimationData &output) {
-	assert(inputs.size() == 0);
-
+void AnimationData::sample_from_animation(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d, double p_time) {
 	const Vector<Animation::Track *> tracks = animation->get_tracks();
 	Animation::Track *const *tracks_ptr = tracks.ptr();
 
@@ -20,7 +12,7 @@ void AnimationSamplerNode::evaluate(GraphEvaluationContext &context, const Vecto
 	for (int i = 0; i < count; i++) {
 		AnimationData::TrackValue *track_value = nullptr;
 		const Animation::Track *animation_track = tracks_ptr[i];
-		const NodePath& track_node_path = animation_track->path;
+		const NodePath &track_node_path = animation_track->path;
 		if (!animation_track->enabled) {
 			continue;
 		}
@@ -31,11 +23,11 @@ void AnimationSamplerNode::evaluate(GraphEvaluationContext &context, const Vecto
 				AnimationData::PositionTrackValue *position_track_value = memnew(AnimationData::PositionTrackValue);
 
 				if (track_node_path.get_subname_count() == 1) {
-					int bone_idx = context.skeleton_3d->find_bone(track_node_path.get_subname(0));
+					int bone_idx = skeleton_3d->find_bone(track_node_path.get_subname(0));
 					if (bone_idx != -1) {
 						position_track_value->bone_idx = bone_idx;
 					}
-					animation->try_position_track_interpolate(i, node_time_info.position, &position_track_value->position);
+					animation->try_position_track_interpolate(i, p_time, &position_track_value->position);
 				} else {
 					// TODO
 					assert(false && !"Not yet implemented");
@@ -48,11 +40,11 @@ void AnimationSamplerNode::evaluate(GraphEvaluationContext &context, const Vecto
 				AnimationData::RotationTrackValue *rotation_track_value = memnew(AnimationData::RotationTrackValue);
 
 				if (track_node_path.get_subname_count() == 1) {
-					int bone_idx = context.skeleton_3d->find_bone(track_node_path.get_subname(0));
+					int bone_idx = skeleton_3d->find_bone(track_node_path.get_subname(0));
 					if (bone_idx != -1) {
 						rotation_track_value->bone_idx = bone_idx;
 					}
-					animation->try_rotation_track_interpolate(i, node_time_info.position, &rotation_track_value->rotation);
+					animation->try_rotation_track_interpolate(i, p_time, &rotation_track_value->rotation);
 				} else {
 					// TODO
 					assert(false && !"Not yet implemented");
@@ -69,6 +61,22 @@ void AnimationSamplerNode::evaluate(GraphEvaluationContext &context, const Vecto
 		}
 
 		track_value->track = tracks_ptr[i];
-		output.set_value(animation_track->thash, track_value);
+		set_value(animation_track->thash, track_value);
 	}
+}
+
+void AnimationSamplerNode::initialize(GraphEvaluationContext &context) {
+	animation = context.animation_player->get_animation(animation_name);
+	node_time_info.length = animation->get_length();
+	node_time_info.loop_mode = Animation::LOOP_LINEAR;
+}
+
+void AnimationSamplerNode::evaluate(GraphEvaluationContext &context, const Vector<AnimationData *> &inputs, AnimationData &output) {
+	assert(inputs.size() == 0);
+
+	output.clear();
+	output.sample_from_animation(animation, context.skeleton_3d, node_time_info.position);
+}
+
+void AnimationBlend2Node::evaluate(GraphEvaluationContext &context, const Vector<AnimationData *> &inputs, AnimationData &output) {
 }
