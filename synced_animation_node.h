@@ -7,6 +7,12 @@
 
 #include <cassert>
 
+/**
+ * @class AnimationData
+ * Represents data that is transported via animation connections in the SyncedAnimationGraph.
+ *
+ * Essentially, it is a hash map for all Animation::Track values that can are sampled from an Animation.
+ */
 struct AnimationData {
 	enum TrackType : uint8_t {
 		TYPE_VALUE, // Set a value in a property, can be interpolated.
@@ -78,6 +84,10 @@ struct GraphEvaluationContext {
 	Skeleton3D *skeleton_3d = nullptr;
 };
 
+/**
+ * @class SyncedAnimationNode
+ * Base class for all nodes in an SyncedAnimationGraph including BlendTree nodes and StateMachine states.
+ */
 class SyncedAnimationNode : public Resource {
 	GDCLASS(SyncedAnimationNode, Resource);
 
@@ -96,21 +106,16 @@ public:
 		SyncTrack sync_track;
 	};
 	NodeTimeInfo node_time_info;
-
-	struct InputPort {
-		StringName name;
-		SyncedAnimationNode *node;
-	};
-
-	Vector<InputPort> input_port;
+	bool active = false;
 
 	StringName name;
 
-	virtual ~SyncedAnimationNode() = default;
+	virtual ~SyncedAnimationNode() override = default;
 	virtual void initialize(GraphEvaluationContext &context) {}
+
 	virtual void activate_inputs(Vector<Ref<SyncedAnimationNode>> input_nodes) {
 		// By default, all inputs nodes are activated.
-		for (const Ref<SyncedAnimationNode>& node : input_nodes) {
+		for (const Ref<SyncedAnimationNode> &node : input_nodes) {
 			node->active = true;
 		}
 	}
@@ -150,7 +155,6 @@ public:
 		}
 	}
 
-	bool active = false;
 	bool set_input_node(const StringName &socket_name, SyncedAnimationNode *node);
 	virtual void get_input_names(Vector<StringName> &inputs) const {}
 
@@ -233,11 +237,7 @@ struct BlendTreeBuilder {
 			print_line(result);
 		}
 
-		void apply_node_mapping(LocalVector<int> node_index_mapping) {
-			if (parent_node_index != -1) {
-				parent_node_index = node_index_mapping[parent_node_index];
-			}
-
+		void apply_node_mapping(const LocalVector<int> &node_index_mapping) {
 			// Map connected node indices
 			for (unsigned int j = 0; j < connected_child_node_index_at_port.size(); j++) {
 				int connected_node_index = connected_child_node_index_at_port[j];
@@ -285,10 +285,6 @@ struct BlendTreeBuilder {
 
 	void sort_nodes_and_references() {
 		LocalVector<int> sorted_node_indices = get_sorted_node_indices();
-		LocalVector<int> index_mapping;
-		for (int i : sorted_node_indices) {
-			index_mapping.push_back(sorted_node_indices.find(i));
-		}
 
 		Vector<Ref<SyncedAnimationNode>> sorted_nodes;
 		Vector<NodeConnectionInfo> old_node_connection_info = node_connection_info;
@@ -300,6 +296,9 @@ struct BlendTreeBuilder {
 		nodes = sorted_nodes;
 
 		for (NodeConnectionInfo &connection_info : node_connection_info) {
+			if (connection_info.parent_node_index != -1) {
+				connection_info.parent_node_index = sorted_node_indices[connection_info.parent_node_index];
+			}
 			connection_info.apply_node_mapping(sorted_node_indices);
 		}
 	}
@@ -400,11 +399,6 @@ struct BlendTreeBuilder {
 };
 
 class SyncedBlendTree : public SyncedAnimationNode {
-	Vector<Ref<SyncedAnimationNode>> tree_nodes;
-	Vector<Vector<int>> tree_node_subgraph;
-
-	Vector<BlendTreeConnection> tree_connections;
-
 	Vector<Ref<SyncedAnimationNode>> nodes;
 
 	struct NodeRuntimeData {
@@ -456,7 +450,7 @@ public:
 		return tree_builder.nodes[0];
 	}
 
-	int get_node_index(const Ref<SyncedAnimationNode>& node) const {
+	int get_node_index(const Ref<SyncedAnimationNode> &node) const {
 		for (int i = 0; i < nodes.size(); i++) {
 			if (nodes[i] == node) {
 				return i;
@@ -544,7 +538,7 @@ public:
 
 	void evaluate(GraphEvaluationContext &context, const Vector<AnimationData *> &input_datas, AnimationData &output_data) override {
 		for (int i = nodes.size() - 1; i > 0; i--) {
-			const Ref<SyncedAnimationNode>& node = nodes[i];
+			const Ref<SyncedAnimationNode> &node = nodes[i];
 
 			if (!node->active) {
 				continue;
