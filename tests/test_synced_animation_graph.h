@@ -12,7 +12,8 @@ struct SyncedAnimationGraphFixture {
 
 	int hip_bone_index = -1;
 
-	Ref<Animation> test_animation;
+	Ref<Animation> test_animation_a;
+	Ref<Animation> test_animation_b;
 	Ref<AnimationLibrary> animation_library;
 
 	SyncedAnimationGraph *synced_animation_graph;
@@ -31,17 +32,8 @@ struct SyncedAnimationGraphFixture {
 		player_node = memnew(AnimationPlayer);
 		player_node->set_name("AnimationPlayer");
 
-		test_animation = memnew(Animation);
-		const int track_index = test_animation->add_track(Animation::TYPE_POSITION_3D);
-		CHECK(track_index == 0);
-		test_animation->track_insert_key(track_index, 0.0, Vector3(0., 0., 0.));
-		test_animation->track_insert_key(track_index, 1.0, Vector3(1., 2., 3.));
-		test_animation->track_set_path(track_index, NodePath(vformat("%s:%s", skeleton_node->get_path().get_concatenated_names(), "Hips")));
+		setup_animations();
 
-		animation_library.instantiate();
-		animation_library->add_animation("TestAnimation", test_animation);
-
-		player_node->add_animation_library("animation_library", animation_library);
 		SceneTree::get_singleton()->get_root()->add_child(player_node);
 
 		synced_animation_graph = memnew(SyncedAnimationGraph);
@@ -49,6 +41,29 @@ struct SyncedAnimationGraphFixture {
 
 		synced_animation_graph->set_animation_player(player_node->get_path());
 		synced_animation_graph->set_skeleton(skeleton_node->get_path());
+	}
+
+	void setup_animations() {
+		test_animation_a = memnew(Animation);
+		int track_index = test_animation_a->add_track(Animation::TYPE_POSITION_3D);
+		CHECK(track_index == 0);
+		test_animation_a->track_insert_key(track_index, 0.0, Vector3(0., 0., 0.));
+		test_animation_a->track_insert_key(track_index, 1.0, Vector3(1., 2., 3.));
+		test_animation_a->track_set_path(track_index, NodePath(vformat("%s:%s", skeleton_node->get_path().get_concatenated_names(), "Hips")));
+
+		animation_library.instantiate();
+		animation_library->add_animation("TestAnimationA", test_animation_a);
+
+		test_animation_b = memnew(Animation);
+		track_index = test_animation_b->add_track(Animation::TYPE_POSITION_3D);
+		CHECK(track_index == 0);
+		test_animation_b->track_insert_key(track_index, 0.0, Vector3(0., 0., 0.));
+		test_animation_b->track_insert_key(track_index, 1.0, Vector3(2., 4., 6.));
+		test_animation_b->track_set_path(track_index, NodePath(vformat("%s:%s", skeleton_node->get_path().get_concatenated_names(), "Hips")));
+
+		animation_library->add_animation("TestAnimationB", test_animation_b);
+
+		player_node->add_animation_library("animation_library", animation_library);
 	}
 };
 
@@ -135,13 +150,13 @@ TEST_CASE("[SyncedAnimationGraph] Test BlendTree construction") {
 
 TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph] Test AnimationData blending") {
 	AnimationData data_t0;
-	data_t0.sample_from_animation(test_animation, skeleton_node, 0.0);
+	data_t0.sample_from_animation(test_animation_a, skeleton_node, 0.0);
 
 	AnimationData data_t1;
-	data_t1.sample_from_animation(test_animation, skeleton_node, 1.0);
+	data_t1.sample_from_animation(test_animation_a, skeleton_node, 1.0);
 
 	AnimationData data_t0_5;
-	data_t0_5.sample_from_animation(test_animation, skeleton_node, 0.5);
+	data_t0_5.sample_from_animation(test_animation_a, skeleton_node, 0.5);
 
 	AnimationData data_blended = data_t0;
 	data_blended.blend(data_t1, 0.5);
@@ -164,7 +179,7 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph] SyncedAnimationGraph with an AnimationSampler as root node") {
 	Ref<AnimationSamplerNode> animation_sampler_node;
 	animation_sampler_node.instantiate();
-	animation_sampler_node->animation_name = "animation_library/TestAnimation";
+	animation_sampler_node->animation_name = "animation_library/TestAnimationA";
 
 	synced_animation_graph->set_graph_root_node(animation_sampler_node);
 
@@ -189,7 +204,7 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 
 	Ref<AnimationSamplerNode> animation_sampler_node;
 	animation_sampler_node.instantiate();
-	animation_sampler_node->animation_name = "animation_library/TestAnimation";
+	animation_sampler_node->animation_name = "animation_library/TestAnimationA";
 
 	synced_blend_tree_node->add_node(animation_sampler_node);
 	REQUIRE(synced_blend_tree_node->add_connection(animation_sampler_node, synced_blend_tree_node->get_output_node(), "Input"));
@@ -211,6 +226,68 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 	CHECK(hip_bone_position.x == doctest::Approx(0.01));
 	CHECK(hip_bone_position.y == doctest::Approx(0.02));
 	CHECK(hip_bone_position.z == doctest::Approx(0.03));
+}
+
+TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph][BlendTree][Blend2Node] BlendTree with a Blend2Node connected to the output") {
+	Ref<SyncedBlendTree> synced_blend_tree_node;
+	synced_blend_tree_node.instantiate();
+
+	// TestAnimationA
+	Ref<AnimationSamplerNode> animation_sampler_node_a;
+	animation_sampler_node_a.instantiate();
+	animation_sampler_node_a->animation_name = "animation_library/TestAnimationA";
+
+	synced_blend_tree_node->add_node(animation_sampler_node_a);
+
+	// TestAnimationB
+	Ref<AnimationSamplerNode> animation_sampler_node_b;
+	animation_sampler_node_b.instantiate();
+	animation_sampler_node_b->animation_name = "animation_library/TestAnimationB";
+
+	synced_blend_tree_node->add_node(animation_sampler_node_b);
+
+	// Blend2
+	Ref<AnimationBlend2Node> blend2_node;
+	blend2_node.instantiate();
+	blend2_node->blend_weight = 0.5;
+
+	synced_blend_tree_node->add_node(blend2_node);
+
+	// Connect nodes
+	Vector<StringName> blend2_inputs;
+	blend2_node->get_input_names(blend2_inputs);
+	REQUIRE(synced_blend_tree_node->add_connection(animation_sampler_node_a, blend2_node, blend2_inputs[0]));
+	REQUIRE(synced_blend_tree_node->add_connection(animation_sampler_node_b, blend2_node, blend2_inputs[1]));
+	REQUIRE(synced_blend_tree_node->add_connection(blend2_node, synced_blend_tree_node->get_output_node(), "Input"));
+
+	synced_blend_tree_node->initialize(synced_animation_graph->get_context());
+
+	//	int sampler_node_1_index = synced_blend_tree_node->get_node_index(animation_sampler_node_1);
+	//	const SyncedBlendTree::NodeRuntimeData &sampler_node_1_runtime_data = synced_blend_tree_node->_node_runtime_data[sampler_node_1_index];
+
+	//	int sampler_node_2_index = synced_blend_tree_node->get_node_index(animation_sampler_node_2);
+	//	const SyncedBlendTree::NodeRuntimeData &sampler_node_2_runtime_data = synced_blend_tree_node->_node_runtime_data[sampler_node_2_index];
+	int blend2_node_index = synced_blend_tree_node->get_node_index(blend2_node);
+	const SyncedBlendTree::NodeRuntimeData &blend2_runtime_data = synced_blend_tree_node->_node_runtime_data[blend2_node_index];
+
+	CHECK(blend2_runtime_data.input_nodes[0] == animation_sampler_node_a);
+	CHECK(blend2_runtime_data.input_nodes[1] == animation_sampler_node_b);
+
+	synced_animation_graph->set_graph_root_node(synced_blend_tree_node);
+
+	Vector3 hip_bone_position = skeleton_node->get_bone_global_pose(hip_bone_index).origin;
+
+	CHECK(hip_bone_position.x == doctest::Approx(0.0));
+	CHECK(hip_bone_position.y == doctest::Approx(0.0));
+	CHECK(hip_bone_position.z == doctest::Approx(0.0));
+
+	SceneTree::get_singleton()->process(0.5);
+
+	hip_bone_position = skeleton_node->get_bone_global_pose(hip_bone_index).origin;
+
+	CHECK(hip_bone_position.x == doctest::Approx(0.75));
+	CHECK(hip_bone_position.y == doctest::Approx(1.5));
+	CHECK(hip_bone_position.z == doctest::Approx(2.25));
 }
 
 } //namespace TestSyncedAnimationGraph

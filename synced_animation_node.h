@@ -72,6 +72,7 @@ struct AnimationData {
 
 		TrackValue *clone() const override {
 			PositionTrackValue *result = memnew(PositionTrackValue);
+			result->track = track;
 			result->bone_idx = bone_idx;
 			result->position = position;
 			return result;
@@ -100,6 +101,7 @@ struct AnimationData {
 
 		TrackValue *clone() const override {
 			RotationTrackValue *result = memnew(RotationTrackValue);
+			result->track = track;
 			result->bone_idx = bone_idx;
 			result->rotation = rotation;
 			return result;
@@ -135,7 +137,7 @@ struct AnimationData {
 	}
 
 	void
-	set_value(const Animation::TypeHash& thash, TrackValue *value) {
+	set_value(const Animation::TypeHash &thash, TrackValue *value) {
 		if (!track_values.has(thash)) {
 			track_values.insert(thash, value);
 		} else {
@@ -262,7 +264,7 @@ public:
 			}
 		}
 	}
-	virtual void evaluate(GraphEvaluationContext &context, const Vector<AnimationData *> &input_datas, AnimationData &output_data) {
+	virtual void evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &input_datas, AnimationData &output_data) {
 		// By default, use the AnimationData of the first input.
 		if (input_datas.size() > 0) {
 			output_data = *input_datas[0];
@@ -294,7 +296,7 @@ private:
 	Ref<Animation> animation;
 
 	void initialize(GraphEvaluationContext &context) override;
-	void evaluate(GraphEvaluationContext &context, const Vector<AnimationData *> &inputs, AnimationData &output) override;
+	void evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) override;
 };
 
 class OutputNode : public SyncedAnimationNode {
@@ -313,7 +315,7 @@ public:
 		inputs.push_back("Input1");
 	}
 
-	void evaluate(GraphEvaluationContext &context, const Vector<AnimationData *> &inputs, AnimationData &output) override;
+	void evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) override;
 };
 
 struct BlendTreeConnection {
@@ -519,22 +521,16 @@ struct BlendTreeBuilder {
 class SyncedBlendTree : public SyncedAnimationNode {
 	Vector<Ref<SyncedAnimationNode>> nodes;
 
-	struct NodeRuntimeData {
-		Vector<Ref<SyncedAnimationNode>> input_nodes;
-		Vector<AnimationData *> input_data;
-		AnimationData *output_data = nullptr;
-	};
-	LocalVector<NodeRuntimeData> _node_runtime_data;
-
 	BlendTreeBuilder tree_builder;
 	bool tree_initialized = false;
 
-	void setup_tree() {
+	void sort_nodes() {
 		nodes.clear();
 		_node_runtime_data.clear();
-
 		tree_builder.sort_nodes_and_references();
+	}
 
+	void setup_runtime_data() {
 		// Add nodes and allocate runtime data
 		for (int i = 0; i < tree_builder.nodes.size(); i++) {
 			const Ref<SyncedAnimationNode> node = tree_builder.nodes[i];
@@ -559,11 +555,16 @@ class SyncedBlendTree : public SyncedAnimationNode {
 				node_runtime_data.input_nodes.push_back(nodes[connected_node_index]);
 			}
 		}
-
-		tree_initialized = true;
 	}
 
 public:
+	struct NodeRuntimeData {
+		Vector<Ref<SyncedAnimationNode>> input_nodes;
+		LocalVector<AnimationData *> input_data;
+		AnimationData *output_data = nullptr;
+	};
+	LocalVector<NodeRuntimeData> _node_runtime_data;
+
 	Ref<SyncedAnimationNode> get_output_node() const {
 		return tree_builder.nodes[0];
 	}
@@ -598,11 +599,14 @@ public:
 
 	// overrides from SyncedAnimationNode
 	void initialize(GraphEvaluationContext &context) override {
-		setup_tree();
+		sort_nodes();
+		setup_runtime_data();
 
 		for (Ref<SyncedAnimationNode> node : nodes) {
 			node->initialize(context);
 		}
+
+		tree_initialized = true;
 	}
 
 	void activate_inputs(Vector<Ref<SyncedAnimationNode>> input_nodes) override {
@@ -654,7 +658,7 @@ public:
 		}
 	}
 
-	void evaluate(GraphEvaluationContext &context, const Vector<AnimationData *> &input_datas, AnimationData &output_data) override {
+	void evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &input_datas, AnimationData &output_data) override {
 		for (int i = nodes.size() - 1; i > 0; i--) {
 			const Ref<SyncedAnimationNode> &node = nodes[i];
 
@@ -664,13 +668,22 @@ public:
 
 			NodeRuntimeData &node_runtime_data = _node_runtime_data[i];
 
+			// Populate the inputs
+			for (unsigned int j = 0; j < node_runtime_data.input_data.size(); j++) {
+				int child_index = tree_builder.node_connection_info[i].connected_child_node_index_at_port[j];
+				node_runtime_data.input_data[j] = _node_runtime_data[child_index].output_data;
+			}
+
+			// Set output pointer
 			if (i == 1) {
 				node_runtime_data.output_data = &output_data;
 			} else {
 				node_runtime_data.output_data = memnew(AnimationData);
 			}
+
 			node->evaluate(context, node_runtime_data.input_data, *node_runtime_data.output_data);
 
+			// All inputs have been consumed and can now be freed.
 			for (int child_index : tree_builder.node_connection_info[i].connected_child_node_index_at_port) {
 				memfree(_node_runtime_data[child_index].output_data);
 			}

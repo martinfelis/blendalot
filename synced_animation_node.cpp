@@ -71,12 +71,14 @@ void AnimationSamplerNode::initialize(GraphEvaluationContext &context) {
 	node_time_info.loop_mode = Animation::LOOP_LINEAR;
 }
 
-void AnimationSamplerNode::evaluate(GraphEvaluationContext &context, const Vector<AnimationData *> &inputs, AnimationData &output) {
+void AnimationSamplerNode::evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) {
 	assert(inputs.size() == 0);
 
 	output.clear();
 	output.sample_from_animation(animation, context.skeleton_3d, node_time_info.position);
 }
 
-void AnimationBlend2Node::evaluate(GraphEvaluationContext &context, const Vector<AnimationData *> &inputs, AnimationData &output) {
+void AnimationBlend2Node::evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) {
+	output = *inputs[0];
+	output.blend(*inputs[1], blend_weight);
 }
