@@ -71,7 +71,7 @@ struct SyncedAnimationGraphFixture {
 namespace TestSyncedAnimationGraph {
 
 TEST_CASE("[SyncedAnimationGraph] Test BlendTree construction") {
-	BlendTreeBuilder tree_constructor;
+	BlendTreeGraph tree_constructor;
 
 	Ref<AnimationSamplerNode> animation_sampler_node0;
 	animation_sampler_node0.instantiate();

@@ -5,7 +5,7 @@
 #include "synced_animation_node.h"
 
 void SyncedBlendTree::_get_property_list(List<PropertyInfo> *p_list) const {
-	for (const Ref<SyncedAnimationNode> &node : nodes) {
+	for (const Ref<SyncedAnimationNode> &node : tree_graph.nodes) {
 		String prop_name = node->name;
 		if (prop_name != "Output") {
 			p_list->push_back(PropertyInfo(Variant::OBJECT, "nodes/" + prop_name + "/node", PROPERTY_HINT_RESOURCE_TYPE, "AnimationNode", PROPERTY_USAGE_NO_EDITOR));
@@ -25,23 +25,23 @@ bool SyncedBlendTree::_get(const StringName &p_name, Variant &r_value) const {
 
 		if (what == "node") {
 			if (node_index != -1) {
-				r_value = nodes[node_index];
+				r_value = tree_graph.nodes[node_index];
 				return true;
 			}
 		}
 
 		if (what == "position") {
 			if (node_index != -1) {
-				r_value = nodes[node_index]->position;
+				r_value = tree_graph.nodes[node_index]->position;
 				return true;
 			}
 		}
 	} else if (prop_name == "node_connections") {
 		Array conns;
-		conns.resize(tree_builder.connections.size() * 3);
+		conns.resize(tree_graph.connections.size() * 3);
 
 		int idx = 0;
-		for (const BlendTreeConnection &connection : tree_builder.connections) {
+		for (const BlendTreeConnection &connection : tree_graph.connections) {
 			conns[idx * 3 + 0] = connection.target_node->name;
 			conns[idx * 3 + 1] = connection.target_node->get_node_input_index(connection.target_port_name);
 			conns[idx * 3 + 2] = connection.source_node->name;
@@ -73,7 +73,7 @@ bool SyncedBlendTree::_set(const StringName &p_name, const Variant &p_value) {
 		if (what == "position") {
 			int node_index = find_node_index_by_name(node_name);
 			if (node_index > -1) {
-				tree_builder.nodes[node_index]->position = p_value;
+				tree_graph.nodes[node_index]->position = p_value;
 			}
 			return true;
 		}
@@ -86,11 +86,11 @@ bool SyncedBlendTree::_set(const StringName &p_name, const Variant &p_value) {
 			int target_node_port_index = conns[i + 1];
 			int source_node_index = find_node_index_by_name(conns[i + 2]);
 
-			Ref<SyncedAnimationNode> target_node = tree_builder.nodes[target_node_index];
+			Ref<SyncedAnimationNode> target_node = tree_graph.nodes[target_node_index];
 			Vector<StringName> target_input_names;
 			target_node->get_input_names(target_input_names);
 
-			add_connection(tree_builder.nodes[source_node_index], target_node, target_input_names[target_node_port_index]);
+			add_connection(tree_graph.nodes[source_node_index], target_node, target_input_names[target_node_port_index]);
 		}
 		return true;
 	}
