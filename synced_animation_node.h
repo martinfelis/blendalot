@@ -225,6 +225,7 @@ public:
 	bool active = false;
 
 	StringName name;
+	Vector2 position;
 
 	virtual ~SyncedAnimationNode() override = default;
 	virtual void initialize(GraphEvaluationContext &context) {}
@@ -284,6 +285,11 @@ public:
 		get_input_names(inputs);
 		return inputs.size();
 	}
+
+	//protected:
+	//	void _get_property_list(List<PropertyInfo> *p_list) const;
+	//	bool _get(const StringName &p_name, Variant &r_value) const;
+	//	bool _set(const StringName &p_name, const Variant &p_value);
 };
 
 class AnimationSamplerNode : public SyncedAnimationNode {
@@ -292,14 +298,22 @@ class AnimationSamplerNode : public SyncedAnimationNode {
 public:
 	StringName animation_name;
 
+	void set_animation(const StringName &p_name);
+	StringName get_animation() const;
+
 private:
 	Ref<Animation> animation;
 
 	void initialize(GraphEvaluationContext &context) override;
 	void evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) override;
+
+protected:
+	static void _bind_methods();
 };
 
 class OutputNode : public SyncedAnimationNode {
+	GDCLASS(OutputNode, SyncedAnimationNode);
+
 public:
 	void get_input_names(Vector<StringName> &inputs) const override {
 		inputs.push_back("Input");
@@ -307,8 +321,12 @@ public:
 };
 
 class AnimationBlend2Node : public SyncedAnimationNode {
+	GDCLASS(AnimationBlend2Node, SyncedAnimationNode);
+
 public:
+	StringName blend_amount = PNAME("blend_amount");
 	float blend_weight = 0.0f;
+	bool sync = false;
 
 	void get_input_names(Vector<StringName> &inputs) const override {
 		inputs.push_back("Input0");
@@ -316,6 +334,16 @@ public:
 	}
 
 	void evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) override;
+
+	void set_use_sync(bool p_sync);
+	bool is_using_sync() const;
+
+protected:
+	static void _bind_methods();
+
+	void _get_property_list(List<PropertyInfo> *p_list) const;
+	bool _get(const StringName &p_name, Variant &r_value) const;
+	bool _set(const StringName &p_name, const Variant &p_value);
 };
 
 struct BlendTreeConnection {
@@ -375,7 +403,7 @@ struct BlendTreeBuilder {
 
 	Vector<Ref<SyncedAnimationNode>> nodes; // All added nodes
 	LocalVector<NodeConnectionInfo> node_connection_info;
-	Vector<BlendTreeConnection> connections;
+	LocalVector<BlendTreeConnection> connections;
 
 	BlendTreeBuilder() {
 		Ref<OutputNode> output_node;
@@ -388,7 +416,7 @@ struct BlendTreeBuilder {
 		return nodes[0];
 	}
 
-	int get_node_index(const Ref<SyncedAnimationNode> &node) const {
+	int find_node_index(const Ref<SyncedAnimationNode> &node) const {
 		for (int i = 0; i < nodes.size(); i++) {
 			if (nodes[i] == node) {
 				return i;
@@ -398,7 +426,29 @@ struct BlendTreeBuilder {
 		return -1;
 	}
 
+	int find_node_index_by_name(const StringName &name) const {
+		for (int i = 0; i < nodes.size(); i++) {
+			if (nodes[i]->name == name) {
+				return i;
+			}
+		}
+
+		return -1;
+	}
+
 	void add_node(const Ref<SyncedAnimationNode> &node) {
+		StringName node_base_name = node->name;
+		if (node_base_name.is_empty()) {
+			node_base_name = node->get_class_name();
+		}
+		node->name = node_base_name;
+
+		int number_suffix = 1;
+		while (find_node_index_by_name(node->name) != -1) {
+			node->name = vformat("%s %d", node_base_name, number_suffix);
+			number_suffix++;
+		}
+
 		nodes.push_back(node);
 		node_connection_info.push_back(NodeConnectionInfo(node.ptr()));
 	}
@@ -460,12 +510,13 @@ struct BlendTreeBuilder {
 			return false;
 		}
 
-		int source_node_index = get_node_index(source_node);
-		int target_node_index = get_node_index(target_node);
+		int source_node_index = find_node_index(source_node);
+		int target_node_index = find_node_index(target_node);
 		int target_input_port_index = target_node->get_node_input_index(target_port_name);
 
 		node_connection_info[source_node_index].parent_node_index = target_node_index;
 		node_connection_info[target_node_index].connected_child_node_index_at_port[target_input_port_index] = source_node_index;
+		connections.push_back(BlendTreeConnection{ source_node, target_node, target_port_name });
 
 		add_index_and_update_subtrees_recursive(source_node_index, target_node_index);
 
@@ -473,7 +524,7 @@ struct BlendTreeBuilder {
 	}
 
 	bool is_connection_valid(const Ref<SyncedAnimationNode> &source_node, const Ref<SyncedAnimationNode> &target_node, StringName target_port_name) {
-		int source_node_index = get_node_index(source_node);
+		int source_node_index = find_node_index(source_node);
 		if (source_node_index == -1) {
 			print_error("Cannot connect nodes: source node not found.");
 			return false;
@@ -484,14 +535,9 @@ struct BlendTreeBuilder {
 			return false;
 		}
 
-		int target_node_index = get_node_index(target_node);
+		int target_node_index = find_node_index(target_node);
 		if (target_node_index == -1) {
 			print_error("Cannot connect nodes: target node not found.");
-			return false;
-		}
-
-		if (target_node == get_output_node() && connections.size() > 0) {
-			print_error("Cannot add connection to output node: output node is already connected");
 			return false;
 		}
 
@@ -519,6 +565,8 @@ struct BlendTreeBuilder {
 };
 
 class SyncedBlendTree : public SyncedAnimationNode {
+	GDCLASS(SyncedBlendTree, SyncedAnimationNode);
+
 	Vector<Ref<SyncedAnimationNode>> nodes;
 
 	BlendTreeBuilder tree_builder;
@@ -557,6 +605,11 @@ class SyncedBlendTree : public SyncedAnimationNode {
 		}
 	}
 
+protected:
+	void _get_property_list(List<PropertyInfo> *p_list) const;
+	bool _get(const StringName &p_name, Variant &r_value) const;
+	bool _set(const StringName &p_name, const Variant &p_value);
+
 public:
 	struct NodeRuntimeData {
 		Vector<Ref<SyncedAnimationNode>> input_nodes;
@@ -569,14 +622,12 @@ public:
 		return tree_builder.nodes[0];
 	}
 
-	int get_node_index(const Ref<SyncedAnimationNode> &node) const {
-		for (int i = 0; i < nodes.size(); i++) {
-			if (nodes[i] == node) {
-				return i;
-			}
-		}
+	int find_node_index(const Ref<SyncedAnimationNode> &node) const {
+		return tree_builder.find_node_index(node);
+	}
 
-		return -1;
+	int find_node_index_by_name(const StringName &name) const {
+		return tree_builder.find_node_index_by_name(name);
 	}
 
 	void add_node(const Ref<SyncedAnimationNode> &node) {

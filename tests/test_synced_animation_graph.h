@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../synced_animation_graph.h"
+#include "scene/animation/animation_tree.h"
 #include "scene/main/window.h"
 
 #include "tests/test_macros.h"
@@ -105,8 +106,8 @@ TEST_CASE("[SyncedAnimationGraph] Test BlendTree construction") {
 	CHECK(tree_constructor.add_connection(animation_sampler_node0, node_blend0, "Input0"));
 
 	// Ensure that subtree is properly updated
-	int sampler0_index = tree_constructor.get_node_index(animation_sampler_node0);
-	int blend0_index = tree_constructor.get_node_index(node_blend0);
+	int sampler0_index = tree_constructor.find_node_index(animation_sampler_node0);
+	int blend0_index = tree_constructor.find_node_index(node_blend0);
 	CHECK(tree_constructor.node_connection_info[blend0_index].input_subtree_node_indices.has(sampler0_index));
 
 	// Connect blend0 to blend1
@@ -118,8 +119,8 @@ TEST_CASE("[SyncedAnimationGraph] Test BlendTree construction") {
 	CHECK(tree_constructor.add_connection(animation_sampler_node1, node_blend0, "Input1"));
 
 	// Ensure that subtree is properly updated
-	int sampler1_index = tree_constructor.get_node_index(animation_sampler_node0);
-	int blend1_index = tree_constructor.get_node_index(node_blend1);
+	int sampler1_index = tree_constructor.find_node_index(animation_sampler_node0);
+	int blend1_index = tree_constructor.find_node_index(node_blend1);
 	CHECK(tree_constructor.node_connection_info[blend1_index].input_subtree_node_indices.has(sampler1_index));
 	CHECK(tree_constructor.node_connection_info[blend1_index].input_subtree_node_indices.has(sampler0_index));
 	CHECK(tree_constructor.node_connection_info[blend1_index].input_subtree_node_indices.has(blend0_index));
@@ -262,12 +263,7 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 
 	synced_blend_tree_node->initialize(synced_animation_graph->get_context());
 
-	//	int sampler_node_1_index = synced_blend_tree_node->get_node_index(animation_sampler_node_1);
-	//	const SyncedBlendTree::NodeRuntimeData &sampler_node_1_runtime_data = synced_blend_tree_node->_node_runtime_data[sampler_node_1_index];
-
-	//	int sampler_node_2_index = synced_blend_tree_node->get_node_index(animation_sampler_node_2);
-	//	const SyncedBlendTree::NodeRuntimeData &sampler_node_2_runtime_data = synced_blend_tree_node->_node_runtime_data[sampler_node_2_index];
-	int blend2_node_index = synced_blend_tree_node->get_node_index(blend2_node);
+	int blend2_node_index = synced_blend_tree_node->find_node_index(blend2_node);
 	const SyncedBlendTree::NodeRuntimeData &blend2_runtime_data = synced_blend_tree_node->_node_runtime_data[blend2_node_index];
 
 	CHECK(blend2_runtime_data.input_nodes[0] == animation_sampler_node_a);
@@ -288,6 +284,48 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 	CHECK(hip_bone_position.x == doctest::Approx(0.75));
 	CHECK(hip_bone_position.y == doctest::Approx(1.5));
 	CHECK(hip_bone_position.z == doctest::Approx(2.25));
+
+	// Test saving and loading of the blend tree to a resource
+	ResourceSaver::save(synced_blend_tree_node, "synced_blend_tree_node.tres");
+
+	REQUIRE(ClassDB::class_exists("AnimationSamplerNode"));
+
+	// Load blend tree
+	Ref<SyncedBlendTree> loaded_synced_blend_tree = ResourceLoader::load("synced_blend_tree_node.tres");
+	REQUIRE(loaded_synced_blend_tree.is_valid());
+
+	loaded_synced_blend_tree->initialize(synced_animation_graph->get_context());
+	synced_animation_graph->set_graph_root_node(loaded_synced_blend_tree);
+
+	// Re-evaluate using a different time. All animation samplers will start again from 0.
+	SceneTree::get_singleton()->process(0.2);
+
+	hip_bone_position = skeleton_node->get_bone_global_pose(hip_bone_index).origin;
+
+	CHECK(hip_bone_position.x == doctest::Approx(0.3));
+	CHECK(hip_bone_position.y == doctest::Approx(0.6));
+	CHECK(hip_bone_position.z == doctest::Approx(0.9));
+}
+
+TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph][BlendTree][Blend2Node] Serialize AnimationTree" * doctest::skip(true)) {
+	AnimationTree *animation_tree = memnew(AnimationTree);
+
+	character_node->add_child(animation_tree);
+	animation_tree->set_animation_player(player_node->get_path());
+	animation_tree->set_root_node(character_node->get_path());
+	Ref<AnimationNodeAnimation> animation_node_animation;
+	animation_node_animation.instantiate();
+	animation_node_animation->set_animation("TestAnimationA");
+
+	Ref<AnimationNodeBlendTree> animation_node_blend_tree;
+	animation_node_blend_tree.instantiate();
+	animation_node_blend_tree->add_node("SamplerTestAnimationA", animation_node_animation, Vector2(0, 0));
+	animation_node_blend_tree->connect_node("output", 0, "SamplerTestAnimationA");
+	animation_node_blend_tree->setup_local_to_scene();
+
+	animation_tree->set_root_animation_node(animation_node_blend_tree);
+
+	ResourceSaver::save(animation_node_blend_tree, "animation_tree.tres");
 }
 
 } //namespace TestSyncedAnimationGraph

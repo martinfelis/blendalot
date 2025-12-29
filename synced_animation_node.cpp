@@ -4,6 +4,100 @@
 
 #include "synced_animation_node.h"
 
+void SyncedBlendTree::_get_property_list(List<PropertyInfo> *p_list) const {
+	for (const Ref<SyncedAnimationNode> &node : nodes) {
+		String prop_name = node->name;
+		if (prop_name != "Output") {
+			p_list->push_back(PropertyInfo(Variant::OBJECT, "nodes/" + prop_name + "/node", PROPERTY_HINT_RESOURCE_TYPE, "AnimationNode", PROPERTY_USAGE_NO_EDITOR));
+		}
+		p_list->push_back(PropertyInfo(Variant::VECTOR2, "nodes/" + prop_name + "/position", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR));
+	}
+
+	p_list->push_back(PropertyInfo(Variant::ARRAY, "node_connections", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR));
+}
+
+bool SyncedBlendTree::_get(const StringName &p_name, Variant &r_value) const {
+	String prop_name = p_name;
+	if (prop_name.begins_with("nodes/")) {
+		String node_name = prop_name.get_slicec('/', 1);
+		String what = prop_name.get_slicec('/', 2);
+		int node_index = find_node_index_by_name(node_name);
+
+		if (what == "node") {
+			if (node_index != -1) {
+				r_value = nodes[node_index];
+				return true;
+			}
+		}
+
+		if (what == "position") {
+			if (node_index != -1) {
+				r_value = nodes[node_index]->position;
+				return true;
+			}
+		}
+	} else if (prop_name == "node_connections") {
+		Array conns;
+		conns.resize(tree_builder.connections.size() * 3);
+
+		int idx = 0;
+		for (const BlendTreeConnection &connection : tree_builder.connections) {
+			conns[idx * 3 + 0] = connection.target_node->name;
+			conns[idx * 3 + 1] = connection.target_node->get_node_input_index(connection.target_port_name);
+			conns[idx * 3 + 2] = connection.source_node->name;
+			idx++;
+		}
+
+		r_value = conns;
+		return true;
+	}
+
+	return false;
+}
+
+bool SyncedBlendTree::_set(const StringName &p_name, const Variant &p_value) {
+	String prop_name = p_name;
+	if (prop_name.begins_with("nodes/")) {
+		String node_name = prop_name.get_slicec('/', 1);
+		String what = prop_name.get_slicec('/', 2);
+
+		if (what == "node") {
+			Ref<SyncedAnimationNode> anode = p_value;
+			if (anode.is_valid()) {
+				anode->name = node_name;
+				add_node(anode);
+			}
+			return true;
+		}
+
+		if (what == "position") {
+			int node_index = find_node_index_by_name(node_name);
+			if (node_index > -1) {
+				tree_builder.nodes[node_index]->position = p_value;
+			}
+			return true;
+		}
+	} else if (prop_name == "node_connections") {
+		Array conns = p_value;
+		ERR_FAIL_COND_V(conns.size() % 3 != 0, false);
+
+		for (int i = 0; i < conns.size(); i += 3) {
+			int target_node_index = find_node_index_by_name(conns[i]);
+			int target_node_port_index = conns[i + 1];
+			int source_node_index = find_node_index_by_name(conns[i + 2]);
+
+			Ref<SyncedAnimationNode> target_node = tree_builder.nodes[target_node_index];
+			Vector<StringName> target_input_names;
+			target_node->get_input_names(target_input_names);
+
+			add_connection(tree_builder.nodes[source_node_index], target_node, target_input_names[target_node_port_index]);
+		}
+		return true;
+	}
+
+	return false;
+}
+
 void AnimationData::sample_from_animation(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d, double p_time) {
 	const Vector<Animation::Track *> tracks = animation->get_tracks();
 	Animation::Track *const *tracks_ptr = tracks.ptr();
@@ -78,7 +172,59 @@ void AnimationSamplerNode::evaluate(GraphEvaluationContext &context, const Local
 	output.sample_from_animation(animation, context.skeleton_3d, node_time_info.position);
 }
 
+void AnimationSamplerNode::set_animation(const StringName &p_name) {
+	animation_name = p_name;
+}
+
+StringName AnimationSamplerNode::get_animation() const {
+	return animation_name;
+}
+
+void AnimationSamplerNode::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_animation", "name"), &AnimationSamplerNode::set_animation);
+	ClassDB::bind_method(D_METHOD("get_animation"), &AnimationSamplerNode::get_animation);
+
+	ADD_PROPERTY(PropertyInfo(Variant::STRING_NAME, "animation"), "set_animation", "get_animation");
+}
+
 void AnimationBlend2Node::evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) {
 	output = *inputs[0];
 	output.blend(*inputs[1], blend_weight);
+}
+
+void AnimationBlend2Node::set_use_sync(bool p_sync) {
+	sync = p_sync;
+}
+
+bool AnimationBlend2Node::is_using_sync() const {
+	return sync;
+}
+
+void AnimationBlend2Node::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_use_sync", "enable"), &AnimationBlend2Node::set_use_sync);
+	ClassDB::bind_method(D_METHOD("is_using_sync"), &AnimationBlend2Node::is_using_sync);
+
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "sync"), "set_use_sync", "is_using_sync");
+}
+
+void AnimationBlend2Node::_get_property_list(List<PropertyInfo> *p_list) const {
+	p_list->push_back(PropertyInfo(Variant::FLOAT, blend_amount, PROPERTY_HINT_RANGE, "0,1,0.01,or_less,or_greater"));
+}
+
+bool AnimationBlend2Node::_get(const StringName &p_name, Variant &r_value) const {
+	if (p_name == blend_amount) {
+		r_value = blend_weight;
+		return true;
+	}
+
+	return false;
+}
+
+bool AnimationBlend2Node::_set(const StringName &p_name, const Variant &p_value) {
+	if (p_name == blend_amount) {
+		blend_weight = p_value;
+		return true;
+	}
+
+	return false;
 }

@@ -8,6 +8,10 @@ void initialize_synced_blend_tree_module(ModuleInitializationLevel p_level) {
 		return;
 	}
 	ClassDB::register_class<SyncedAnimationGraph>();
+	ClassDB::register_class<SyncedAnimationNode>();
+	ClassDB::register_class<SyncedBlendTree>();
+	ClassDB::register_class<AnimationSamplerNode>();
+	ClassDB::register_class<AnimationBlend2Node>();
 }
 
 void uninitialize_synced_blend_tree_module(ModuleInitializationLevel p_level) {
