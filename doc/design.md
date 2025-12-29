@@ -83,8 +83,10 @@ invalid.
 flowchart LR
     AnimationB --> TimeScale("TimeScale
     ----
-*scale*")
-AnimationA --> Blend2
+[ ] scale")
+AnimationA --> Blend2("Blend2
+----
+[ ] blend_amount")
 TimeScale --> Blend2
 Blend2 --> Output
 ```
@@ -94,11 +96,12 @@ evaluation of the Blend Tree it can be used to retrieve the result (i.e. Animati
 
 Some nodes have special names in the Blend Tree:
 
-* **Root node** The output node is also called the root node of the graph.
+* **Root node** The output node is also called the root node of the Blend Tree.
 * **Leaf nodes** These are the nodes that have no inputs. In the example these are the nodes AnimationA and AnimationB.
 * **Parent and child node** For two nodes A and B where B is the node that is connected to the Animation Data output
   port of A
-  is called the parent node. The output port has no parent and in the example above The Blend2 node is the parent of
+  is called the parent node. The Output node (= Root node) has no parent. In the example above the Blend2 node is the
+  parent of
   both AnimationA and TimeScale. Conversely, AnimationA and TimeScale are child nodes of the Blend2 node.
 
 ## Blend Tree Evaluation Process
@@ -125,133 +128,10 @@ Disadvantages:
 Evaluation of the Blend Tree happens in multiple phases to ensure we have syncing dependent timing information available
 before performing the actual evaluation. Essentially the Blend Tree has to call the following function on all nodes:
 
-1. ActivateInputs(): right to left (i.e. from the root node via depth first to the leaf nodes)
-2. CalculateSyncTracks(): left to right (leaf nodes to root node)
+1. `ActivateInputs(Vector<Node> inputs)`: right to left (i.e. from the root node via depth first to the leaf nodes)
+2. `CalculateSyncTracks(Vector<Node> inputs)`: left to right (leaf nodes to root node)
 3. UpdateTime(): right to left
 4. Evaluate(): left to right
-
-```c++
-// BlendTree.h
-class BlendTree: public SyncedAnimationNode {
-private:
-    Vector<SyncedAnimationNode*> nodes;
-    Vector<int> node_parent;  // node_parent[i] is the index of the parent of node i.
-    Vector<AnimationData*> node_output; // output for each node
-    Vector<Vector<SyncedAnimationNode*>> node_input_nodes;
-    Vector<Vector<AnimationData*>> node_input_data; // list of inputs for all nodes. 
-
-    int get_index_for_node(const SyncedAnimationNode& node);
-};
-
-// BlendTree.cpp
-void BlendTree::initialize_tree() {
-    for (int i = 0; ci < num_connections; i++) {
-        const Connection& connection = connections[i];
-        connection.target_node->set_input_node(connection.target_port_name, connection.source_node);
-    }
-}
-
-void BlendTree::activate_inputs() {
-    nodes[0]->activate_inputs();
-    
-    for (int i = 1; i < nodes.size(); i++) {
-        if (nodes[i]->is_active()) {
-            nodes[i]->activate_inputs(node_input_nodes[i]);
-        }
-    }
-}
-
-void BlendTree::calculate_sync_tracks() {
-    for (int i = nodes.size() - 1; i > 0; i--) {
-        if (nodes[i]->is_active()) {
-            nodes[i]->calculate_sync_track();
-        }
-    }
-}
-
-void BlendTree::update_time() {
-   for (int i = 1; i < nodes.size(); i++) {
-        if (nodes[i]->is_active()) {
-            if (nodes[i]->is_synced()) {
-                nodes[i]->update_time(node_parents[i]->node_time_info);
-            } else {
-                nodes[i]->update_time(node_parents[i]->node_time_info);
-            }
-        }
-   }
-}
-
-void BlendTree::evaluate(GraphEvaluationContext &context, const Vector<AnimationData*>& inputs, AnimationData &output) {
-    for (int i = nodes.size() - 1; i > 0; i--) {
-        if (nodes[i]->is_active()) {
-            node_output[i] = AnimationDataPool::allocate();
-            nodes[i]->evaluate(context, node_inputs[i], node_output[i]);
-            
-            // node[i] is done, so we can deallocate the output handles of all input nodes of node[i].
-            for (AnimationGraphnNode& input_node: input_nodes[i]) {
-                AnimationDataPool::deallocate(node_output[input_node.index]);
-            }
-            
-            nodes[i]->set_active(false);
-        }
-    }
-    
-    std::move(output, nodes[0].output);
-}
-
-// Blend2Node.cpp
-void Blend2Node::activate_inputs() {
-    input_node_0->set_active(weight < 1.0 - EPS);
-    input_node_1->set_active(weight > EPS);
-}
-
-void Blend2Node::calculate_sync_track() {
-    if (input_node_0->is_active()) {
-        sync_track = input_node_0->sync_track;
-    }
-    
-    if (input_node_1->is_active()) {
-        sync_track.blend(input_node_1->sync_track, blend_weight);
-    }
-}
-
-void Blend2Node::update_time(SyncedAnimationNode::NodeTimeInfo time_info) {
-    if (!sync_enabled) {
-        node_time_info.position = node_time_info.position + time_info.delta;
-    } else {
-        // TODO
-    }
-}
-
-void Blend2Node::evaluate(GraphEvaluationContext &context, const Vector<AnimationData*>& inputs, AnimationData &output) {
-    assert(inputs.size() == 2);
-    output = lerp(inputs[0]->get_output(), inputs[1], blend_weight);
-}
-
-// TimeScaleNode.cpp
-void TimeScaleNode::activate_inputs() {
-    input_node_0->set_active(true);
-}
-
-void TimeScaleNode::calculate_sync_track() {
-    sync_track = input_node_0.sync_track;
-    sync_track.duration *= time_scale;
-}
-
-void TimeScaleNode::update_time(SyncedAnimationNode::NodeTimeInfo time_info) {
-    if (!sync_enabled) {
-        node_time_info.position = node_time_info.position + time_info.delta;
-    } else {
-        // TODO
-    }
-}
-
-void TimeScaleNode::evaluate(GraphEvaluationContext &context, const Vector<AnimationData*>& inputs, AnimationData &output) {
-    assert(inputs.size() == 1);
-    output = inputs[0]->duplicate();
-}
-
-```
 
 ## State Machines
 
@@ -309,7 +189,7 @@ We use the term "value data" to distinguish from Animation Data.
 ### Description
 
 Current AnimationTree nodes have a single designated output port. A node cannot extract a value that then gets used as
-input at a laters tage in the graph.
+input at a later stage in the graph.
 
 **Depends on**: "Generalized data connections".
 
@@ -320,7 +200,7 @@ input at a laters tage in the graph.
 
 ### Effects on graph topology
 
-* Increases Node complexity:
+* Increases Node complexity for handling output ports. Nodes may have the following output ports:
     * AnimOutput
     * AnimOutput + Data
     * Data
