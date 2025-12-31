@@ -4,6 +4,7 @@
 
 #include "core/io/resource.h"
 #include "scene/3d/skeleton_3d.h"
+#include "sync_track.h"
 
 #include <cassert>
 
@@ -190,9 +191,6 @@ protected:
 			memdelete(K.value);
 		}
 	}
-};
-
-struct SyncTrack {
 };
 
 struct GraphEvaluationContext {
