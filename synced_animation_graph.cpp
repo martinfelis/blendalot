@@ -20,10 +20,134 @@ void SyncedAnimationGraph::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "animation_player", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "AnimationPlayer"), "set_animation_player", "get_animation_player");
 	ADD_SIGNAL(MethodInfo(SNAME("animation_player_changed")));
 
+	ClassDB::bind_method(D_METHOD("set_tree_root", "animation_node"), &SyncedAnimationGraph::set_root_animation_node);
+	ClassDB::bind_method(D_METHOD("get_tree_root"), &SyncedAnimationGraph::get_root_animation_node);
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "tree_root", PROPERTY_HINT_RESOURCE_TYPE, "SyncedAnimationNode"), "set_tree_root", "get_tree_root");
+
 	ClassDB::bind_method(D_METHOD("set_skeleton", "skeleton"), &SyncedAnimationGraph::set_skeleton);
 	ClassDB::bind_method(D_METHOD("get_skeleton"), &SyncedAnimationGraph::get_skeleton);
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "skeleton", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Skeleton3D"), "set_skeleton", "get_skeleton");
 	ADD_SIGNAL(MethodInfo(SNAME("skeleton_changed")));
+}
+
+void SyncedAnimationGraph::_update_properties_for_node(const String &p_base_path, Ref<SyncedAnimationNode> p_node) const {
+	ERR_FAIL_COND(p_node.is_null());
+
+	List<PropertyInfo> plist;
+	p_node->get_parameter_list(&plist);
+	for (PropertyInfo &pinfo : plist) {
+		StringName key = pinfo.name;
+
+		if (!property_map.has(p_base_path + key)) {
+			Pair<Variant, bool> param;
+			param.first = p_node->get_parameter_default_value(key);
+			param.second = p_node->is_parameter_read_only(key);
+			property_map[p_base_path + key] = param;
+		}
+
+		property_node_map[p_base_path + key] = Pair<Ref<SyncedAnimationNode>, StringName>(p_node, key);
+
+		pinfo.name = p_base_path + key;
+		properties.push_back(pinfo);
+	}
+
+	List<Ref<SyncedAnimationNode>> children;
+	p_node->get_child_nodes(&children);
+
+	for (const Ref<SyncedAnimationNode> &child_node : children) {
+		_update_properties_for_node(p_base_path + child_node->name + "/", child_node);
+	}
+}
+
+void SyncedAnimationGraph::_update_properties() const {
+	if (!properties_dirty) {
+		return;
+	}
+
+	properties.clear();
+	property_map.clear();
+	property_node_map.clear();
+
+	if (root_animation_node.is_valid()) {
+		_update_properties_for_node(Animation::PARAMETERS_BASE_PATH, root_animation_node);
+	}
+
+	properties_dirty = false;
+
+	const_cast<SyncedAnimationGraph *>(this)->notify_property_list_changed();
+}
+
+bool SyncedAnimationGraph::_set(const StringName &p_name, const Variant &p_value) {
+#ifndef DISABLE_DEPRECATED
+	String name = p_name;
+	if (name == "process_callback") {
+		set_callback_mode_process(static_cast<AnimationMixer::AnimationCallbackModeProcess>((int)p_value));
+		return true;
+	}
+#endif // DISABLE_DEPRECATED
+	if (properties_dirty) {
+		_update_properties();
+	}
+
+	if (property_map.has(p_name)) {
+		if (is_inside_tree() && property_map[p_name].second) {
+			return false; // Prevent to set property by user.
+		}
+		Pair<Variant, bool> &prop = property_map[p_name];
+		Variant value = p_value;
+		if (Animation::validate_type_match(prop.first, value)) {
+			Pair<Ref<SyncedAnimationNode>, StringName> property_node = property_node_map[p_name];
+			if (!property_node.first.is_valid()) {
+				print_error(vformat("Cannot set property '%s' node not found.", p_name));
+				return false;
+			}
+			property_node.first->set_parameter(property_node.second, value);
+
+			// also set value in the graph's copy of the value. Should probably be removed at some point...
+			prop.first = value;
+		}
+		return true;
+	}
+
+	return false;
+}
+
+bool SyncedAnimationGraph::_get(const StringName &p_name, Variant &r_ret) const {
+#ifndef DISABLE_DEPRECATED
+	if (p_name == "process_callback") {
+		r_ret = get_callback_mode_process();
+		return true;
+	}
+#endif // DISABLE_DEPRECATED
+	if (properties_dirty) {
+		_update_properties();
+	}
+
+	if (property_map.has(p_name)) {
+		r_ret = property_map[p_name].first;
+		return true;
+	}
+
+	return false;
+}
+
+void SyncedAnimationGraph::_get_property_list(List<PropertyInfo> *p_list) const {
+	if (properties_dirty) {
+		_update_properties();
+	}
+
+	for (const PropertyInfo &E : properties) {
+		p_list->push_back(E);
+	}
+}
+
+void SyncedAnimationGraph::_tree_changed() {
+	if (properties_dirty) {
+		return;
+	}
+
+	callable_mp(this, &SyncedAnimationGraph::_update_properties).call_deferred();
+	properties_dirty = true;
 }
 
 void SyncedAnimationGraph::_notification(int p_what) {
@@ -132,6 +256,27 @@ NodePath SyncedAnimationGraph::get_animation_player() const {
 	return animation_player_path;
 }
 
+void SyncedAnimationGraph::set_root_animation_node(const Ref<SyncedAnimationNode> &p_animation_node) {
+	if (root_animation_node.is_valid()) {
+		root_animation_node->disconnect(SNAME("tree_changed"), callable_mp(this, &SyncedAnimationGraph::_tree_changed));
+	}
+
+	root_animation_node = p_animation_node;
+
+	if (root_animation_node.is_valid()) {
+		_setup_graph();
+		root_animation_node->connect(SNAME("tree_changed"), callable_mp(this, &SyncedAnimationGraph::_tree_changed));
+	}
+
+	properties_dirty = true;
+
+	update_configuration_warnings();
+}
+
+Ref<SyncedAnimationNode> SyncedAnimationGraph::get_root_animation_node() const {
+	return root_animation_node;
+}
+
 void SyncedAnimationGraph::set_skeleton(const NodePath &p_path) {
 	skeleton_path = p_path;
 	if (p_path.is_empty()) {
@@ -152,26 +297,17 @@ NodePath SyncedAnimationGraph::get_skeleton() const {
 	return skeleton_path;
 }
 
-void SyncedAnimationGraph::set_graph_root_node(const Ref<SyncedAnimationNode> &p_animation_node) {
-	if (graph_root_node != p_animation_node) {
-		graph_root_node = p_animation_node;
-		_setup_graph();
-	}
-}
-
-Ref<SyncedAnimationNode> SyncedAnimationGraph::get_graph_root_node() const {
-	return graph_root_node;
-}
-
 void SyncedAnimationGraph::_process_graph(double p_delta, bool p_update_only) {
-	if (!graph_root_node.is_valid()) {
+	if (!root_animation_node.is_valid()) {
 		return;
 	}
 
-	graph_root_node->activate_inputs(Vector<Ref<SyncedAnimationNode>>());
-	graph_root_node->calculate_sync_track(Vector<Ref<SyncedAnimationNode>>());
-	graph_root_node->update_time(p_delta);
-	graph_root_node->evaluate(graph_context, LocalVector<AnimationData *>(), graph_output);
+	_update_properties();
+
+	root_animation_node->activate_inputs(Vector<Ref<SyncedAnimationNode>>());
+	root_animation_node->calculate_sync_track(Vector<Ref<SyncedAnimationNode>>());
+	root_animation_node->update_time(p_delta);
+	root_animation_node->evaluate(graph_context, LocalVector<AnimationData *>(), graph_output);
 
 	_apply_animation_data(graph_output);
 }
@@ -242,11 +378,11 @@ void SyncedAnimationGraph::_cleanup_evaluation_context() {
 }
 
 void SyncedAnimationGraph::_setup_graph() {
-	if (graph_context.animation_player == nullptr || graph_context.skeleton_3d == nullptr || !graph_root_node.is_valid()) {
+	if (graph_context.animation_player == nullptr || graph_context.skeleton_3d == nullptr || !root_animation_node.is_valid()) {
 		return;
 	}
 
-	graph_root_node->initialize(graph_context);
+	root_animation_node->initialize(graph_context);
 }
 
 SyncedAnimationGraph::SyncedAnimationGraph() {

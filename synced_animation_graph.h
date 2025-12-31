@@ -12,15 +12,30 @@ class SyncedAnimationGraph : public Node {
 
 private:
 	NodePath animation_player_path;
+	Ref<SyncedAnimationNode> root_animation_node;
 	NodePath skeleton_path;
 
 	GraphEvaluationContext graph_context = {};
-	Ref<SyncedAnimationNode> graph_root_node = nullptr;
 	AnimationData graph_output;
+
+	mutable List<PropertyInfo> properties;
+	mutable AHashMap<StringName, Pair<Variant, bool>> property_map; // Property value and read-only flag.
+	mutable AHashMap<StringName, Pair<Ref<SyncedAnimationNode>, StringName>> property_node_map;
+
+	mutable bool properties_dirty = true;
+
+	void _update_properties() const;
+	void _update_properties_for_node(const String &p_base_path, Ref<SyncedAnimationNode> p_node) const;
+
+	void _tree_changed();
 
 protected:
 	void _notification(int p_what);
 	static void _bind_methods();
+
+	bool _set(const StringName &p_name, const Variant &p_value);
+	bool _get(const StringName &p_name, Variant &r_ret) const;
+	void _get_property_list(List<PropertyInfo> *p_list) const;
 
 	/* ---- General settings for animation ---- */
 	AnimationMixer::AnimationCallbackModeProcess callback_mode_process = AnimationMixer::ANIMATION_CALLBACK_MODE_PROCESS_IDLE;
@@ -40,11 +55,11 @@ public:
 	void set_animation_player(const NodePath &p_path);
 	NodePath get_animation_player() const;
 
+	void set_root_animation_node(const Ref<SyncedAnimationNode> &p_animation_node);
+	Ref<SyncedAnimationNode> get_root_animation_node() const;
+
 	void set_skeleton(const NodePath &p_path);
 	NodePath get_skeleton() const;
-
-	void set_graph_root_node(const Ref<SyncedAnimationNode> &p_animation_node);
-	Ref<SyncedAnimationNode> get_graph_root_node() const;
 
 	void set_callback_mode_process(AnimationMixer::AnimationCallbackModeProcess p_mode);
 	AnimationMixer::AnimationCallbackModeProcess get_callback_mode_process() const;

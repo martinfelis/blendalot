@@ -209,6 +209,20 @@ class SyncedAnimationNode : public Resource {
 
 	friend class SyncedAnimationGraph;
 
+protected:
+	static void _bind_methods();
+
+	virtual void get_parameter_list(List<PropertyInfo> *r_list) const;
+	virtual Variant get_parameter_default_value(const StringName &p_parameter) const;
+	virtual bool is_parameter_read_only(const StringName &p_parameter) const;
+
+	virtual void set_parameter(const StringName &p_name, const Variant &p_value);
+	virtual Variant get_parameter(const StringName &p_name) const;
+
+	virtual void _tree_changed();
+	virtual void _animation_node_renamed(const ObjectID &p_oid, const String &p_old_name, const String &p_new_name);
+	virtual void _animation_node_removed(const ObjectID &p_oid, const StringName &p_node);
+
 public:
 	struct NodeTimeInfo {
 		double length = 0.0;
@@ -228,7 +242,7 @@ public:
 	Vector2 position;
 
 	virtual ~SyncedAnimationNode() override = default;
-	virtual void initialize(GraphEvaluationContext &context) {}
+	virtual bool initialize(GraphEvaluationContext &context) { return true; }
 
 	virtual void activate_inputs(Vector<Ref<SyncedAnimationNode>> input_nodes) {
 		// By default, all inputs nodes are activated.
@@ -275,16 +289,19 @@ public:
 	bool set_input_node(const StringName &socket_name, SyncedAnimationNode *node);
 	virtual void get_input_names(Vector<StringName> &inputs) const {}
 
-	int get_node_input_index(const StringName &port_name) const {
+	int get_input_index(const StringName &port_name) const {
 		Vector<StringName> inputs;
 		get_input_names(inputs);
 		return inputs.find(port_name);
 	}
-	int get_node_input_count() const {
+	int get_input_count() const {
 		Vector<StringName> inputs;
 		get_input_names(inputs);
 		return inputs.size();
 	}
+
+	// Creates a list of nodes nested within the current node. E.g. all nodes within a BlendTree node.
+	virtual void get_child_nodes(List<Ref<SyncedAnimationNode>> *r_child_nodes) const {}
 };
 
 class AnimationSamplerNode : public SyncedAnimationNode {
@@ -299,7 +316,7 @@ public:
 private:
 	Ref<Animation> animation;
 
-	void initialize(GraphEvaluationContext &context) override;
+	bool initialize(GraphEvaluationContext &context) override;
 	void evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) override;
 
 protected:
@@ -336,6 +353,11 @@ public:
 protected:
 	static void _bind_methods();
 
+	void get_parameter_list(List<PropertyInfo> *p_list) const override;
+	Variant get_parameter_default_value(const StringName &p_parameter) const override;
+	void set_parameter(const StringName &p_name, const Variant &p_value) override;
+	Variant get_parameter(const StringName &p_name) const override;
+
 	void _get_property_list(List<PropertyInfo> *p_list) const;
 	bool _get(const StringName &p_name, Variant &r_value) const;
 	bool _set(const StringName &p_name, const Variant &p_value);
@@ -361,7 +383,7 @@ struct BlendTreeGraph {
 
 		explicit NodeConnectionInfo(const SyncedAnimationNode *node) {
 			parent_node_index = -1;
-			for (int i = 0; i < node->get_node_input_count(); i++) {
+			for (int i = 0; i < node->get_input_count(); i++) {
 				connected_child_node_index_at_port.push_back(-1);
 			}
 		}
@@ -507,7 +529,7 @@ struct BlendTreeGraph {
 
 		int source_node_index = find_node_index(source_node);
 		int target_node_index = find_node_index(target_node);
-		int target_input_port_index = target_node->get_node_input_index(target_port_name);
+		int target_input_port_index = target_node->get_input_index(target_port_name);
 
 		node_connection_info[source_node_index].parent_node_index = target_node_index;
 		node_connection_info[target_node_index].connected_child_node_index_at_port[target_input_port_index] = source_node_index;
@@ -544,7 +566,7 @@ struct BlendTreeGraph {
 			return false;
 		}
 
-		int target_input_port_index = target_node->get_node_input_index(target_port_name);
+		int target_input_port_index = target_node->get_input_index(target_port_name);
 		if (node_connection_info[target_node_index].connected_child_node_index_at_port[target_input_port_index] != -1) {
 			print_error("Cannot connect node: target port already connected");
 			return false;
@@ -576,7 +598,7 @@ class SyncedBlendTree : public SyncedAnimationNode {
 			const Ref<SyncedAnimationNode> node = tree_graph.nodes[i];
 
 			NodeRuntimeData node_runtime_data;
-			for (int ni = 0; ni < node->get_node_input_count(); ni++) {
+			for (int ni = 0; ni < node->get_input_count(); ni++) {
 				node_runtime_data.input_data.push_back(nullptr);
 			}
 
@@ -589,7 +611,7 @@ class SyncedBlendTree : public SyncedAnimationNode {
 			Ref<SyncedAnimationNode> node = tree_graph.nodes[i];
 			NodeRuntimeData &node_runtime_data = _node_runtime_data[i];
 
-			for (int port_index = 0; port_index < node->get_node_input_count(); port_index++) {
+			for (int port_index = 0; port_index < node->get_input_count(); port_index++) {
 				const int connected_node_index = tree_graph.node_connection_info[i].connected_child_node_index_at_port[port_index];
 				node_runtime_data.input_nodes.push_back(tree_graph.nodes[connected_node_index]);
 			}
@@ -640,15 +662,19 @@ public:
 	}
 
 	// overrides from SyncedAnimationNode
-	void initialize(GraphEvaluationContext &context) override {
+	bool initialize(GraphEvaluationContext &context) override {
 		sort_nodes();
 		setup_runtime_data();
 
 		for (const Ref<SyncedAnimationNode> &node : tree_graph.nodes) {
-			node->initialize(context);
+			if (!node->initialize(context)) {
+				return false;
+			}
 		}
 
 		tree_initialized = true;
+
+		return true;
 	}
 
 	void activate_inputs(Vector<Ref<SyncedAnimationNode>> input_nodes) override {
@@ -729,6 +755,12 @@ public:
 			for (const int child_index : tree_graph.node_connection_info[i].connected_child_node_index_at_port) {
 				memfree(_node_runtime_data[child_index].output_data);
 			}
+		}
+	}
+
+	void get_child_nodes(List<Ref<SyncedAnimationNode>> *r_child_nodes) const override {
+		for (const Ref<SyncedAnimationNode> &node : tree_graph.nodes) {
+			r_child_nodes->push_back(node.ptr());
 		}
 	}
 };

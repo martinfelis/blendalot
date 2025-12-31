@@ -4,6 +4,42 @@
 
 #include "synced_animation_node.h"
 
+void SyncedAnimationNode::_bind_methods() {
+	ADD_SIGNAL(MethodInfo("tree_changed"));
+	ADD_SIGNAL(MethodInfo("animation_node_renamed", PropertyInfo(Variant::INT, "object_id"), PropertyInfo(Variant::STRING, "old_name"), PropertyInfo(Variant::STRING, "new_name")));
+	ADD_SIGNAL(MethodInfo("animation_node_removed", PropertyInfo(Variant::INT, "object_id"), PropertyInfo(Variant::STRING, "name")));
+}
+
+void SyncedAnimationNode::get_parameter_list(List<PropertyInfo> *r_list) const {
+}
+
+Variant SyncedAnimationNode::get_parameter_default_value(const StringName &p_parameter) const {
+	return Variant();
+}
+
+bool SyncedAnimationNode::is_parameter_read_only(const StringName &p_parameter) const {
+	return false;
+}
+
+void SyncedAnimationNode::set_parameter(const StringName &p_name, const Variant &p_value) {
+}
+
+Variant SyncedAnimationNode::get_parameter(const StringName &p_name) const {
+	return Variant();
+}
+
+void SyncedAnimationNode::_tree_changed() {
+	emit_signal(SNAME("tree_changed"));
+}
+
+void SyncedAnimationNode::_animation_node_renamed(const ObjectID &p_oid, const String &p_old_name, const String &p_new_name) {
+	emit_signal(SNAME("animation_node_renamed"), p_oid, p_old_name, p_new_name);
+}
+
+void SyncedAnimationNode::_animation_node_removed(const ObjectID &p_oid, const StringName &p_node) {
+	emit_signal(SNAME("animation_node_removed"), p_oid, p_node);
+}
+
 void SyncedBlendTree::_get_property_list(List<PropertyInfo> *p_list) const {
 	for (const Ref<SyncedAnimationNode> &node : tree_graph.nodes) {
 		String prop_name = node->name;
@@ -43,7 +79,7 @@ bool SyncedBlendTree::_get(const StringName &p_name, Variant &r_value) const {
 		int idx = 0;
 		for (const BlendTreeConnection &connection : tree_graph.connections) {
 			conns[idx * 3 + 0] = connection.target_node->name;
-			conns[idx * 3 + 1] = connection.target_node->get_node_input_index(connection.target_port_name);
+			conns[idx * 3 + 1] = connection.target_node->get_input_index(connection.target_port_name);
 			conns[idx * 3 + 2] = connection.source_node->name;
 			idx++;
 		}
@@ -159,10 +195,17 @@ void AnimationData::sample_from_animation(const Ref<Animation> &animation, const
 	}
 }
 
-void AnimationSamplerNode::initialize(GraphEvaluationContext &context) {
+bool AnimationSamplerNode::initialize(GraphEvaluationContext &context) {
 	animation = context.animation_player->get_animation(animation_name);
+	if (!animation.is_valid()) {
+		print_error(vformat("Cannot initialize node %s: animation '%s' not found in animation player.", name, animation_name));
+		return false;
+	}
+
 	node_time_info.length = animation->get_length();
 	node_time_info.loop_mode = Animation::LOOP_LINEAR;
+
+	return true;
 }
 
 void AnimationSamplerNode::evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) {
@@ -205,6 +248,28 @@ void AnimationBlend2Node::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_using_sync"), &AnimationBlend2Node::is_using_sync);
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "sync"), "set_use_sync", "is_using_sync");
+}
+
+void AnimationBlend2Node::get_parameter_list(List<PropertyInfo> *p_list) const {
+	p_list->push_back(PropertyInfo(Variant::FLOAT, blend_amount, PROPERTY_HINT_RANGE, "0,1,0.01,or_less,or_greater"));
+}
+
+void AnimationBlend2Node::set_parameter(const StringName &p_name, const Variant &p_value) {
+	_set(p_name, p_value);
+}
+
+Variant AnimationBlend2Node::get_parameter(const StringName &p_name) const {
+	Variant result;
+	_get(p_name, result);
+	return result;
+}
+
+Variant AnimationBlend2Node::get_parameter_default_value(const StringName &p_parameter) const {
+	if (p_parameter == blend_amount) {
+		return blend_weight;
+	}
+
+	return Variant();
 }
 
 void AnimationBlend2Node::_get_property_list(List<PropertyInfo> *p_list) const {

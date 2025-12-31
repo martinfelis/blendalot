@@ -182,7 +182,7 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 	animation_sampler_node.instantiate();
 	animation_sampler_node->animation_name = "animation_library/TestAnimationA";
 
-	synced_animation_graph->set_graph_root_node(animation_sampler_node);
+	synced_animation_graph->set_root_animation_node(animation_sampler_node);
 
 	Vector3 hip_bone_position = skeleton_node->get_bone_global_pose(hip_bone_index).origin;
 
@@ -212,7 +212,7 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 
 	synced_blend_tree_node->initialize(synced_animation_graph->get_context());
 
-	synced_animation_graph->set_graph_root_node(synced_blend_tree_node);
+	synced_animation_graph->set_root_animation_node(synced_blend_tree_node);
 
 	Vector3 hip_bone_position = skeleton_node->get_bone_global_pose(hip_bone_index).origin;
 
@@ -269,7 +269,7 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 	CHECK(blend2_runtime_data.input_nodes[0] == animation_sampler_node_a);
 	CHECK(blend2_runtime_data.input_nodes[1] == animation_sampler_node_b);
 
-	synced_animation_graph->set_graph_root_node(synced_blend_tree_node);
+	synced_animation_graph->set_root_animation_node(synced_blend_tree_node);
 
 	Vector3 hip_bone_position = skeleton_node->get_bone_global_pose(hip_bone_index).origin;
 
@@ -295,7 +295,7 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 	REQUIRE(loaded_synced_blend_tree.is_valid());
 
 	loaded_synced_blend_tree->initialize(synced_animation_graph->get_context());
-	synced_animation_graph->set_graph_root_node(loaded_synced_blend_tree);
+	synced_animation_graph->set_root_animation_node(loaded_synced_blend_tree);
 
 	// Re-evaluate using a different time. All animation samplers will start again from 0.
 	SceneTree::get_singleton()->process(0.2);
