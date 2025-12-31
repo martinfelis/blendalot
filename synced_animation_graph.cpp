@@ -38,14 +38,9 @@ void SyncedAnimationGraph::_update_properties_for_node(const String &p_base_path
 	for (PropertyInfo &pinfo : plist) {
 		StringName key = pinfo.name;
 
-		if (!property_map.has(p_base_path + key)) {
-			Pair<Variant, bool> param;
-			param.first = p_node->get_parameter_default_value(key);
-			param.second = p_node->is_parameter_read_only(key);
-			property_map[p_base_path + key] = param;
+		if (!parameter_to_node_parameter_map.has(p_base_path + key)) {
+			parameter_to_node_parameter_map[p_base_path + key] = Pair<Ref<SyncedAnimationNode>, StringName>(p_node, key);
 		}
-
-		property_node_map[p_base_path + key] = Pair<Ref<SyncedAnimationNode>, StringName>(p_node, key);
 
 		pinfo.name = p_base_path + key;
 		properties.push_back(pinfo);
@@ -65,8 +60,7 @@ void SyncedAnimationGraph::_update_properties() const {
 	}
 
 	properties.clear();
-	property_map.clear();
-	property_node_map.clear();
+	parameter_to_node_parameter_map.clear();
 
 	if (root_animation_node.is_valid()) {
 		_update_properties_for_node(Animation::PARAMETERS_BASE_PATH, root_animation_node);
@@ -89,23 +83,14 @@ bool SyncedAnimationGraph::_set(const StringName &p_name, const Variant &p_value
 		_update_properties();
 	}
 
-	if (property_map.has(p_name)) {
-		if (is_inside_tree() && property_map[p_name].second) {
-			return false; // Prevent to set property by user.
+	if (parameter_to_node_parameter_map.has(p_name)) {
+		const Pair<Ref<SyncedAnimationNode>, StringName> &property_node = parameter_to_node_parameter_map[p_name];
+		if (!property_node.first.is_valid()) {
+			print_error(vformat("Cannot set property '%s' node not found.", p_name));
+			return false;
 		}
-		Pair<Variant, bool> &prop = property_map[p_name];
-		Variant value = p_value;
-		if (Animation::validate_type_match(prop.first, value)) {
-			Pair<Ref<SyncedAnimationNode>, StringName> property_node = property_node_map[p_name];
-			if (!property_node.first.is_valid()) {
-				print_error(vformat("Cannot set property '%s' node not found.", p_name));
-				return false;
-			}
-			property_node.first->set_parameter(property_node.second, value);
 
-			// also set value in the graph's copy of the value. Should probably be removed at some point...
-			prop.first = value;
-		}
+		property_node.first->set_parameter(property_node.second, p_value);
 		return true;
 	}
 
@@ -123,8 +108,13 @@ bool SyncedAnimationGraph::_get(const StringName &p_name, Variant &r_ret) const 
 		_update_properties();
 	}
 
-	if (property_map.has(p_name)) {
-		r_ret = property_map[p_name].first;
+	if (parameter_to_node_parameter_map.has(p_name)) {
+		const Pair<Ref<SyncedAnimationNode>, StringName> &property_node = parameter_to_node_parameter_map[p_name];
+		if (!property_node.first.is_valid()) {
+			print_error(vformat("Cannot get property '%s' node not found.", p_name));
+			return false;
+		}
+		r_ret = property_node.first->get_parameter(property_node.second);
 		return true;
 	}
 

@@ -19,8 +19,7 @@ private:
 	AnimationData graph_output;
 
 	mutable List<PropertyInfo> properties;
-	mutable AHashMap<StringName, Pair<Variant, bool>> property_map; // Property value and read-only flag.
-	mutable AHashMap<StringName, Pair<Ref<SyncedAnimationNode>, StringName>> property_node_map;
+	mutable AHashMap<StringName, Pair<Ref<SyncedAnimationNode>, StringName>> parameter_to_node_parameter_map;
 
 	mutable bool properties_dirty = true;
 
