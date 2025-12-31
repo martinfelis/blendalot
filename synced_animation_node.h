@@ -51,68 +51,65 @@ struct AnimationData {
 		}
 	};
 
-	struct PositionTrackValue : public TrackValue {
+	struct TransformTrackValue : public TrackValue {
 		int bone_idx = -1;
-		Vector3 position = Vector3(0, 0, 0);
-		PositionTrackValue() { type = TYPE_POSITION_3D; }
 
-		void blend(const TrackValue &to_value, const float lambda) override {
-			const PositionTrackValue *to_value_casted = &static_cast<const PositionTrackValue &>(to_value);
-			assert(bone_idx == to_value_casted->bone_idx);
-			position = (1. - lambda) * position + lambda * to_value_casted->position;
-		}
-
-		bool operator==(const TrackValue &other_value) const override {
-			if (type != other_value.type) {
-				return false;
-			}
-
-			const PositionTrackValue *other_value_casted = &static_cast<const PositionTrackValue &>(other_value);
-			return bone_idx == other_value_casted->bone_idx && position == other_value_casted->position;
-		}
-
-		TrackValue *clone() const override {
-			PositionTrackValue *result = memnew(PositionTrackValue);
-			result->track = track;
-			result->bone_idx = bone_idx;
-			result->position = position;
-			return result;
-		}
-	};
-
-	struct RotationTrackValue : public TrackValue {
-		int bone_idx = -1;
-		Quaternion rotation = Quaternion(0, 0, 0, 1);
-		RotationTrackValue() { type = TYPE_ROTATION_3D; }
-
-		void blend(const TrackValue &to_value, const float lambda) override {
-			const RotationTrackValue *to_value_casted = &static_cast<const RotationTrackValue &>(to_value);
-			assert(bone_idx == to_value_casted->bone_idx);
-			rotation = rotation.slerp(to_value_casted->rotation, lambda);
-		}
-
-		bool operator==(const TrackValue &other_value) const override {
-			if (type != other_value.type) {
-				return false;
-			}
-
-			const RotationTrackValue *other_value_casted = &static_cast<const RotationTrackValue &>(other_value);
-			return bone_idx == other_value_casted->bone_idx && rotation == other_value_casted->rotation;
-		}
-
-		TrackValue *clone() const override {
-			RotationTrackValue *result = memnew(RotationTrackValue);
-			result->track = track;
-			result->bone_idx = bone_idx;
-			result->rotation = rotation;
-			return result;
-		}
-	};
-
-	struct ScaleTrackValue : public TrackValue {
-		int bone_idx = -1;
+		bool loc_used = false;
+		bool rot_used = false;
+		bool scale_used = false;
+		Vector3 init_loc = Vector3(0, 0, 0);
+		Quaternion init_rot = Quaternion(0, 0, 0, 1);
+		Vector3 init_scale = Vector3(1, 1, 1);
+		Vector3 loc;
+		Quaternion rot;
 		Vector3 scale;
-		ScaleTrackValue() { type = TYPE_SCALE_3D; }
+
+		TransformTrackValue() { type = TYPE_POSITION_3D; }
+
+		void blend(const TrackValue &to_value, const float lambda) override {
+			const TransformTrackValue *to_value_casted = &static_cast<const TransformTrackValue &>(to_value);
+			assert(bone_idx == to_value_casted->bone_idx);
+			if (loc_used) {
+				loc = (1. - lambda) * loc + lambda * to_value_casted->loc;
+			}
+
+			if (rot_used) {
+				rot = rot.slerp(to_value_casted->rot, lambda);
+			}
+
+			if (scale_used) {
+				scale = (1. - lambda) * scale + lambda * to_value_casted->scale;
+			}
+		}
+
+		bool operator==(const TrackValue &other_value) const override {
+			if (type != other_value.type) {
+				return false;
+			}
+
+			const TransformTrackValue *other_value_casted = &static_cast<const TransformTrackValue &>(other_value);
+			return bone_idx == other_value_casted->bone_idx && loc == other_value_casted->loc && rot == other_value_casted->rot && scale == other_value_casted->scale;
+		}
+
+		TrackValue *clone() const override {
+			TransformTrackValue *result = memnew(TransformTrackValue);
+			result->track = track;
+			result->bone_idx = bone_idx;
+
+			result->loc_used = loc_used;
+			result->rot_used = rot_used;
+			result->scale_used = scale_used;
+
+			result->init_loc = init_loc;
+			result->init_rot = init_rot;
+			result->init_scale = init_scale;
+
+			result->loc = loc;
+			result->rot = rot;
+			result->scale = scale;
+
+			return result;
+		}
 	};
 
 	AnimationData() = default;

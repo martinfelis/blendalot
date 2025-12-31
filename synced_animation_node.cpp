@@ -140,7 +140,7 @@ void AnimationData::sample_from_animation(const Ref<Animation> &animation, const
 
 	int count = tracks.size();
 	for (int i = 0; i < count; i++) {
-		AnimationData::TrackValue *track_value = nullptr;
+		TrackValue *track_value = nullptr;
 		const Animation::Track *animation_track = tracks_ptr[i];
 		const NodePath &track_node_path = animation_track->path;
 		if (!animation_track->enabled) {
@@ -149,38 +149,43 @@ void AnimationData::sample_from_animation(const Ref<Animation> &animation, const
 
 		Animation::TrackType ttype = animation_track->type;
 		switch (ttype) {
-			case Animation::TYPE_POSITION_3D: {
-				AnimationData::PositionTrackValue *position_track_value = memnew(AnimationData::PositionTrackValue);
-
-				if (track_node_path.get_subname_count() == 1) {
-					int bone_idx = skeleton_3d->find_bone(track_node_path.get_subname(0));
-					if (bone_idx != -1) {
-						position_track_value->bone_idx = bone_idx;
-					}
-					animation->try_position_track_interpolate(i, p_time, &position_track_value->position);
-				} else {
-					// TODO
-					assert(false && !"Not yet implemented");
-				}
-
-				track_value = position_track_value;
-				break;
-			}
+			case Animation::TYPE_POSITION_3D:
 			case Animation::TYPE_ROTATION_3D: {
-				AnimationData::RotationTrackValue *rotation_track_value = memnew(AnimationData::RotationTrackValue);
+				TransformTrackValue *transform_track_value = nullptr;
+				if (track_values.has(animation_track->thash)) {
+					transform_track_value = static_cast<TransformTrackValue *>(track_values[animation_track->thash]);
+				} else {
+					transform_track_value = memnew(AnimationData::TransformTrackValue);
+				}
+				int bone_idx = -1;
 
 				if (track_node_path.get_subname_count() == 1) {
-					int bone_idx = skeleton_3d->find_bone(track_node_path.get_subname(0));
+					bone_idx = skeleton_3d->find_bone(track_node_path.get_subname(0));
 					if (bone_idx != -1) {
-						rotation_track_value->bone_idx = bone_idx;
+						transform_track_value->bone_idx = bone_idx;
+						switch (ttype) {
+							case Animation::TYPE_POSITION_3D: {
+								animation->try_position_track_interpolate(i, p_time, &transform_track_value->loc);
+								transform_track_value->loc_used = true;
+								break;
+							}
+							case Animation::TYPE_ROTATION_3D: {
+								animation->try_rotation_track_interpolate(i, p_time, &transform_track_value->rot);
+								transform_track_value->rot_used = true;
+								break;
+							}
+							default: {
+								assert(false && !"Not yet implemented");
+								break;
+							}
+						}
 					}
-					animation->try_rotation_track_interpolate(i, p_time, &rotation_track_value->rotation);
 				} else {
 					// TODO
 					assert(false && !"Not yet implemented");
 				}
 
-				track_value = rotation_track_value;
+				track_value = transform_track_value;
 				break;
 			}
 			default: {

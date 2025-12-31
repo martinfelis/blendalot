@@ -306,29 +306,26 @@ void SyncedAnimationGraph::_apply_animation_data(const AnimationData &output_dat
 	for (const KeyValue<Animation::TypeHash, AnimationData::TrackValue *> &K : output_data.track_values) {
 		const AnimationData::TrackValue *track_value = K.value;
 		switch (track_value->type) {
-			case AnimationData::TrackType::TYPE_POSITION_3D: {
-				const AnimationData::PositionTrackValue *position_value = static_cast<const AnimationData::PositionTrackValue *>(track_value);
-
-				NodePath path = position_value->track->path;
-
-				if (path.get_subname_count() == 1) {
-					int bone_idx = graph_context.skeleton_3d->find_bone(path.get_subname(0));
-					if (bone_idx != -1) {
-						graph_context.skeleton_3d->set_bone_pose_position(position_value->bone_idx, position_value->position);
-					}
-				}
-
-				break;
-			}
+			case AnimationData::TrackType::TYPE_POSITION_3D:
 			case AnimationData::TrackType::TYPE_ROTATION_3D: {
-				const AnimationData::RotationTrackValue *rotation_value = static_cast<const AnimationData::RotationTrackValue *>(track_value);
+				const AnimationData::TransformTrackValue *transform_track_value = static_cast<const AnimationData::TransformTrackValue *>(track_value);
 
-				NodePath path = rotation_value->track->path;
+				int bone_idx = -1;
+				NodePath path = transform_track_value->track->path;
 
 				if (path.get_subname_count() == 1) {
-					int bone_idx = graph_context.skeleton_3d->find_bone(path.get_subname(0));
+					bone_idx = graph_context.skeleton_3d->find_bone(path.get_subname(0));
+
 					if (bone_idx != -1) {
-						graph_context.skeleton_3d->set_bone_pose_rotation(rotation_value->bone_idx, rotation_value->rotation);
+						if (transform_track_value->loc_used) {
+							graph_context.skeleton_3d->set_bone_pose_position(transform_track_value->bone_idx, transform_track_value->loc);
+						}
+
+						if (transform_track_value->rot_used) {
+							graph_context.skeleton_3d->set_bone_pose_rotation(transform_track_value->bone_idx, transform_track_value->rot);
+						}
+					} else {
+						assert(false && "Not yet implemented!");
 					}
 				}
 
