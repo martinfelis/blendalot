@@ -230,7 +230,7 @@ public:
 		double sync_delta = 0.0;
 		bool is_synced = false;
 
-		Animation::LoopMode loop_mode = Animation::LOOP_NONE;
+		Animation::LoopMode loop_mode = Animation::LOOP_LINEAR;
 		SyncTrack sync_track;
 	};
 	NodeTimeInfo node_time_info;
@@ -246,6 +246,7 @@ public:
 		// By default, all inputs nodes are activated.
 		for (const Ref<SyncedAnimationNode> &node : input_nodes) {
 			node->active = true;
+			node->node_time_info.is_synced = node_time_info.is_synced;
 		}
 	}
 	virtual void calculate_sync_track(Vector<Ref<SyncedAnimationNode>> input_nodes) {
@@ -254,25 +255,29 @@ public:
 			node_time_info.sync_track = input_nodes[0]->node_time_info.sync_track;
 		}
 	}
-	virtual void update_time(double p_delta) {
-		node_time_info.delta = p_delta;
-		node_time_info.position += p_delta;
-		if (node_time_info.position > node_time_info.length) {
-			switch (node_time_info.loop_mode) {
-				case Animation::LOOP_NONE: {
-					node_time_info.position = node_time_info.length;
-					break;
-				}
-				case Animation::LOOP_LINEAR: {
-					assert(node_time_info.length > 0.0);
-					while (node_time_info.position > node_time_info.length) {
-						node_time_info.position -= node_time_info.length;
+	virtual void update_time(double p_time) {
+		if (node_time_info.is_synced) {
+			node_time_info.sync_position = p_time;
+		} else {
+			node_time_info.delta = p_time;
+			node_time_info.position += p_time;
+			if (node_time_info.position > node_time_info.length) {
+				switch (node_time_info.loop_mode) {
+					case Animation::LOOP_NONE: {
+						node_time_info.position = node_time_info.length;
+						break;
 					}
-					break;
-				}
-				case Animation::LOOP_PINGPONG: {
-					assert(false && !"Not yet implemented.");
-					break;
+					case Animation::LOOP_LINEAR: {
+						assert(node_time_info.length > 0.0);
+						while (node_time_info.position > node_time_info.length) {
+							node_time_info.position -= node_time_info.length;
+						}
+						break;
+					}
+					case Animation::LOOP_PINGPONG: {
+						assert(false && !"Not yet implemented.");
+						break;
+					}
 				}
 			}
 		}
@@ -336,13 +341,33 @@ class AnimationBlend2Node : public SyncedAnimationNode {
 public:
 	StringName blend_amount = PNAME("blend_amount");
 	float blend_weight = 0.0f;
-	bool sync = false;
+	bool sync = true;
 
 	void get_input_names(Vector<StringName> &inputs) const override {
 		inputs.push_back("Input0");
 		inputs.push_back("Input1");
 	}
+	void activate_inputs(Vector<Ref<SyncedAnimationNode>> input_nodes) override {
+		for (const Ref<SyncedAnimationNode> &node : input_nodes) {
+			node->active = true;
 
+			// If this Blend2 node is already synced then inputs are also synced. Otherwise, inputs are only set to synced if synced blending is active in this node.
+			node->node_time_info.is_synced = node_time_info.is_synced || sync;
+		}
+	}
+	void calculate_sync_track(Vector<Ref<SyncedAnimationNode>> input_nodes) override {
+		if (node_time_info.is_synced || sync) {
+			node_time_info.sync_track = SyncTrack::blend(blend_weight, input_nodes[0]->node_time_info.sync_track, input_nodes[1]->node_time_info.sync_track);
+			node_time_info.length = node_time_info.sync_track.duration;
+		}
+	}
+	void update_time(double p_delta) override {
+		SyncedAnimationNode::update_time(p_delta);
+
+		if (sync && !node_time_info.is_synced) {
+			node_time_info.sync_position = node_time_info.sync_track.calc_sync_from_abs_time(node_time_info.position);
+		}
+	}
 	void evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) override;
 
 	void set_use_sync(bool p_sync);
@@ -717,7 +742,7 @@ public:
 			const Ref<SyncedAnimationNode> &node_parent = tree_graph.nodes[tree_graph.node_connection_info[i].parent_node_index];
 
 			if (node->node_time_info.is_synced) {
-				node->update_time(node_parent->node_time_info.position);
+				node->update_time(node_parent->node_time_info.sync_position);
 			} else {
 				node->update_time(node_parent->node_time_info.delta);
 			}

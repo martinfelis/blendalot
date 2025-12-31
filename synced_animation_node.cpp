@@ -202,6 +202,20 @@ bool AnimationSamplerNode::initialize(GraphEvaluationContext &context) {
 		return false;
 	}
 
+	if (animation_name == "animation_library/TestAnimationA") {
+		// Corresponds to the walking animation
+		node_time_info.sync_track = SyncTrack::create_from_markers(animation->get_length(), { 0.8117, 0.314 });
+		print_line(vformat("Using hardcoded sync track for animation %s.", animation_name));
+	} else if (animation_name == "animation_library/TestAnimationB") {
+		// Corresponds to the running animation
+		node_time_info.sync_track = SyncTrack::create_from_markers(animation->get_length(), { 0.6256, 0.2721 });
+		print_line(vformat("Using hardcoded sync track for animation %s.", animation_name));
+	} else if (animation_name == "animation_library/TestAnimationC") {
+		// Corresponds to the limping animation
+		node_time_info.sync_track = SyncTrack::create_from_markers(animation->get_length(), { 0.0674, 1.1047 });
+		print_line(vformat("Using hardcoded sync track for animation %s.", animation_name));
+	}
+
 	node_time_info.length = animation->get_length();
 	node_time_info.loop_mode = Animation::LOOP_LINEAR;
 
@@ -211,8 +225,14 @@ bool AnimationSamplerNode::initialize(GraphEvaluationContext &context) {
 void AnimationSamplerNode::evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) {
 	assert(inputs.size() == 0);
 
+	double sample_time = node_time_info.position;
+
+	if (node_time_info.is_synced) {
+		sample_time = node_time_info.sync_track.calc_ratio_from_sync_time(node_time_info.sync_position) * animation->get_length();
+	}
+
 	output.clear();
-	output.sample_from_animation(animation, context.skeleton_3d, node_time_info.position);
+	output.sample_from_animation(animation, context.skeleton_3d, sample_time);
 }
 
 void AnimationSamplerNode::set_animation(const StringName &p_name) {

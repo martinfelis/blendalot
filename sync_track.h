@@ -57,11 +57,11 @@ struct SyncTrack {
 		return -1.f;
 	}
 
-	float calc_ratio_from_sync_time(float sync_time) const {
-		float interval_ratio = fmodf(sync_time, 1.0f);
+	double calc_ratio_from_sync_time(double sync_time) const {
+		float interval_ratio = fmod(sync_time, 1.0f);
 		int interval = int(sync_time - interval_ratio);
 
-		return fmodf(
+		return fmod(
 				interval_start_ratio[interval] + interval_duration_ratio[interval] * interval_ratio,
 				1.0f);
 	}
