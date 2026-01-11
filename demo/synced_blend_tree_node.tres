@@ -1,0 +1,18 @@
+[gd_resource type="SyncedBlendTree" load_steps=4 format=3 uid="uid://de41u8rkjnjyk"]
+
+[sub_resource type="AnimationSamplerNode" id="AnimationSamplerNode_bvt3d"]
+animation = &"animation_library/Run-InPlace"
+
+[sub_resource type="AnimationSamplerNode" id="AnimationSamplerNode_sntl5"]
+animation = &"animation_library/Walk-InPlace"
+
+[sub_resource type="AnimationBlend2Node" id="AnimationBlend2Node_n4m28"]
+
+[resource]
+nodes/Blend2/node = SubResource("AnimationBlend2Node_n4m28")
+nodes/Blend2/position = Vector2(0, 0)
+"nodes/AnimationSamplerNode 1/node" = SubResource("AnimationSamplerNode_bvt3d")
+"nodes/AnimationSamplerNode 1/position" = Vector2(0, 0)
+nodes/AnimationSamplerNode/node = SubResource("AnimationSamplerNode_sntl5")
+nodes/AnimationSamplerNode/position = Vector2(0, 0)
+node_connections = [&"Blend2", 0, &"AnimationSamplerNode", &"Blend2", 1, &"AnimationSamplerNode 1", &"Output", 0, &"Blend2"]
