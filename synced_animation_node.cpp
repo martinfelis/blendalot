@@ -201,43 +201,63 @@ void AnimationData::sample_from_animation(const Ref<Animation> &animation, const
 }
 
 bool AnimationSamplerNode::initialize(GraphEvaluationContext &context) {
+	SyncedAnimationNode::initialize(context);
+
 	animation = context.animation_player->get_animation(animation_name);
 	if (!animation.is_valid()) {
 		print_error(vformat("Cannot initialize node %s: animation '%s' not found in animation player.", name, animation_name));
 		return false;
 	}
 
-	if (animation_name == "animation_library/TestAnimationA") {
-		// Corresponds to the walking animation
-		node_time_info.sync_track = SyncTrack::create_from_markers(animation->get_length(), { 0.8117, 0.314 });
-		print_line(vformat("Using hardcoded sync track for animation %s.", animation_name));
-	} else if (animation_name == "animation_library/TestAnimationB") {
-		// Corresponds to the running animation
-		node_time_info.sync_track = SyncTrack::create_from_markers(animation->get_length(), { 0.6256, 0.2721 });
-		print_line(vformat("Using hardcoded sync track for animation %s.", animation_name));
-	} else if (animation_name == "animation_library/TestAnimationC") {
-		// Corresponds to the limping animation
-		node_time_info.sync_track = SyncTrack::create_from_markers(animation->get_length(), { 0.0674, 1.1047 });
-		print_line(vformat("Using hardcoded sync track for animation %s.", animation_name));
+	node_time_info.loop_mode = animation->get_loop_mode();
+
+	// Initialize Sync Track from marker
+	LocalVector<float> sync_markers;
+	int marker_index = 0;
+	StringName marker_name = itos(marker_index);
+	while (animation->has_marker(marker_name)) {
+		sync_markers.push_back(animation->get_marker_time(marker_name));
+		marker_index++;
+		marker_name = itos(marker_index);
 	}
 
-	node_time_info.length = animation->get_length();
-	node_time_info.loop_mode = Animation::LOOP_LINEAR;
+	if (sync_markers.size() > 0) {
+		node_time_info.sync_track = SyncTrack::create_from_markers(animation->get_length(), sync_markers);
+	} else {
+		node_time_info.sync_track = SyncTrack::create_from_markers(animation->get_length(), { 0 });
+	}
 
 	return true;
+}
+
+void AnimationSamplerNode::update_time(double p_time) {
+	SyncedAnimationNode::update_time(p_time);
+
+	if (node_time_info.is_synced) {
+		// Any potential looping has already been performed in the sync-controlling node.
+		return;
+	}
+
+	if (node_time_info.loop_mode != Animation::LOOP_NONE) {
+		if (node_time_info.loop_mode == Animation::LOOP_LINEAR) {
+			if (!Math::is_zero_approx(animation->get_length())) {
+				node_time_info.position = Math::fposmod(node_time_info.position, static_cast<double>(animation->get_length()));
+			}
+		} else {
+			assert(false && !"Ping-pong looping not yet supported");
+		}
+	}
 }
 
 void AnimationSamplerNode::evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) {
 	assert(inputs.size() == 0);
 
-	double sample_time = node_time_info.position;
-
 	if (node_time_info.is_synced) {
-		sample_time = node_time_info.sync_track.calc_ratio_from_sync_time(node_time_info.sync_position) * animation->get_length();
+		node_time_info.position = node_time_info.sync_track.calc_ratio_from_sync_time(node_time_info.sync_position) * animation->get_length();
 	}
 
 	output.clear();
-	output.sample_from_animation(animation, context.skeleton_3d, sample_time);
+	output.sample_from_animation(animation, context.skeleton_3d, node_time_info.position);
 }
 
 void AnimationSamplerNode::set_animation(const StringName &p_name) {
@@ -276,7 +296,7 @@ void AnimationBlend2Node::_bind_methods() {
 }
 
 void AnimationBlend2Node::get_parameter_list(List<PropertyInfo> *p_list) const {
-	p_list->push_back(PropertyInfo(Variant::FLOAT, blend_amount, PROPERTY_HINT_RANGE, "0,1,0.01,or_less,or_greater"));
+	p_list->push_back(PropertyInfo(Variant::FLOAT, blend_weight_pname, PROPERTY_HINT_RANGE, "0,1,0.01,or_less,or_greater"));
 }
 
 void AnimationBlend2Node::set_parameter(const StringName &p_name, const Variant &p_value) {
@@ -290,7 +310,7 @@ Variant AnimationBlend2Node::get_parameter(const StringName &p_name) const {
 }
 
 Variant AnimationBlend2Node::get_parameter_default_value(const StringName &p_parameter) const {
-	if (p_parameter == blend_amount) {
+	if (p_parameter == blend_weight_pname) {
 		return blend_weight;
 	}
 
@@ -298,12 +318,18 @@ Variant AnimationBlend2Node::get_parameter_default_value(const StringName &p_par
 }
 
 void AnimationBlend2Node::_get_property_list(List<PropertyInfo> *p_list) const {
-	p_list->push_back(PropertyInfo(Variant::FLOAT, blend_amount, PROPERTY_HINT_RANGE, "0,1,0.01,or_less,or_greater"));
+	p_list->push_back(PropertyInfo(Variant::FLOAT, blend_weight_pname, PROPERTY_HINT_RANGE, "0,1,0.01,or_less,or_greater"));
+	p_list->push_back(PropertyInfo(Variant::BOOL, sync_pname));
 }
 
 bool AnimationBlend2Node::_get(const StringName &p_name, Variant &r_value) const {
-	if (p_name == blend_amount) {
+	if (p_name == blend_weight_pname) {
 		r_value = blend_weight;
+		return true;
+	}
+
+	if (p_name == sync_pname) {
+		r_value = sync;
 		return true;
 	}
 
@@ -311,8 +337,13 @@ bool AnimationBlend2Node::_get(const StringName &p_name, Variant &r_value) const
 }
 
 bool AnimationBlend2Node::_set(const StringName &p_name, const Variant &p_value) {
-	if (p_name == blend_amount) {
+	if (p_name == blend_weight_pname) {
 		blend_weight = p_value;
+		return true;
+	}
+
+	if (p_name == sync_pname) {
+		sync = p_value;
 		return true;
 	}
 

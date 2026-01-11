@@ -2,8 +2,8 @@
 
 [ext_resource type="PackedScene" uid="uid://d1xcqdqr1qeu6" path="res://assets/MixamoAmy.glb" id="1_0xm2m"]
 [ext_resource type="AnimationNodeBlendTree" uid="uid://dbkgln7hoxxc8" path="res://embedded_statemachine.tres" id="2_h2yge"]
-[ext_resource type="AnimationLibrary" uid="uid://dwubn740aqx51" path="res://animation_library.res" id="3_h2yge"]
-[ext_resource type="SyncedBlendTree" uid="uid://cjeho6848x43q" path="res://synced_blend_tree_node.tres" id="4_1bvp3"]
+[ext_resource type="AnimationLibrary" uid="uid://bjyfy6m2sr2kp" path="res://animation_library.tres" id="3_1bvp3"]
+[ext_resource type="SyncedBlendTree" uid="uid://bijslmj4wd7ap" path="res://synced_blend_tree_node_limping.tres" id="4_1bvp3"]
 
 [node name="Node3D" type="Node3D"]
 
@@ -19,16 +19,15 @@ parameters/Blend2/blend_amount = 0.44
 "parameters/Embedded StateMachine/conditions/is_limping" = false
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
-active = false
 root_node = NodePath("../MixamoAmy")
 libraries = {
-&"animation_library": ExtResource("3_h2yge")
+&"animation_library": ExtResource("3_1bvp3")
 }
 
 [node name="SyncedAnimationGraph" type="SyncedAnimationGraph" parent="."]
 animation_player = NodePath("../AnimationPlayer")
 tree_root = ExtResource("4_1bvp3")
 skeleton = NodePath("../MixamoAmy/Armature/Skeleton3D")
-parameters/AnimationBlend2Node/blend_amount = 0.24
+parameters/AnimationBlend2Node/blend_amount = 0.0
 
 [editable path="MixamoAmy"]

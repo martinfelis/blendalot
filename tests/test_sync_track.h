@@ -66,16 +66,20 @@ TEST_CASE("[SyncedAnimationGraph][SyncTrack] Basic") {
 	WHEN("Blending two synctracks with weight 0.") {
 		SyncTrack blended = SyncTrack::blend(0.f, track_a, track_b);
 
-		THEN("Result must equal track_A") {
-			REQUIRE(track_a == blended);
+		blended.duration = track_a.duration;
+		blended.interval_start_ratio[0] = 0.0;
+		for (int i = 0; i < track_a.num_intervals; i++) {
+			CHECK(blended.interval_duration_ratio[i] == track_a.interval_duration_ratio[i]);
 		}
 	}
 
 	WHEN("Blending two synctracks with weight 1.") {
 		SyncTrack blended = SyncTrack::blend(1.f, track_a, track_b);
 
-		THEN("Result must equal track_B") {
-			REQUIRE(track_b == blended);
+		blended.duration = track_b.duration;
+		blended.interval_start_ratio[0] = 0.0;
+		for (int i = 0; i < track_b.num_intervals; i++) {
+			CHECK(blended.interval_duration_ratio[i] == track_b.interval_duration_ratio[i]);
 		}
 	}
 }
@@ -153,16 +157,20 @@ TEST_CASE("[SyncedAnimationGraph][SyncTrack] Sync Track blending") {
 	WHEN("Blending two synctracks with weight 0.") {
 		SyncTrack blended = SyncTrack::blend(0.f, track_a, track_b);
 
-		THEN("Result must equal track_A") {
-			REQUIRE(track_a == blended);
+		blended.duration = track_a.duration;
+		blended.interval_start_ratio[0] = 0.0;
+		for (int i = 0; i < track_a.num_intervals; i++) {
+			CHECK(blended.interval_duration_ratio[i] == track_a.interval_duration_ratio[i]);
 		}
 	}
 
 	WHEN("Blending two synctracks with weight 1.") {
 		SyncTrack blended = SyncTrack::blend(1.f, track_a, track_b);
 
-		THEN("Result must equal track_B") {
-			REQUIRE(track_b == blended);
+		blended.duration = track_b.duration;
+		blended.interval_start_ratio[0] = 0.0;
+		for (int i = 0; i < track_b.num_intervals; i++) {
+			CHECK(blended.interval_duration_ratio[i] == track_b.interval_duration_ratio[i]);
 		}
 	}
 
@@ -173,7 +181,7 @@ TEST_CASE("[SyncedAnimationGraph][SyncTrack] Sync Track blending") {
 		REQUIRE(
 				blended.duration == (1.0f - weight) * track_a.duration + weight * track_b.duration);
 		REQUIRE(
-				blended.interval_start_ratio[0] == fmodf((1.0f - weight) * (track_a.interval_start_ratio[0] + 1.0f) + weight * (track_b.interval_start_ratio[0]), 1.0f));
+				blended.interval_start_ratio[0] == 0.0);
 		REQUIRE(
 				blended.interval_duration_ratio[1] == (1.0f - weight) * (track_a.interval_duration_ratio[1]) + weight * (track_b.interval_duration_ratio[1]));
 		REQUIRE(
@@ -187,7 +195,7 @@ TEST_CASE("[SyncedAnimationGraph][SyncTrack] Sync Track blending") {
 		REQUIRE(
 				blended.duration == (1.0f - weight) * track_b.duration + weight * track_a.duration);
 		REQUIRE(
-				blended.interval_start_ratio[0] == fmodf((1.0f - weight) * (track_b.interval_start_ratio[0]) + weight * (track_a.interval_start_ratio[0] + 1.0f), 1.0f));
+				blended.interval_start_ratio[0] == 0.0);
 		REQUIRE(
 				blended.interval_duration_ratio[1] == (1.0f - weight) * (track_b.interval_duration_ratio[1]) + weight * (track_a.interval_duration_ratio[1]));
 		REQUIRE(

@@ -220,14 +220,12 @@ protected:
 
 public:
 	struct NodeTimeInfo {
-		double length = 0.0;
+		double delta = 0.0;
 		double position = 0.0;
 		double sync_position = 0.0;
-		double delta = 0.0;
-		double sync_delta = 0.0;
 		bool is_synced = false;
 
-		Animation::LoopMode loop_mode = Animation::LOOP_LINEAR;
+		Animation::LoopMode loop_mode = Animation::LOOP_NONE;
 		SyncTrack sync_track;
 	};
 	NodeTimeInfo node_time_info;
@@ -237,7 +235,10 @@ public:
 	Vector2 position;
 
 	virtual ~SyncedAnimationNode() override = default;
-	virtual bool initialize(GraphEvaluationContext &context) { return true; }
+	virtual bool initialize(GraphEvaluationContext &context) {
+		node_time_info = {};
+		return true;
+	}
 
 	virtual void activate_inputs(Vector<Ref<SyncedAnimationNode>> input_nodes) {
 		// By default, all inputs nodes are activated.
@@ -250,6 +251,7 @@ public:
 		// By default, use the SyncTrack of the first input.
 		if (input_nodes.size() > 0) {
 			node_time_info.sync_track = input_nodes[0]->node_time_info.sync_track;
+			node_time_info.loop_mode = input_nodes[0]->node_time_info.loop_mode;
 		}
 	}
 	virtual void update_time(double p_time) {
@@ -258,25 +260,6 @@ public:
 		} else {
 			node_time_info.delta = p_time;
 			node_time_info.position += p_time;
-			if (node_time_info.position > node_time_info.length) {
-				switch (node_time_info.loop_mode) {
-					case Animation::LOOP_NONE: {
-						node_time_info.position = node_time_info.length;
-						break;
-					}
-					case Animation::LOOP_LINEAR: {
-						assert(node_time_info.length > 0.0);
-						while (node_time_info.position > node_time_info.length) {
-							node_time_info.position -= node_time_info.length;
-						}
-						break;
-					}
-					case Animation::LOOP_PINGPONG: {
-						assert(false && !"Not yet implemented.");
-						break;
-					}
-				}
-			}
 		}
 	}
 	virtual void evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &input_datas, AnimationData &output_data) {
@@ -317,6 +300,7 @@ private:
 	Ref<Animation> animation;
 
 	bool initialize(GraphEvaluationContext &context) override;
+	void update_time(double p_time) override;
 	void evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) override;
 
 protected:
@@ -336,13 +320,23 @@ class AnimationBlend2Node : public SyncedAnimationNode {
 	GDCLASS(AnimationBlend2Node, SyncedAnimationNode);
 
 public:
-	StringName blend_amount = PNAME("blend_amount");
 	float blend_weight = 0.0f;
 	bool sync = true;
 
 	void get_input_names(Vector<StringName> &inputs) const override {
 		inputs.push_back("Input0");
 		inputs.push_back("Input1");
+	}
+
+	bool initialize(GraphEvaluationContext &context) override {
+		bool result = SyncedAnimationNode::initialize(context);
+
+		if (sync) {
+			// TODO: do we always want looping in this case or do we traverse the graph to check what's reasonable?
+			node_time_info.loop_mode = Animation::LOOP_LINEAR;
+		}
+
+		return result;
 	}
 	void activate_inputs(Vector<Ref<SyncedAnimationNode>> input_nodes) override {
 		for (const Ref<SyncedAnimationNode> &node : input_nodes) {
@@ -352,17 +346,28 @@ public:
 			node->node_time_info.is_synced = node_time_info.is_synced || sync;
 		}
 	}
+
 	void calculate_sync_track(Vector<Ref<SyncedAnimationNode>> input_nodes) override {
 		if (node_time_info.is_synced || sync) {
+			assert(input_nodes[0]->node_time_info.loop_mode == input_nodes[1]->node_time_info.loop_mode);
 			node_time_info.sync_track = SyncTrack::blend(blend_weight, input_nodes[0]->node_time_info.sync_track, input_nodes[1]->node_time_info.sync_track);
-			node_time_info.length = node_time_info.sync_track.duration;
 		}
 	}
+
 	void update_time(double p_delta) override {
 		SyncedAnimationNode::update_time(p_delta);
 
 		if (sync && !node_time_info.is_synced) {
-			node_time_info.sync_position = node_time_info.sync_track.calc_sync_from_abs_time(node_time_info.position);
+			if (node_time_info.loop_mode != Animation::LOOP_NONE) {
+				if (node_time_info.loop_mode == Animation::LOOP_LINEAR) {
+					if (!Math::is_zero_approx(node_time_info.sync_track.duration)) {
+						node_time_info.position = Math::fposmod(static_cast<float>(node_time_info.position), node_time_info.sync_track.duration);
+						node_time_info.sync_position = node_time_info.sync_track.calc_sync_from_abs_time(node_time_info.position);
+					} else {
+						assert(false && !"Loop mode ping-pong not yet supported");
+					}
+				}
+			}
 		}
 	}
 	void evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) override;
@@ -381,6 +386,10 @@ protected:
 	void _get_property_list(List<PropertyInfo> *p_list) const;
 	bool _get(const StringName &p_name, Variant &r_value) const;
 	bool _set(const StringName &p_name, const Variant &p_value);
+
+private:
+	StringName blend_weight_pname = PNAME("blend_amount");
+	StringName sync_pname = PNAME("sync");
 };
 
 struct BlendTreeConnection {
@@ -661,6 +670,14 @@ public:
 
 	int find_node_index_by_name(const StringName &name) const {
 		return tree_graph.find_node_index_by_name(name);
+	}
+
+	Ref<SyncedAnimationNode> get_node(int node_index) {
+		if (node_index < 0 || node_index > tree_graph.nodes.size()) {
+			return nullptr;
+		}
+
+		return tree_graph.nodes[node_index];
 	}
 
 	void add_node(const Ref<SyncedAnimationNode> &node) {

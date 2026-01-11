@@ -7,17 +7,18 @@
 
 /** @class SyncTrack used for synced animation blending.
  *
- *  A SyncTrack consists of multiple SyncInterval that are adjacent to each other.
+ *  A SyncTrack consists of multiple sync intervals that are adjacent to each other.
  *
  *  Important definitions:
  *
  *  - Absolute Time: time within an animation duration in seconds.
- *  - Ratio: time relative to the animations duration, e.g. 0.5 corresponds to 50% of the duration.
- *  - SyncTime is a floating point value where the integer parts defines the SyncInterval and the
+ *  - Ratio: time relative to the SyncTrack duration, e.g. 0.5 corresponds to 50% of the duration.
+ *  - SyncTime is a floating point value where the integer parts defines the sync interval and the
  *    fractional part the fraction within the interval. I.e. a SyncTime of 5.332 means it is ~33%
  *    through interval 5.
  *
- *  A SyncInterval is defined by a ratio of the starting point and the ratio of the interval's duration.
+ *  A sync interval is defined by a ratio of the starting point and the ratio of the interval's
+ *  duration. Blended SyncTracks always have their first interval start at t = 0.0s.
  */
 struct SyncTrack {
 	static constexpr int cSyncTrackMaxIntervals = 8;
@@ -119,6 +120,10 @@ struct SyncTrack {
 		return result;
 	}
 
+	/** Creates a blended SyncTrack from two input SyncTracks
+	 *
+	 * \note the first interval will always start at sync time 0, i.e. interval_start_ratio[0] = 0.0.
+	 */
 	static SyncTrack
 	blend(float weight, const SyncTrack &track_A, const SyncTrack &track_B) {
 		assert(track_A.num_intervals == track_B.num_intervals);
@@ -129,17 +134,7 @@ struct SyncTrack {
 		result.duration =
 				(1.0f - weight) * track_A.duration + weight * track_B.duration;
 
-		float interval_0_offset =
-				track_B.interval_start_ratio[0] - track_A.interval_start_ratio[0];
-		if (interval_0_offset > 0.5f) {
-			interval_0_offset = -fmodf(1.f - interval_0_offset, 1.0f);
-		} else if (interval_0_offset < -0.5) {
-			interval_0_offset = fmodf(1.f + interval_0_offset, 1.0f);
-		}
-
-		result.interval_start_ratio[0] = fmodf(
-				1.0 + (1.0f - weight) * track_A.interval_start_ratio[0] + weight * (track_A.interval_start_ratio[0] + interval_0_offset),
-				1.0f);
+		result.interval_start_ratio[0] = 0.f;
 
 		for (int i = 0; i < result.num_intervals; i++) {
 			float interval_duration_A = track_A.interval_duration_ratio[i];
