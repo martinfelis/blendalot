@@ -1,9 +1,12 @@
-[gd_scene load_steps=14 format=3 uid="uid://svj53e2xoio"]
+[gd_scene load_steps=13 format=3 uid="uid://svj53e2xoio"]
 
 [ext_resource type="PackedScene" uid="uid://d1xcqdqr1qeu6" path="res://assets/MixamoAmy.glb" id="1_0xm2m"]
 [ext_resource type="Script" uid="uid://bjvgqujpqumj7" path="res://main.gd" id="1_1bvp3"]
 [ext_resource type="AnimationLibrary" uid="uid://dwubn740aqx51" path="res://animation_library.res" id="3_1bvp3"]
-[ext_resource type="SyncedBlendTree" uid="uid://bijslmj4wd7ap" path="res://synced_blend_tree_node_limping.tres" id="4_1bvp3"]
+[ext_resource type="AnimationNodeBlendTree" uid="uid://dqy0dgwsm8t46" path="res://animation_tree_walk_limp.tres" id="3_272bh"]
+[ext_resource type="SyncedBlendTree" uid="uid://2qfwr1xkiw0s" path="res://new_synced_blend_tree_walk_limp.tres" id="4_lquwl"]
+[ext_resource type="SyncedBlendTree" uid="uid://qsk64ax2o47f" path="res://new_synced_blend_tree_walk_run.tres" id="5_7mycd"]
+[ext_resource type="AnimationNodeBlendTree" uid="uid://vsf71o82lkld" path="res://animation_tree_walk_run.tres" id="6_5vw27"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_h2yge"]
 albedo_color = Color(0.427493, 0.42749307, 0.42749307, 1)
@@ -24,24 +27,6 @@ background_mode = 2
 sky = SubResource("Sky_1bvp3")
 tonemap_mode = 2
 glow_enabled = true
-
-[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_h2yge"]
-animation = &"Limping-InPlace"
-
-[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_1bvp3"]
-animation = &"Walk-InPlace"
-
-[sub_resource type="AnimationNodeBlend2" id="AnimationNodeBlend2_lquwl"]
-
-[sub_resource type="AnimationNodeBlendTree" id="AnimationNodeBlendTree_7mycd"]
-nodes/output/position = Vector2(540, 140)
-nodes/Animation/node = SubResource("AnimationNodeAnimation_1bvp3")
-nodes/Animation/position = Vector2(120, 80)
-"nodes/Animation 2/node" = SubResource("AnimationNodeAnimation_h2yge")
-"nodes/Animation 2/position" = Vector2(80, 320)
-nodes/Blend2/node = SubResource("AnimationNodeBlend2_lquwl")
-nodes/Blend2/position = Vector2(360, 180)
-node_connections = [&"output", 0, &"Blend2", &"Blend2", 0, &"Animation", &"Blend2", 1, &"Animation 2"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_1bvp3")
@@ -97,36 +82,62 @@ shadow_enabled = true
 environment = SubResource("Environment_lquwl")
 
 [node name="Camera3D" type="Camera3D" parent="Level"]
-transform = Transform3D(1, 0, 0, 0, 0.9897887, 0.14254257, 0, -0.14254257, 0.9897887, 0, 0.89188766, 1.4517534)
+transform = Transform3D(1, 0, 0, 0, 0.95413065, 0.29939055, 0, -0.29939055, 0.95413065, -0.06075996, 1.648746, 3.1971257)
+fov = 36.8
 
 [node name="Characters" type="Node3D" parent="."]
 
-[node name="MixamoAmy" parent="Characters" instance=ExtResource("1_0xm2m")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0, 0)
-
-[node name="AnimationTree" type="AnimationTree" parent="Characters/MixamoAmy"]
+[node name="MixamoAmyWalkLimp" parent="Characters" instance=ExtResource("1_0xm2m")]
 unique_name_in_owner = true
-root_node = NodePath("%AnimationTree/..")
-tree_root = SubResource("AnimationNodeBlendTree_7mycd")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.3831767, 0, 0)
+
+[node name="AnimationTree" type="AnimationTree" parent="Characters/MixamoAmyWalkLimp"]
+tree_root = ExtResource("3_272bh")
 anim_player = NodePath("../AnimationPlayer")
-parameters/Blend2/blend_amount = 0.5
+parameters/Blend2/blend_amount = 0.0
 
-[node name="MixamoAmySynced" parent="Characters" instance=ExtResource("1_0xm2m")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0, 0)
+[node name="MixamoAmyWalkRun" parent="Characters" instance=ExtResource("1_0xm2m")]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.59658086, 0, 0)
 
-[node name="AnimationPlayer2" type="AnimationPlayer" parent="Characters/MixamoAmySynced"]
+[node name="AnimationTree" type="AnimationTree" parent="Characters/MixamoAmyWalkRun"]
+tree_root = ExtResource("6_5vw27")
+anim_player = NodePath("../AnimationPlayer")
+parameters/Blend2/blend_amount = 0.46
+
+[node name="MixamoAmyWalkLimpSynced" parent="Characters" instance=ExtResource("1_0xm2m")]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5428504, 0, 0)
+
+[node name="AnimationPlayer2" type="AnimationPlayer" parent="Characters/MixamoAmyWalkLimpSynced"]
 libraries = {
 &"animation_library": ExtResource("3_1bvp3")
 }
 
-[node name="SyncedAnimationGraph" type="SyncedAnimationGraph" parent="Characters/MixamoAmySynced"]
-unique_name_in_owner = true
+[node name="SyncedAnimationGraph" type="SyncedAnimationGraph" parent="Characters/MixamoAmyWalkLimpSynced"]
 animation_player = NodePath("../AnimationPlayer2")
-tree_root = ExtResource("4_1bvp3")
+tree_root = ExtResource("4_lquwl")
+skeleton = NodePath("../Armature/Skeleton3D")
+parameters/AnimationBlend2Node/blend_amount = 0.5
+
+[node name="MixamoAmyWalkRunSynced" parent="Characters" instance=ExtResource("1_0xm2m")]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.295326, 0, 0)
+
+[node name="AnimationPlayer2" type="AnimationPlayer" parent="Characters/MixamoAmyWalkRunSynced"]
+libraries = {
+&"animation_library": ExtResource("3_1bvp3")
+}
+
+[node name="SyncedAnimationGraph" type="SyncedAnimationGraph" parent="Characters/MixamoAmyWalkRunSynced"]
+animation_player = NodePath("../AnimationPlayer2")
+tree_root = ExtResource("5_7mycd")
 skeleton = NodePath("../Armature/Skeleton3D")
 parameters/AnimationBlend2Node/blend_amount = 0.5
 
 [connection signal="value_changed" from="UI/MarginContainer/HBoxContainer/BlendWeightSlider" to="." method="_on_blend_weight_slider_value_changed"]
 
-[editable path="Characters/MixamoAmy"]
-[editable path="Characters/MixamoAmySynced"]
+[editable path="Characters/MixamoAmyWalkLimp"]
+[editable path="Characters/MixamoAmyWalkRun"]
+[editable path="Characters/MixamoAmyWalkLimpSynced"]
+[editable path="Characters/MixamoAmyWalkRunSynced"]
