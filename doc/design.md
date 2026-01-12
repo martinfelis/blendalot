@@ -104,9 +104,9 @@ Some nodes have special names in the Blend Tree:
   parent of
   both AnimationA and TimeScale. Conversely, AnimationA and TimeScale are child nodes of the Blend2 node.
 
-## Blend Tree Evaluation Process
+### Blend Tree Evaluation Process
 
-### Ownership of evaluation data (inputs and outputs)
+#### Ownership of evaluation data (inputs and outputs)
 
 Except for the output node of a Blend Tree the following properties hold:
 
@@ -123,15 +123,16 @@ Disadvantages:
 
 * Data has to be managed by the Blend Tree => additional bookkeeping there.
 
-### Evaluation
+#### Evaluation
 
 Evaluation of the Blend Tree happens in multiple phases to ensure we have syncing dependent timing information available
 before performing the actual evaluation. Essentially the Blend Tree has to call the following function on all nodes:
 
-1. `ActivateInputs(Vector<Node> inputs)`: right to left (i.e. from the root node via depth first to the leaf nodes)
-2. `CalculateSyncTracks(Vector<Node> inputs)`: left to right (leaf nodes to root node)
-3. UpdateTime(): right to left
-4. Evaluate(): left to right
+1. `ActivateInputs(const Vector<Node> &input_nodes)`: right to left (i.e. from the root node via depth
+   first to the leaf nodes)
+2. `CalculateSyncTracks(const Vector<const Node> &input_nodes)`: left to right (leaf nodes to root node)
+3. `UpdateTime(delta)`: right to left
+4. `Evaluate(const Vector<AnimationData> &input_data, AnimationData& output)`: left to right
 
 ## State Machines
 
