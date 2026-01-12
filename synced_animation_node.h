@@ -269,7 +269,6 @@ public:
 		}
 	}
 
-	bool set_input_node(const StringName &socket_name, SyncedAnimationNode *node);
 	virtual void get_input_names(Vector<StringName> &inputs) const {}
 
 	int get_input_index(const StringName &port_name) const {
