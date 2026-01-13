@@ -1,7 +1,6 @@
 [gd_resource type="SyncedBlendTree" load_steps=4 format=3 uid="uid://qsk64ax2o47f"]
 
 [sub_resource type="AnimationBlend2Node" id="AnimationBlend2Node_bvt3d"]
-blend_amount = 0.5
 
 [sub_resource type="AnimationSamplerNode" id="AnimationSamplerNode_sntl5"]
 animation = &"animation_library/Run-InPlace"

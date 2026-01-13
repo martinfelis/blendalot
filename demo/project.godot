@@ -15,6 +15,11 @@ run/main_scene="uid://svj53e2xoio"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
 
+[display]
+
+window/size/viewport_width=1900
+window/size/viewport_height=1024
+
 [dotnet]
 
 project/assembly_name="Synced Blend Tree Test"

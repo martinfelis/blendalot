@@ -3,7 +3,7 @@
 #include "core/object/class_db.h"
 #include "synced_animation_graph.h"
 
-void initialize_synced_blend_tree_module(ModuleInitializationLevel p_level) {
+void initialize_blendalot_animgraph_module(ModuleInitializationLevel p_level) {
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
 		return;
 	}
@@ -14,7 +14,7 @@ void initialize_synced_blend_tree_module(ModuleInitializationLevel p_level) {
 	ClassDB::register_class<AnimationBlend2Node>();
 }
 
-void uninitialize_synced_blend_tree_module(ModuleInitializationLevel p_level) {
+void uninitialize_blendalot_animgraph_module(ModuleInitializationLevel p_level) {
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
 		return;
 	}

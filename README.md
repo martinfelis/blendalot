@@ -1,9 +1,9 @@
 # Blendalot - A Magical Animation System for Godot
 
-**Status**: This is a very much work in progress repository. Very rough drafts of the design and API can be found in the
-doc folder.
-
-Blendalot is an experimental animation system for Godot that is currently in development.
+Blendalot is an experimental animation system for Godot that is currently in development. One of it's core features is a
+very flexible animation syncing mechanism that allows smooth transitions between related motions (e.g. walking, running,
+limping , ...). This is done by using SyncTracks as described by Bobby Anguelov
+here: https://www.youtube.com/watch?v=Jkv0pbp0ckQ&t=7998s.
 
 Stay tuned for more...
 
