@@ -299,41 +299,37 @@ void SyncedAnimationGraph::_process_graph(double p_delta, bool p_update_only) {
 
 	_update_properties();
 
+	AnimationData *graph_output = graph_context.animation_data_allocator.allocate();
 	root_animation_node->activate_inputs(Vector<Ref<SyncedAnimationNode>>());
 	root_animation_node->calculate_sync_track(Vector<Ref<SyncedAnimationNode>>());
 	root_animation_node->update_time(p_delta);
-	root_animation_node->evaluate(graph_context, LocalVector<AnimationData *>(), graph_output);
+	root_animation_node->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
 
-	_apply_animation_data(graph_output);
+	_apply_animation_data(*graph_output);
+
+	graph_context.animation_data_allocator.free(graph_output);
 }
 
 void SyncedAnimationGraph::_apply_animation_data(const AnimationData &output_data) const {
 	GodotProfileZone("SyncedAnimationGraph::_apply_animation_data");
 
-	for (const KeyValue<Animation::TypeHash, AnimationData::TrackValue *> &K : output_data.track_values) {
-		const AnimationData::TrackValue *track_value = K.value;
+	for (const KeyValue<Animation::TypeHash, size_t> &K : output_data.value_buffer_offset) {
+		const AnimationData::TrackValue *track_value = output_data.get_value<AnimationData::TrackValue>(K.key);
 		switch (track_value->type) {
 			case AnimationData::TrackType::TYPE_POSITION_3D:
 			case AnimationData::TrackType::TYPE_ROTATION_3D: {
 				const AnimationData::TransformTrackValue *transform_track_value = static_cast<const AnimationData::TransformTrackValue *>(track_value);
 
-				int bone_idx = -1;
-				NodePath path = transform_track_value->track->path;
-
-				if (path.get_subname_count() == 1) {
-					bone_idx = graph_context.skeleton_3d->find_bone(path.get_subname(0));
-
-					if (bone_idx != -1) {
-						if (transform_track_value->loc_used) {
-							graph_context.skeleton_3d->set_bone_pose_position(transform_track_value->bone_idx, transform_track_value->loc);
-						}
-
-						if (transform_track_value->rot_used) {
-							graph_context.skeleton_3d->set_bone_pose_rotation(transform_track_value->bone_idx, transform_track_value->rot);
-						}
-					} else {
-						assert(false && "Not yet implemented!");
+				if (transform_track_value->bone_idx != -1) {
+					if (transform_track_value->loc_used) {
+						graph_context.skeleton_3d->set_bone_pose_position(transform_track_value->bone_idx, transform_track_value->loc);
 					}
+
+					if (transform_track_value->rot_used) {
+						graph_context.skeleton_3d->set_bone_pose_rotation(transform_track_value->bone_idx, transform_track_value->rot);
+					}
+				} else {
+					assert(false && "Not yet implemented!");
 				}
 
 				break;

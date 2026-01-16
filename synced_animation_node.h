@@ -13,7 +13,11 @@
  * @class AnimationData
  * Represents data that is transported via animation connections in the SyncedAnimationGraph.
  *
- * Essentially, it is a hash map for all Animation::Track values that can are sampled from an Animation.
+ * In general AnimationData objects should be obtained using the AnimationDataAllocator.
+ *
+ * The class consists of a buffer containing the data and a hashmap that resolves the
+ * Animation::TypeHash of an Animation::Track to the corresponding AnimationData::TrackValue
+ * block within the buffer.
  */
 struct AnimationData {
 	enum TrackType : uint8_t {
@@ -29,7 +33,6 @@ struct AnimationData {
 	};
 
 	struct TrackValue {
-		Animation::Track *track = nullptr;
 		TrackType type = TYPE_ANIMATION;
 
 		virtual ~TrackValue() = default;
@@ -91,69 +94,51 @@ struct AnimationData {
 			const TransformTrackValue *other_value_casted = &static_cast<const TransformTrackValue &>(other_value);
 			return bone_idx == other_value_casted->bone_idx && loc == other_value_casted->loc && rot == other_value_casted->rot && scale == other_value_casted->scale;
 		}
-
-		TrackValue *clone() const override {
-			TransformTrackValue *result = memnew(TransformTrackValue);
-			result->track = track;
-			result->bone_idx = bone_idx;
-
-			result->loc_used = loc_used;
-			result->rot_used = rot_used;
-			result->scale_used = scale_used;
-
-			result->init_loc = init_loc;
-			result->init_rot = init_rot;
-			result->init_scale = init_scale;
-
-			result->loc = loc;
-			result->rot = rot;
-			result->scale = scale;
-
-			return result;
-		}
 	};
 
 	AnimationData() = default;
 	~AnimationData() = default;
 
 	AnimationData(const AnimationData &other) {
-		for (const KeyValue<Animation::TypeHash, TrackValue *> &K : other.track_values) {
-			track_values.insert(K.key, K.value->clone());
-		}
+		value_buffer_offset = other.value_buffer_offset;
+		buffer = other.buffer;
 	}
 	AnimationData(AnimationData &&other) noexcept :
-			track_values(std::exchange(other.track_values, AHashMap<Animation::TypeHash, TrackValue *, HashHasher>())) {
+			value_buffer_offset(std::exchange(other.value_buffer_offset, AHashMap<Animation::TypeHash, size_t, HashHasher>())),
+			buffer(std::exchange(other.buffer, LocalVector<uint8_t>())) {
 	}
 	AnimationData &operator=(const AnimationData &other) {
 		AnimationData temp(other);
-		std::swap(track_values, temp.track_values);
+		std::swap(value_buffer_offset, temp.value_buffer_offset);
+		std::swap(buffer, temp.buffer);
 		return *this;
 	}
 	AnimationData &operator=(AnimationData &&other) noexcept {
-		std::swap(track_values, other.track_values);
+		std::swap(value_buffer_offset, other.value_buffer_offset);
+		std::swap(buffer, other.buffer);
 		return *this;
 	}
 
-	void
-	set_value(const Animation::TypeHash &thash, TrackValue *value) {
-		if (!track_values.has(thash)) {
-			track_values.insert(thash, value);
-		} else {
-			track_values[thash] = value;
-		}
+	void allocate_track_value(const Animation::Track *animation_track, const Skeleton3D *skeleton_3d);
+	void allocate_track_values(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d);
+
+	template <typename TrackValueType>
+	TrackValueType *get_value(const Animation::TypeHash &thash) {
+		return reinterpret_cast<TrackValueType *>(&buffer[value_buffer_offset[thash]]);
 	}
 
-	void clear() {
-		_clear_values();
+	template <typename TrackValueType>
+	const TrackValueType *get_value(const Animation::TypeHash &thash) const {
+		return reinterpret_cast<const TrackValueType *>(&buffer[value_buffer_offset[thash]]);
 	}
 
 	bool has_same_tracks(const AnimationData &other) const {
 		HashSet<Animation::TypeHash> valid_track_hashes;
-		for (const KeyValue<Animation::TypeHash, TrackValue *> &K : track_values) {
+		for (const KeyValue<Animation::TypeHash, size_t> &K : value_buffer_offset) {
 			valid_track_hashes.insert(K.key);
 		}
 
-		for (const KeyValue<Animation::TypeHash, TrackValue *> &K : other.track_values) {
+		for (const KeyValue<Animation::TypeHash, size_t> &K : other.value_buffer_offset) {
 			if (HashSet<Animation::TypeHash>::Iterator entry = valid_track_hashes.find(K.key)) {
 				valid_track_hashes.remove(entry);
 			} else {
@@ -172,9 +157,9 @@ struct AnimationData {
 			return;
 		}
 
-		for (const KeyValue<Animation::TypeHash, TrackValue *> &K : track_values) {
-			TrackValue *track_value = K.value;
-			TrackValue *other_track_value = to_data.track_values[K.key];
+		for (const KeyValue<Animation::TypeHash, size_t> &K : value_buffer_offset) {
+			TrackValue *track_value = get_value<TrackValue>(K.key);
+			const TrackValue *other_track_value = to_data.get_value<TrackValue>(K.key);
 
 			track_value->blend(*other_track_value, lambda);
 		}
@@ -182,19 +167,63 @@ struct AnimationData {
 
 	void sample_from_animation(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d, double p_time);
 
-	AHashMap<Animation::TypeHash, TrackValue *, HashHasher> track_values; // Animation::Track to TrackValue
+	AHashMap<Animation::TypeHash, size_t, HashHasher> value_buffer_offset;
+	LocalVector<uint8_t> buffer;
+};
 
-protected:
-	void _clear_values() {
-		for (KeyValue<Animation::TypeHash, TrackValue *> &K : track_values) {
-			memdelete(K.value);
+/**
+ * @class AnimationDataAllocator
+ *
+ * Allows reusing of already allocated AnimationData objects. Stores the default values for all
+ * tracks. An allocated AnimationData object always has a resetted state where all TrackValues
+ * have the default value.
+ *
+ * During SyncedAnimationGraph initialization all nodes that generate values for AnimationData
+ * must register their tracks in the AnimationDataAllocator to ensure all allocated AnimationData
+ * have corresponding tracks.
+ */
+class AnimationDataAllocator {
+	AnimationData default_data;
+	List<AnimationData *> allocated_data;
+
+public:
+	~AnimationDataAllocator() {
+		while (!allocated_data.is_empty()) {
+			memfree(allocated_data.front()->get());
+			allocated_data.pop_front();
 		}
+	}
+
+	/// @brief Registers all animation track values for the default_data value.
+	void register_track_values(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d);
+
+	AnimationData *allocate() {
+		GodotProfileZone("AnimationDataAllocator::allocate_template");
+		if (!allocated_data.is_empty()) {
+			GodotProfileZone("AnimationDataAllocator::allocate_from_list");
+			AnimationData *result = allocated_data.front()->get();
+			allocated_data.pop_front();
+
+			// We copy the whole block as the assignment operator copies entries element wise.
+			memcpy(result->buffer.ptr(), default_data.buffer.ptr(), default_data.buffer.size());
+
+			return result;
+		}
+
+		AnimationData *result = memnew(AnimationData);
+		*result = default_data;
+		return result;
+	}
+
+	void free(AnimationData *data) {
+		allocated_data.push_front(data);
 	}
 };
 
 struct GraphEvaluationContext {
 	AnimationPlayer *animation_player = nullptr;
 	Skeleton3D *skeleton_3d = nullptr;
+	AnimationDataAllocator animation_data_allocator;
 };
 
 /**
@@ -242,14 +271,14 @@ public:
 		return true;
 	}
 
-	virtual void activate_inputs(Vector<Ref<SyncedAnimationNode>> input_nodes) {
+	virtual void activate_inputs(const Vector<Ref<SyncedAnimationNode>> &input_nodes) {
 		// By default, all inputs nodes are activated.
 		for (const Ref<SyncedAnimationNode> &node : input_nodes) {
 			node->active = true;
 			node->node_time_info.is_synced = node_time_info.is_synced;
 		}
 	}
-	virtual void calculate_sync_track(Vector<Ref<SyncedAnimationNode>> input_nodes) {
+	virtual void calculate_sync_track(const Vector<Ref<SyncedAnimationNode>> &input_nodes) {
 		// By default, use the SyncTrack of the first input.
 		if (input_nodes.size() > 0) {
 			node_time_info.sync_track = input_nodes[0]->node_time_info.sync_track;
@@ -339,16 +368,16 @@ public:
 
 		return result;
 	}
-	void activate_inputs(Vector<Ref<SyncedAnimationNode>> input_nodes) override {
-		for (const Ref<SyncedAnimationNode> &node : input_nodes) {
-			node->active = true;
+	void activate_inputs(const Vector<Ref<SyncedAnimationNode>> &input_nodes) override {
+		input_nodes[0]->active = true;
+		input_nodes[1]->active = true;
 
-			// If this Blend2 node is already synced then inputs are also synced. Otherwise, inputs are only set to synced if synced blending is active in this node.
-			node->node_time_info.is_synced = node_time_info.is_synced || sync;
-		}
+		// If this Blend2 node is already synced then inputs are also synced. Otherwise, inputs are only set to synced if synced blending is active in this node.
+		input_nodes[0]->node_time_info.is_synced = node_time_info.is_synced || sync;
+		input_nodes[1]->node_time_info.is_synced = node_time_info.is_synced || sync;
 	}
 
-	void calculate_sync_track(Vector<Ref<SyncedAnimationNode>> input_nodes) override {
+	void calculate_sync_track(const Vector<Ref<SyncedAnimationNode>> &input_nodes) override {
 		if (node_time_info.is_synced || sync) {
 			assert(input_nodes[0]->node_time_info.loop_mode == input_nodes[1]->node_time_info.loop_mode);
 			node_time_info.sync_track = SyncTrack::blend(blend_weight, input_nodes[0]->node_time_info.sync_track, input_nodes[1]->node_time_info.sync_track);
@@ -715,7 +744,7 @@ public:
 		return true;
 	}
 
-	void activate_inputs(Vector<Ref<SyncedAnimationNode>> input_nodes) override {
+	void activate_inputs(const Vector<Ref<SyncedAnimationNode>> &input_nodes) override {
 		GodotProfileZone("SyncedBlendTree::activate_inputs");
 
 		tree_graph.nodes[0]->active = true;
@@ -731,7 +760,7 @@ public:
 		}
 	}
 
-	void calculate_sync_track(Vector<Ref<SyncedAnimationNode>> input_nodes) override {
+	void calculate_sync_track(const Vector<Ref<SyncedAnimationNode>> &input_nodes) override {
 		GodotProfileZone("SyncedBlendTree::calculate_sync_track");
 		for (int i = tree_graph.nodes.size() - 1; i > 0; i--) {
 			const Ref<SyncedAnimationNode> &node = tree_graph.nodes[i];
@@ -791,14 +820,14 @@ public:
 			if (i == 1) {
 				node_runtime_data.output_data = &output_data;
 			} else {
-				node_runtime_data.output_data = memnew(AnimationData);
+				node_runtime_data.output_data = context.animation_data_allocator.allocate();
 			}
 
 			node->evaluate(context, node_runtime_data.input_data, *node_runtime_data.output_data);
 
 			// All inputs have been consumed and can now be freed.
 			for (const int child_index : tree_graph.node_connection_info[i].connected_child_node_index_at_port) {
-				memfree(_node_runtime_data[child_index].output_data);
+				context.animation_data_allocator.free(_node_runtime_data[child_index].output_data);
 			}
 		}
 	}

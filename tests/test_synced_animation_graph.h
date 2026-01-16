@@ -222,20 +222,25 @@ TEST_CASE("[SyncedAnimationGraph] Test BlendTree construction") {
 
 TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph] Test AnimationData blending") {
 	AnimationData data_t0;
+	data_t0.allocate_track_values(test_animation_a, skeleton_node);
 	data_t0.sample_from_animation(test_animation_a, skeleton_node, 0.0);
 
 	AnimationData data_t1;
+	data_t1.allocate_track_values(test_animation_a, skeleton_node);
 	data_t1.sample_from_animation(test_animation_a, skeleton_node, 1.0);
 
 	AnimationData data_t0_5;
+	data_t0_5.allocate_track_values(test_animation_a, skeleton_node);
 	data_t0_5.sample_from_animation(test_animation_a, skeleton_node, 0.5);
 
 	AnimationData data_blended = data_t0;
 	data_blended.blend(data_t1, 0.5);
 
 	REQUIRE(data_blended.has_same_tracks(data_t0_5));
-	for (const KeyValue<Animation::TypeHash, AnimationData::TrackValue *> &K : data_blended.track_values) {
-		CHECK(K.value->operator==(*data_t0_5.track_values.find(K.key)->value));
+	for (const KeyValue<Animation::TypeHash, size_t> &K : data_blended.value_buffer_offset) {
+		AnimationData::TrackValue *blended_value = data_blended.get_value<AnimationData::TrackValue>(K.key);
+		AnimationData::TrackValue *data_t0_5_value = data_t0_5.get_value<AnimationData::TrackValue>(K.key);
+		CHECK(*blended_value == *data_t0_5_value);
 	}
 
 	// And also check that values do not match
@@ -243,8 +248,10 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 	data_blended.blend(data_t1, 0.3);
 
 	REQUIRE(data_blended.has_same_tracks(data_t0_5));
-	for (const KeyValue<Animation::TypeHash, AnimationData::TrackValue *> &K : data_blended.track_values) {
-		CHECK(K.value->operator!=(*data_t0_5.track_values.find(K.key)->value));
+	for (const KeyValue<Animation::TypeHash, size_t> &K : data_blended.value_buffer_offset) {
+		AnimationData::TrackValue *blended_value = data_blended.get_value<AnimationData::TrackValue>(K.key);
+		AnimationData::TrackValue *data_t0_5_value = data_t0_5.get_value<AnimationData::TrackValue>(K.key);
+		CHECK(*blended_value != *data_t0_5_value);
 	}
 }
 

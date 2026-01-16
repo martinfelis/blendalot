@@ -14,7 +14,6 @@ private:
 	NodePath skeleton_path;
 
 	GraphEvaluationContext graph_context = {};
-	AnimationData graph_output;
 
 	mutable List<PropertyInfo> properties;
 	mutable AHashMap<StringName, Pair<Ref<SyncedAnimationNode>, StringName>> parameter_to_node_parameter_map;

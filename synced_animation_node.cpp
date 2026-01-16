@@ -142,9 +142,7 @@ void AnimationData::sample_from_animation(const Ref<Animation> &animation, const
 
 	int count = tracks.size();
 	for (int i = 0; i < count; i++) {
-		TrackValue *track_value = nullptr;
 		const Animation::Track *animation_track = tracks_ptr[i];
-		const NodePath &track_node_path = animation_track->path;
 		if (!animation_track->enabled) {
 			continue;
 		}
@@ -153,41 +151,29 @@ void AnimationData::sample_from_animation(const Ref<Animation> &animation, const
 		switch (ttype) {
 			case Animation::TYPE_POSITION_3D:
 			case Animation::TYPE_ROTATION_3D: {
-				TransformTrackValue *transform_track_value = nullptr;
-				if (track_values.has(animation_track->thash)) {
-					transform_track_value = static_cast<TransformTrackValue *>(track_values[animation_track->thash]);
-				} else {
-					transform_track_value = memnew(AnimationData::TransformTrackValue);
-				}
-				int bone_idx = -1;
+				TransformTrackValue *transform_track_value = get_value<TransformTrackValue>(animation_track->thash);
 
-				if (track_node_path.get_subname_count() == 1) {
-					bone_idx = skeleton_3d->find_bone(track_node_path.get_subname(0));
-					if (bone_idx != -1) {
-						transform_track_value->bone_idx = bone_idx;
-						switch (ttype) {
-							case Animation::TYPE_POSITION_3D: {
-								animation->try_position_track_interpolate(i, p_time, &transform_track_value->loc);
-								transform_track_value->loc_used = true;
-								break;
-							}
-							case Animation::TYPE_ROTATION_3D: {
-								animation->try_rotation_track_interpolate(i, p_time, &transform_track_value->rot);
-								transform_track_value->rot_used = true;
-								break;
-							}
-							default: {
-								assert(false && !"Not yet implemented");
-								break;
-							}
+				if (transform_track_value->bone_idx != -1) {
+					switch (ttype) {
+						case Animation::TYPE_POSITION_3D: {
+							animation->try_position_track_interpolate(i, p_time, &transform_track_value->loc);
+							transform_track_value->loc_used = true;
+							break;
+						}
+						case Animation::TYPE_ROTATION_3D: {
+							animation->try_rotation_track_interpolate(i, p_time, &transform_track_value->rot);
+							transform_track_value->rot_used = true;
+							break;
+						}
+						default: {
+							assert(false && !"Not yet implemented");
+							break;
 						}
 					}
 				} else {
 					// TODO
 					assert(false && !"Not yet implemented");
 				}
-
-				track_value = transform_track_value;
 				break;
 			}
 			default: {
@@ -196,10 +182,61 @@ void AnimationData::sample_from_animation(const Ref<Animation> &animation, const
 				break;
 			}
 		}
-
-		track_value->track = tracks_ptr[i];
-		set_value(animation_track->thash, track_value);
 	}
+}
+
+void AnimationData::allocate_track_value(const Animation::Track *animation_track, const Skeleton3D *skeleton_3d) {
+	switch (animation_track->type) {
+		case Animation::TrackType::TYPE_ROTATION_3D:
+		case Animation::TrackType::TYPE_POSITION_3D: {
+			size_t value_offset = 0;
+			AnimationData::TransformTrackValue *transform_track_value = nullptr;
+			if (value_buffer_offset.has(animation_track->thash)) {
+				value_offset = value_buffer_offset[animation_track->thash];
+				transform_track_value = reinterpret_cast<AnimationData::TransformTrackValue *>(&buffer[value_offset]);
+			} else {
+				value_offset = buffer.size();
+				value_buffer_offset.insert(animation_track->thash, buffer.size());
+				buffer.resize(buffer.size() + sizeof(AnimationData::TransformTrackValue));
+				transform_track_value = new (reinterpret_cast<AnimationData::TransformTrackValue *>(&buffer[value_offset])) AnimationData::TransformTrackValue();
+			}
+			assert(transform_track_value != nullptr);
+			if (animation_track->path.get_subname_count() == 1) {
+				transform_track_value->bone_idx = skeleton_3d->find_bone(animation_track->path.get_subname(0));
+			}
+
+			if (animation_track->type == Animation::TrackType::TYPE_POSITION_3D) {
+				transform_track_value->loc_used = true;
+			} else if (animation_track->type == Animation::TrackType::TYPE_ROTATION_3D) {
+				transform_track_value->rot_used = true;
+			}
+
+			break;
+		}
+		default:
+			break;
+	}
+}
+
+void AnimationData::allocate_track_values(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d) {
+	GodotProfileZone("AnimationData::allocate_track_values");
+
+	const LocalVector<Animation::Track *> tracks = animation->get_tracks();
+	Animation::Track *const *tracks_ptr = tracks.ptr();
+
+	int count = tracks.size();
+	for (int i = 0; i < count; i++) {
+		const Animation::Track *animation_track = tracks_ptr[i];
+		if (!animation_track->enabled) {
+			continue;
+		}
+
+		allocate_track_value(animation_track, skeleton_3d);
+	}
+}
+
+void AnimationDataAllocator::register_track_values(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d) {
+	default_data.allocate_track_values(animation, skeleton_3d);
 }
 
 bool AnimationSamplerNode::initialize(GraphEvaluationContext &context) {
@@ -210,6 +247,8 @@ bool AnimationSamplerNode::initialize(GraphEvaluationContext &context) {
 		print_error(vformat("Cannot initialize node %s: animation '%s' not found in animation player.", name, animation_name));
 		return false;
 	}
+
+	context.animation_data_allocator.register_track_values(animation, context.skeleton_3d);
 
 	node_time_info.loop_mode = animation->get_loop_mode();
 
@@ -260,7 +299,6 @@ void AnimationSamplerNode::evaluate(GraphEvaluationContext &context, const Local
 		node_time_info.position = node_time_info.sync_track.calc_ratio_from_sync_time(node_time_info.sync_position) * animation->get_length();
 	}
 
-	output.clear();
 	output.sample_from_animation(animation, context.skeleton_3d, node_time_info.position);
 }
 
