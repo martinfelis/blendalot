@@ -1,27 +1,27 @@
 #pragma once
 
+#include "blendalot_animation_node.h"
 #include "scene/animation/animation_player.h"
-#include "synced_animation_node.h"
 
 class Skeleton3D;
 
-class SyncedAnimationGraph : public Node {
-	GDCLASS(SyncedAnimationGraph, Node);
+class BLTAnimationGraph : public Node {
+	GDCLASS(BLTAnimationGraph, Node);
 
 private:
 	NodePath animation_player_path;
-	Ref<SyncedAnimationNode> root_animation_node;
+	Ref<BLTAnimationNode> root_animation_node;
 	NodePath skeleton_path;
 
 	GraphEvaluationContext graph_context = {};
 
 	mutable List<PropertyInfo> properties;
-	mutable AHashMap<StringName, Pair<Ref<SyncedAnimationNode>, StringName>> parameter_to_node_parameter_map;
+	mutable AHashMap<StringName, Pair<Ref<BLTAnimationNode>, StringName>> parameter_to_node_parameter_map;
 
 	mutable bool properties_dirty = true;
 
 	void _update_properties() const;
-	void _update_properties_for_node(const String &p_base_path, Ref<SyncedAnimationNode> p_node) const;
+	void _update_properties_for_node(const String &p_base_path, Ref<BLTAnimationNode> p_node) const;
 
 	void _tree_changed();
 
@@ -51,8 +51,8 @@ public:
 	void set_animation_player(const NodePath &p_path);
 	NodePath get_animation_player() const;
 
-	void set_root_animation_node(const Ref<SyncedAnimationNode> &p_animation_node);
-	Ref<SyncedAnimationNode> get_root_animation_node() const;
+	void set_root_animation_node(const Ref<BLTAnimationNode> &p_animation_node);
+	Ref<BLTAnimationNode> get_root_animation_node() const;
 
 	void set_skeleton(const NodePath &p_path);
 	NodePath get_skeleton() const;
@@ -70,7 +70,7 @@ public:
 		return graph_context;
 	}
 
-	SyncedAnimationGraph();
+	BLTAnimationGraph();
 
 private:
 	void _set_process(bool p_process, bool p_force = false);

@@ -1,37 +1,37 @@
-#include "synced_animation_graph.h"
+#include "blendalot_animation_graph.h"
 
 #include "core/os/time.h"
 #include "core/profiling/profiling.h"
 #include "scene/3d/skeleton_3d.h"
 #include "scene/animation/animation_player.h"
 
-void SyncedAnimationGraph::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("set_active", "active"), &SyncedAnimationGraph::set_active);
-	ClassDB::bind_method(D_METHOD("is_active"), &SyncedAnimationGraph::is_active);
+void BLTAnimationGraph::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_active", "active"), &BLTAnimationGraph::set_active);
+	ClassDB::bind_method(D_METHOD("is_active"), &BLTAnimationGraph::is_active);
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "active"), "set_active", "is_active");
 
-	ClassDB::bind_method(D_METHOD("set_callback_mode_process", "mode"), &SyncedAnimationGraph::set_callback_mode_process);
-	ClassDB::bind_method(D_METHOD("get_callback_mode_process"), &SyncedAnimationGraph::get_callback_mode_process);
+	ClassDB::bind_method(D_METHOD("set_callback_mode_process", "mode"), &BLTAnimationGraph::set_callback_mode_process);
+	ClassDB::bind_method(D_METHOD("get_callback_mode_process"), &BLTAnimationGraph::get_callback_mode_process);
 
-	ClassDB::bind_method(D_METHOD("set_callback_mode_method", "mode"), &SyncedAnimationGraph::set_callback_mode_method);
-	ClassDB::bind_method(D_METHOD("get_callback_mode_method"), &SyncedAnimationGraph::get_callback_mode_method);
+	ClassDB::bind_method(D_METHOD("set_callback_mode_method", "mode"), &BLTAnimationGraph::set_callback_mode_method);
+	ClassDB::bind_method(D_METHOD("get_callback_mode_method"), &BLTAnimationGraph::get_callback_mode_method);
 
-	ClassDB::bind_method(D_METHOD("set_animation_player", "animation_player"), &SyncedAnimationGraph::set_animation_player);
-	ClassDB::bind_method(D_METHOD("get_animation_player"), &SyncedAnimationGraph::get_animation_player);
+	ClassDB::bind_method(D_METHOD("set_animation_player", "animation_player"), &BLTAnimationGraph::set_animation_player);
+	ClassDB::bind_method(D_METHOD("get_animation_player"), &BLTAnimationGraph::get_animation_player);
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "animation_player", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "AnimationPlayer"), "set_animation_player", "get_animation_player");
 	ADD_SIGNAL(MethodInfo(SNAME("animation_player_changed")));
 
-	ClassDB::bind_method(D_METHOD("set_tree_root", "animation_node"), &SyncedAnimationGraph::set_root_animation_node);
-	ClassDB::bind_method(D_METHOD("get_tree_root"), &SyncedAnimationGraph::get_root_animation_node);
+	ClassDB::bind_method(D_METHOD("set_tree_root", "animation_node"), &BLTAnimationGraph::set_root_animation_node);
+	ClassDB::bind_method(D_METHOD("get_tree_root"), &BLTAnimationGraph::get_root_animation_node);
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "tree_root", PROPERTY_HINT_RESOURCE_TYPE, "SyncedAnimationNode"), "set_tree_root", "get_tree_root");
 
-	ClassDB::bind_method(D_METHOD("set_skeleton", "skeleton"), &SyncedAnimationGraph::set_skeleton);
-	ClassDB::bind_method(D_METHOD("get_skeleton"), &SyncedAnimationGraph::get_skeleton);
+	ClassDB::bind_method(D_METHOD("set_skeleton", "skeleton"), &BLTAnimationGraph::set_skeleton);
+	ClassDB::bind_method(D_METHOD("get_skeleton"), &BLTAnimationGraph::get_skeleton);
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "skeleton", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Skeleton3D"), "set_skeleton", "get_skeleton");
 	ADD_SIGNAL(MethodInfo(SNAME("skeleton_changed")));
 }
 
-void SyncedAnimationGraph::_update_properties_for_node(const String &p_base_path, Ref<SyncedAnimationNode> p_node) const {
+void BLTAnimationGraph::_update_properties_for_node(const String &p_base_path, Ref<BLTAnimationNode> p_node) const {
 	ERR_FAIL_COND(p_node.is_null());
 
 	List<PropertyInfo> plist;
@@ -40,22 +40,22 @@ void SyncedAnimationGraph::_update_properties_for_node(const String &p_base_path
 		StringName key = pinfo.name;
 
 		if (!parameter_to_node_parameter_map.has(p_base_path + key)) {
-			parameter_to_node_parameter_map[p_base_path + key] = Pair<Ref<SyncedAnimationNode>, StringName>(p_node, key);
+			parameter_to_node_parameter_map[p_base_path + key] = Pair<Ref<BLTAnimationNode>, StringName>(p_node, key);
 		}
 
 		pinfo.name = p_base_path + key;
 		properties.push_back(pinfo);
 	}
 
-	List<Ref<SyncedAnimationNode>> children;
+	List<Ref<BLTAnimationNode>> children;
 	p_node->get_child_nodes(&children);
 
-	for (const Ref<SyncedAnimationNode> &child_node : children) {
+	for (const Ref<BLTAnimationNode> &child_node : children) {
 		_update_properties_for_node(p_base_path + child_node->name + "/", child_node);
 	}
 }
 
-void SyncedAnimationGraph::_update_properties() const {
+void BLTAnimationGraph::_update_properties() const {
 	if (!properties_dirty) {
 		return;
 	}
@@ -69,10 +69,10 @@ void SyncedAnimationGraph::_update_properties() const {
 
 	properties_dirty = false;
 
-	const_cast<SyncedAnimationGraph *>(this)->notify_property_list_changed();
+	const_cast<BLTAnimationGraph *>(this)->notify_property_list_changed();
 }
 
-bool SyncedAnimationGraph::_set(const StringName &p_name, const Variant &p_value) {
+bool BLTAnimationGraph::_set(const StringName &p_name, const Variant &p_value) {
 #ifndef DISABLE_DEPRECATED
 	String name = p_name;
 	if (name == "process_callback") {
@@ -85,7 +85,7 @@ bool SyncedAnimationGraph::_set(const StringName &p_name, const Variant &p_value
 	}
 
 	if (parameter_to_node_parameter_map.has(p_name)) {
-		const Pair<Ref<SyncedAnimationNode>, StringName> &property_node = parameter_to_node_parameter_map[p_name];
+		const Pair<Ref<BLTAnimationNode>, StringName> &property_node = parameter_to_node_parameter_map[p_name];
 		if (!property_node.first.is_valid()) {
 			print_error(vformat("Cannot set property '%s' node not found.", p_name));
 			return false;
@@ -98,7 +98,7 @@ bool SyncedAnimationGraph::_set(const StringName &p_name, const Variant &p_value
 	return false;
 }
 
-bool SyncedAnimationGraph::_get(const StringName &p_name, Variant &r_ret) const {
+bool BLTAnimationGraph::_get(const StringName &p_name, Variant &r_ret) const {
 #ifndef DISABLE_DEPRECATED
 	if (p_name == "process_callback") {
 		r_ret = get_callback_mode_process();
@@ -110,7 +110,7 @@ bool SyncedAnimationGraph::_get(const StringName &p_name, Variant &r_ret) const 
 	}
 
 	if (parameter_to_node_parameter_map.has(p_name)) {
-		const Pair<Ref<SyncedAnimationNode>, StringName> &property_node = parameter_to_node_parameter_map[p_name];
+		const Pair<Ref<BLTAnimationNode>, StringName> &property_node = parameter_to_node_parameter_map[p_name];
 		if (!property_node.first.is_valid()) {
 			print_error(vformat("Cannot get property '%s' node not found.", p_name));
 			return false;
@@ -122,7 +122,7 @@ bool SyncedAnimationGraph::_get(const StringName &p_name, Variant &r_ret) const 
 	return false;
 }
 
-void SyncedAnimationGraph::_get_property_list(List<PropertyInfo> *p_list) const {
+void BLTAnimationGraph::_get_property_list(List<PropertyInfo> *p_list) const {
 	if (properties_dirty) {
 		_update_properties();
 	}
@@ -132,16 +132,16 @@ void SyncedAnimationGraph::_get_property_list(List<PropertyInfo> *p_list) const 
 	}
 }
 
-void SyncedAnimationGraph::_tree_changed() {
+void BLTAnimationGraph::_tree_changed() {
 	if (properties_dirty) {
 		return;
 	}
 
-	callable_mp(this, &SyncedAnimationGraph::_update_properties).call_deferred();
+	callable_mp(this, &BLTAnimationGraph::_update_properties).call_deferred();
 	properties_dirty = true;
 }
 
-void SyncedAnimationGraph::_notification(int p_what) {
+void BLTAnimationGraph::_notification(int p_what) {
 	GodotProfileZone("SyncedAnimationGraph::_notification");
 
 	switch (p_what) {
@@ -177,7 +177,7 @@ void SyncedAnimationGraph::_notification(int p_what) {
 	}
 }
 
-void SyncedAnimationGraph::set_active(bool p_active) {
+void BLTAnimationGraph::set_active(bool p_active) {
 	if (active == p_active) {
 		return;
 	}
@@ -186,11 +186,11 @@ void SyncedAnimationGraph::set_active(bool p_active) {
 	_set_process(processing, true);
 }
 
-bool SyncedAnimationGraph::is_active() const {
+bool BLTAnimationGraph::is_active() const {
 	return active;
 }
 
-void SyncedAnimationGraph::set_callback_mode_process(AnimationMixer::AnimationCallbackModeProcess p_mode) {
+void BLTAnimationGraph::set_callback_mode_process(AnimationMixer::AnimationCallbackModeProcess p_mode) {
 	if (callback_mode_process == p_mode) {
 		return;
 	}
@@ -207,29 +207,29 @@ void SyncedAnimationGraph::set_callback_mode_process(AnimationMixer::AnimationCa
 	}
 }
 
-AnimationMixer::AnimationCallbackModeProcess SyncedAnimationGraph::get_callback_mode_process() const {
+AnimationMixer::AnimationCallbackModeProcess BLTAnimationGraph::get_callback_mode_process() const {
 	return callback_mode_process;
 }
 
-void SyncedAnimationGraph::set_callback_mode_method(AnimationMixer::AnimationCallbackModeMethod p_mode) {
+void BLTAnimationGraph::set_callback_mode_method(AnimationMixer::AnimationCallbackModeMethod p_mode) {
 	callback_mode_method = p_mode;
 	emit_signal(SNAME("mixer_updated"));
 }
 
-AnimationMixer::AnimationCallbackModeMethod SyncedAnimationGraph::get_callback_mode_method() const {
+AnimationMixer::AnimationCallbackModeMethod BLTAnimationGraph::get_callback_mode_method() const {
 	return callback_mode_method;
 }
 
-void SyncedAnimationGraph::set_callback_mode_discrete(AnimationMixer::AnimationCallbackModeDiscrete p_mode) {
+void BLTAnimationGraph::set_callback_mode_discrete(AnimationMixer::AnimationCallbackModeDiscrete p_mode) {
 	callback_mode_discrete = p_mode;
 	emit_signal(SNAME("mixer_updated"));
 }
 
-AnimationMixer::AnimationCallbackModeDiscrete SyncedAnimationGraph::get_callback_mode_discrete() const {
+AnimationMixer::AnimationCallbackModeDiscrete BLTAnimationGraph::get_callback_mode_discrete() const {
 	return callback_mode_discrete;
 }
 
-void SyncedAnimationGraph::set_animation_player(const NodePath &p_path) {
+void BLTAnimationGraph::set_animation_player(const NodePath &p_path) {
 	animation_player_path = p_path;
 	if (p_path.is_empty()) {
 		//		set_root_node(SceneStringName(path_pp));
@@ -245,20 +245,20 @@ void SyncedAnimationGraph::set_animation_player(const NodePath &p_path) {
 	emit_signal(SNAME("animation_player_changed")); // Needs to unpin AnimationPlayerEditor.
 }
 
-NodePath SyncedAnimationGraph::get_animation_player() const {
+NodePath BLTAnimationGraph::get_animation_player() const {
 	return animation_player_path;
 }
 
-void SyncedAnimationGraph::set_root_animation_node(const Ref<SyncedAnimationNode> &p_animation_node) {
+void BLTAnimationGraph::set_root_animation_node(const Ref<BLTAnimationNode> &p_animation_node) {
 	if (root_animation_node.is_valid()) {
-		root_animation_node->disconnect(SNAME("tree_changed"), callable_mp(this, &SyncedAnimationGraph::_tree_changed));
+		root_animation_node->disconnect(SNAME("tree_changed"), callable_mp(this, &BLTAnimationGraph::_tree_changed));
 	}
 
 	root_animation_node = p_animation_node;
 
 	if (root_animation_node.is_valid()) {
 		_setup_graph();
-		root_animation_node->connect(SNAME("tree_changed"), callable_mp(this, &SyncedAnimationGraph::_tree_changed));
+		root_animation_node->connect(SNAME("tree_changed"), callable_mp(this, &BLTAnimationGraph::_tree_changed));
 	}
 
 	properties_dirty = true;
@@ -266,11 +266,11 @@ void SyncedAnimationGraph::set_root_animation_node(const Ref<SyncedAnimationNode
 	update_configuration_warnings();
 }
 
-Ref<SyncedAnimationNode> SyncedAnimationGraph::get_root_animation_node() const {
+Ref<BLTAnimationNode> BLTAnimationGraph::get_root_animation_node() const {
 	return root_animation_node;
 }
 
-void SyncedAnimationGraph::set_skeleton(const NodePath &p_path) {
+void BLTAnimationGraph::set_skeleton(const NodePath &p_path) {
 	skeleton_path = p_path;
 	if (p_path.is_empty()) {
 		//		set_root_node(SceneStringName(path_pp));
@@ -286,11 +286,11 @@ void SyncedAnimationGraph::set_skeleton(const NodePath &p_path) {
 	emit_signal(SNAME("skeleton_changed")); // Needs to unpin AnimationPlayerEditor.
 }
 
-NodePath SyncedAnimationGraph::get_skeleton() const {
+NodePath BLTAnimationGraph::get_skeleton() const {
 	return skeleton_path;
 }
 
-void SyncedAnimationGraph::_process_graph(double p_delta, bool p_update_only) {
+void BLTAnimationGraph::_process_graph(double p_delta, bool p_update_only) {
 	if (!root_animation_node.is_valid()) {
 		return;
 	}
@@ -300,8 +300,8 @@ void SyncedAnimationGraph::_process_graph(double p_delta, bool p_update_only) {
 	_update_properties();
 
 	AnimationData *graph_output = graph_context.animation_data_allocator.allocate();
-	root_animation_node->activate_inputs(Vector<Ref<SyncedAnimationNode>>());
-	root_animation_node->calculate_sync_track(Vector<Ref<SyncedAnimationNode>>());
+	root_animation_node->activate_inputs(Vector<Ref<BLTAnimationNode>>());
+	root_animation_node->calculate_sync_track(Vector<Ref<BLTAnimationNode>>());
 	root_animation_node->update_time(p_delta);
 	root_animation_node->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
 
@@ -310,7 +310,7 @@ void SyncedAnimationGraph::_process_graph(double p_delta, bool p_update_only) {
 	graph_context.animation_data_allocator.free(graph_output);
 }
 
-void SyncedAnimationGraph::_apply_animation_data(const AnimationData &output_data) const {
+void BLTAnimationGraph::_apply_animation_data(const AnimationData &output_data) const {
 	GodotProfileZone("SyncedAnimationGraph::_apply_animation_data");
 
 	for (const KeyValue<Animation::TypeHash, size_t> &K : output_data.value_buffer_offset) {
@@ -342,7 +342,7 @@ void SyncedAnimationGraph::_apply_animation_data(const AnimationData &output_dat
 	}
 }
 
-void SyncedAnimationGraph::_set_process(bool p_process, bool p_force) {
+void BLTAnimationGraph::_set_process(bool p_process, bool p_force) {
 	if (processing == p_process && !p_force) {
 		return;
 	}
@@ -353,19 +353,19 @@ void SyncedAnimationGraph::_set_process(bool p_process, bool p_force) {
 	processing = p_process;
 }
 
-void SyncedAnimationGraph::_setup_evaluation_context() {
+void BLTAnimationGraph::_setup_evaluation_context() {
 	_cleanup_evaluation_context();
 
 	graph_context.animation_player = Object::cast_to<AnimationPlayer>(get_node_or_null(animation_player_path));
 	graph_context.skeleton_3d = Object::cast_to<Skeleton3D>(get_node_or_null(skeleton_path));
 }
 
-void SyncedAnimationGraph::_cleanup_evaluation_context() {
+void BLTAnimationGraph::_cleanup_evaluation_context() {
 	graph_context.animation_player = nullptr;
 	graph_context.skeleton_3d = nullptr;
 }
 
-void SyncedAnimationGraph::_setup_graph() {
+void BLTAnimationGraph::_setup_graph() {
 	if (graph_context.animation_player == nullptr || graph_context.skeleton_3d == nullptr || !root_animation_node.is_valid()) {
 		return;
 	}
@@ -373,5 +373,5 @@ void SyncedAnimationGraph::_setup_graph() {
 	root_animation_node->initialize(graph_context);
 }
 
-SyncedAnimationGraph::SyncedAnimationGraph() {
+BLTAnimationGraph::BLTAnimationGraph() {
 }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../synced_animation_graph.h"
+#include "../blendalot_animation_graph.h"
 #include "scene/animation/animation_tree.h"
 #include "scene/main/window.h"
 
@@ -20,9 +20,9 @@ struct SyncedAnimationGraphFixture {
 
 	Ref<AnimationLibrary> animation_library;
 
-	SyncedAnimationGraph *synced_animation_graph;
+	BLTAnimationGraph *synced_animation_graph;
 	SyncedAnimationGraphFixture() {
-		SyncedAnimationGraph *scene_animation_graph = dynamic_cast<SyncedAnimationGraph *>(SceneTree::get_singleton()->get_root()->find_child("SyncedAnimationGraphFixtureTestNode", true, false));
+		BLTAnimationGraph *scene_animation_graph = dynamic_cast<BLTAnimationGraph *>(SceneTree::get_singleton()->get_root()->find_child("SyncedAnimationGraphFixtureTestNode", true, false));
 
 		if (scene_animation_graph == nullptr) {
 			setup_test_scene();
@@ -50,7 +50,7 @@ struct SyncedAnimationGraphFixture {
 
 		SceneTree::get_singleton()->get_root()->add_child(player_node);
 
-		synced_animation_graph = memnew(SyncedAnimationGraph);
+		synced_animation_graph = memnew(BLTAnimationGraph);
 		synced_animation_graph->set_name("SyncedAnimationGraphFixtureTestNode");
 		SceneTree::get_singleton()->get_root()->add_child(synced_animation_graph);
 
@@ -112,7 +112,7 @@ struct SyncedAnimationGraphFixture {
 	}
 
 	void assign_scene_variables() {
-		synced_animation_graph = dynamic_cast<SyncedAnimationGraph *>(SceneTree::get_singleton()->get_root()->find_child("SyncedAnimationGraphFixtureTestNode", true, false));
+		synced_animation_graph = dynamic_cast<BLTAnimationGraph *>(SceneTree::get_singleton()->get_root()->find_child("SyncedAnimationGraphFixtureTestNode", true, false));
 		REQUIRE(synced_animation_graph);
 		character_node = (SceneTree::get_singleton()->get_root()->find_child("CharacterNode", true, false));
 		REQUIRE(character_node != nullptr);
@@ -144,27 +144,27 @@ namespace TestSyncedAnimationGraph {
 TEST_CASE("[SyncedAnimationGraph] Test BlendTree construction") {
 	BlendTreeGraph tree_constructor;
 
-	Ref<AnimationSamplerNode> animation_sampler_node0;
+	Ref<BLTAnimationNodeSampler> animation_sampler_node0;
 	animation_sampler_node0.instantiate();
 	animation_sampler_node0->name = "Sampler0";
 	tree_constructor.add_node(animation_sampler_node0);
 
-	Ref<AnimationSamplerNode> animation_sampler_node1;
+	Ref<BLTAnimationNodeSampler> animation_sampler_node1;
 	animation_sampler_node1.instantiate();
 	animation_sampler_node1->name = "Sampler1";
 	tree_constructor.add_node(animation_sampler_node1);
 
-	Ref<AnimationSamplerNode> animation_sampler_node2;
+	Ref<BLTAnimationNodeSampler> animation_sampler_node2;
 	animation_sampler_node2.instantiate();
 	animation_sampler_node2->name = "Sampler2";
 	tree_constructor.add_node(animation_sampler_node2);
 
-	Ref<AnimationBlend2Node> node_blend0;
+	Ref<BLTAnimationNodeBlend2> node_blend0;
 	node_blend0.instantiate();
 	node_blend0->name = "Blend0";
 	tree_constructor.add_node(node_blend0);
 
-	Ref<AnimationBlend2Node> node_blend1;
+	Ref<BLTAnimationNodeBlend2> node_blend1;
 	node_blend1.instantiate();
 	node_blend1->name = "Blend1";
 	tree_constructor.add_node(node_blend1);
@@ -256,7 +256,7 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 }
 
 TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph] SyncedAnimationGraph evaluation with an AnimationSampler as root node") {
-	Ref<AnimationSamplerNode> animation_sampler_node;
+	Ref<BLTAnimationNodeSampler> animation_sampler_node;
 	animation_sampler_node.instantiate();
 	animation_sampler_node->animation_name = "animation_library/TestAnimationA";
 
@@ -278,10 +278,10 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 }
 
 TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph][BlendTree] BlendTree evaluation with a AnimationSamplerNode connected to the output") {
-	Ref<SyncedBlendTree> synced_blend_tree_node;
+	Ref<BLTAnimationNodeBlendTree> synced_blend_tree_node;
 	synced_blend_tree_node.instantiate();
 
-	Ref<AnimationSamplerNode> animation_sampler_node;
+	Ref<BLTAnimationNodeSampler> animation_sampler_node;
 	animation_sampler_node.instantiate();
 	animation_sampler_node->animation_name = "animation_library/TestAnimationA";
 
@@ -308,25 +308,25 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 }
 
 TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph][BlendTree][Blend2Node] BlendTree evaluation with a Blend2Node connected to the output") {
-	Ref<SyncedBlendTree> synced_blend_tree_node;
+	Ref<BLTAnimationNodeBlendTree> synced_blend_tree_node;
 	synced_blend_tree_node.instantiate();
 
 	// TestAnimationA
-	Ref<AnimationSamplerNode> animation_sampler_node_a;
+	Ref<BLTAnimationNodeSampler> animation_sampler_node_a;
 	animation_sampler_node_a.instantiate();
 	animation_sampler_node_a->animation_name = "animation_library/TestAnimationA";
 
 	synced_blend_tree_node->add_node(animation_sampler_node_a);
 
 	// TestAnimationB
-	Ref<AnimationSamplerNode> animation_sampler_node_b;
+	Ref<BLTAnimationNodeSampler> animation_sampler_node_b;
 	animation_sampler_node_b.instantiate();
 	animation_sampler_node_b->animation_name = "animation_library/TestAnimationB";
 
 	synced_blend_tree_node->add_node(animation_sampler_node_b);
 
 	// Blend2
-	Ref<AnimationBlend2Node> blend2_node;
+	Ref<BLTAnimationNodeBlend2> blend2_node;
 	blend2_node.instantiate();
 	blend2_node->name = "Blend2";
 	blend2_node->blend_weight = 0.5;
@@ -344,7 +344,7 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 	synced_blend_tree_node->initialize(synced_animation_graph->get_context());
 
 	int blend2_node_index = synced_blend_tree_node->find_node_index(blend2_node);
-	const SyncedBlendTree::NodeRuntimeData &blend2_runtime_data = synced_blend_tree_node->_node_runtime_data[blend2_node_index];
+	const BLTAnimationNodeBlendTree::NodeRuntimeData &blend2_runtime_data = synced_blend_tree_node->_node_runtime_data[blend2_node_index];
 
 	CHECK(blend2_runtime_data.input_nodes[0] == animation_sampler_node_a);
 	CHECK(blend2_runtime_data.input_nodes[1] == animation_sampler_node_b);
@@ -433,10 +433,10 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 		REQUIRE(ClassDB::class_exists("AnimationSamplerNode"));
 
 		// Load blend tree
-		Ref<SyncedBlendTree> loaded_synced_blend_tree = ResourceLoader::load("synced_blend_tree_node.tres");
+		Ref<BLTAnimationNodeBlendTree> loaded_synced_blend_tree = ResourceLoader::load("synced_blend_tree_node.tres");
 		REQUIRE(loaded_synced_blend_tree.is_valid());
 
-		Ref<AnimationBlend2Node> loaded_blend2_node = loaded_synced_blend_tree->get_node(loaded_synced_blend_tree->find_node_index_by_name("Blend2"));
+		Ref<BLTAnimationNodeBlend2> loaded_blend2_node = loaded_synced_blend_tree->get_node(loaded_synced_blend_tree->find_node_index_by_name("Blend2"));
 		REQUIRE(loaded_blend2_node.is_valid());
 		CHECK(loaded_blend2_node->sync == false);
 		CHECK(loaded_blend2_node->blend_weight == blend2_node->blend_weight);

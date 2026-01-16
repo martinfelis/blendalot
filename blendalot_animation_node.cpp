@@ -2,46 +2,49 @@
 // Created by martin on 03.12.25.
 //
 
-#include "synced_animation_node.h"
+#include "blendalot_animation_node.h"
 
-void SyncedAnimationNode::_bind_methods() {
+void BLTAnimationNode::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("tree_changed"));
 	ADD_SIGNAL(MethodInfo("animation_node_renamed", PropertyInfo(Variant::INT, "object_id"), PropertyInfo(Variant::STRING, "old_name"), PropertyInfo(Variant::STRING, "new_name")));
 	ADD_SIGNAL(MethodInfo("animation_node_removed", PropertyInfo(Variant::INT, "object_id"), PropertyInfo(Variant::STRING, "name")));
 }
 
-void SyncedAnimationNode::get_parameter_list(List<PropertyInfo> *r_list) const {
+void BLTAnimationNode::get_parameter_list(List<PropertyInfo> *r_list) const {
 }
 
-Variant SyncedAnimationNode::get_parameter_default_value(const StringName &p_parameter) const {
+Variant BLTAnimationNode::get_parameter_default_value(const StringName &p_parameter) const {
 	return Variant();
 }
 
-bool SyncedAnimationNode::is_parameter_read_only(const StringName &p_parameter) const {
+bool BLTAnimationNode::is_parameter_read_only(const StringName &p_parameter) const {
 	return false;
 }
 
-void SyncedAnimationNode::set_parameter(const StringName &p_name, const Variant &p_value) {
+void BLTAnimationNode::set_parameter(const StringName &p_name, const Variant &p_value) {
 }
 
-Variant SyncedAnimationNode::get_parameter(const StringName &p_name) const {
+Variant BLTAnimationNode::get_parameter(const StringName &p_name) const {
 	return Variant();
 }
 
-void SyncedAnimationNode::_tree_changed() {
+void BLTAnimationNode::_tree_changed() {
 	emit_signal(SNAME("tree_changed"));
 }
 
-void SyncedAnimationNode::_animation_node_renamed(const ObjectID &p_oid, const String &p_old_name, const String &p_new_name) {
+void BLTAnimationNode::_animation_node_renamed(const ObjectID &p_oid, const String &p_old_name, const String &p_new_name) {
 	emit_signal(SNAME("animation_node_renamed"), p_oid, p_old_name, p_new_name);
 }
 
-void SyncedAnimationNode::_animation_node_removed(const ObjectID &p_oid, const StringName &p_node) {
+void BLTAnimationNode::_animation_node_removed(const ObjectID &p_oid, const StringName &p_node) {
 	emit_signal(SNAME("animation_node_removed"), p_oid, p_node);
 }
 
-void SyncedBlendTree::_get_property_list(List<PropertyInfo> *p_list) const {
-	for (const Ref<SyncedAnimationNode> &node : tree_graph.nodes) {
+void BLTAnimationNodeBlendTree::_bind_methods() {
+}
+
+void BLTAnimationNodeBlendTree::_get_property_list(List<PropertyInfo> *p_list) const {
+	for (const Ref<BLTAnimationNode> &node : tree_graph.nodes) {
 		String prop_name = node->name;
 		if (prop_name != "Output") {
 			p_list->push_back(PropertyInfo(Variant::OBJECT, "nodes/" + prop_name + "/node", PROPERTY_HINT_RESOURCE_TYPE, "AnimationNode", PROPERTY_USAGE_NO_EDITOR));
@@ -52,7 +55,7 @@ void SyncedBlendTree::_get_property_list(List<PropertyInfo> *p_list) const {
 	p_list->push_back(PropertyInfo(Variant::ARRAY, "node_connections", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR));
 }
 
-bool SyncedBlendTree::_get(const StringName &p_name, Variant &r_value) const {
+bool BLTAnimationNodeBlendTree::_get(const StringName &p_name, Variant &r_value) const {
 	String prop_name = p_name;
 	if (prop_name.begins_with("nodes/")) {
 		String node_name = prop_name.get_slicec('/', 1);
@@ -77,7 +80,7 @@ bool SyncedBlendTree::_get(const StringName &p_name, Variant &r_value) const {
 		conns.resize(tree_graph.connections.size() * 3);
 
 		int idx = 0;
-		for (const BlendTreeConnection &connection : tree_graph.connections) {
+		for (const BLTBlendTreeConnection &connection : tree_graph.connections) {
 			conns[idx * 3 + 0] = connection.target_node->name;
 			conns[idx * 3 + 1] = connection.target_node->get_input_index(connection.target_port_name);
 			conns[idx * 3 + 2] = connection.source_node->name;
@@ -91,14 +94,14 @@ bool SyncedBlendTree::_get(const StringName &p_name, Variant &r_value) const {
 	return false;
 }
 
-bool SyncedBlendTree::_set(const StringName &p_name, const Variant &p_value) {
+bool BLTAnimationNodeBlendTree::_set(const StringName &p_name, const Variant &p_value) {
 	String prop_name = p_name;
 	if (prop_name.begins_with("nodes/")) {
 		String node_name = prop_name.get_slicec('/', 1);
 		String what = prop_name.get_slicec('/', 2);
 
 		if (what == "node") {
-			Ref<SyncedAnimationNode> anode = p_value;
+			Ref<BLTAnimationNode> anode = p_value;
 			if (anode.is_valid()) {
 				anode->name = node_name;
 				add_node(anode);
@@ -122,7 +125,7 @@ bool SyncedBlendTree::_set(const StringName &p_name, const Variant &p_value) {
 			int target_node_port_index = conns[i + 1];
 			int source_node_index = find_node_index_by_name(conns[i + 2]);
 
-			Ref<SyncedAnimationNode> target_node = tree_graph.nodes[target_node_index];
+			Ref<BLTAnimationNode> target_node = tree_graph.nodes[target_node_index];
 			Vector<StringName> target_input_names;
 			target_node->get_input_names(target_input_names);
 
@@ -239,8 +242,8 @@ void AnimationDataAllocator::register_track_values(const Ref<Animation> &animati
 	default_data.allocate_track_values(animation, skeleton_3d);
 }
 
-bool AnimationSamplerNode::initialize(GraphEvaluationContext &context) {
-	SyncedAnimationNode::initialize(context);
+bool BLTAnimationNodeSampler::initialize(GraphEvaluationContext &context) {
+	BLTAnimationNode::initialize(context);
 
 	animation = context.animation_player->get_animation(animation_name);
 	if (!animation.is_valid()) {
@@ -271,8 +274,8 @@ bool AnimationSamplerNode::initialize(GraphEvaluationContext &context) {
 	return true;
 }
 
-void AnimationSamplerNode::update_time(double p_time) {
-	SyncedAnimationNode::update_time(p_time);
+void BLTAnimationNodeSampler::update_time(double p_time) {
+	BLTAnimationNode::update_time(p_time);
 
 	if (node_time_info.is_synced) {
 		// Any potential looping has already been performed in the sync-controlling node.
@@ -290,7 +293,7 @@ void AnimationSamplerNode::update_time(double p_time) {
 	}
 }
 
-void AnimationSamplerNode::evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) {
+void BLTAnimationNodeSampler::evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) {
 	GodotProfileZone("AnimationSamplerNode::evaluate");
 
 	assert(inputs.size() == 0);
@@ -302,58 +305,58 @@ void AnimationSamplerNode::evaluate(GraphEvaluationContext &context, const Local
 	output.sample_from_animation(animation, context.skeleton_3d, node_time_info.position);
 }
 
-void AnimationSamplerNode::set_animation(const StringName &p_name) {
+void BLTAnimationNodeSampler::set_animation(const StringName &p_name) {
 	animation_name = p_name;
 }
 
-StringName AnimationSamplerNode::get_animation() const {
+StringName BLTAnimationNodeSampler::get_animation() const {
 	return animation_name;
 }
 
-void AnimationSamplerNode::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("set_animation", "name"), &AnimationSamplerNode::set_animation);
-	ClassDB::bind_method(D_METHOD("get_animation"), &AnimationSamplerNode::get_animation);
+void BLTAnimationNodeSampler::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_animation", "name"), &BLTAnimationNodeSampler::set_animation);
+	ClassDB::bind_method(D_METHOD("get_animation"), &BLTAnimationNodeSampler::get_animation);
 
 	ADD_PROPERTY(PropertyInfo(Variant::STRING_NAME, "animation"), "set_animation", "get_animation");
 }
 
-void AnimationBlend2Node::evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) {
+void BLTAnimationNodeBlend2::evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) {
 	GodotProfileZone("AnimationBlend2Node::evaluate");
 
 	output = std::move(*inputs[0]);
 	output.blend(*inputs[1], blend_weight);
 }
 
-void AnimationBlend2Node::set_use_sync(bool p_sync) {
+void BLTAnimationNodeBlend2::set_use_sync(bool p_sync) {
 	sync = p_sync;
 }
 
-bool AnimationBlend2Node::is_using_sync() const {
+bool BLTAnimationNodeBlend2::is_using_sync() const {
 	return sync;
 }
 
-void AnimationBlend2Node::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("set_use_sync", "enable"), &AnimationBlend2Node::set_use_sync);
-	ClassDB::bind_method(D_METHOD("is_using_sync"), &AnimationBlend2Node::is_using_sync);
+void BLTAnimationNodeBlend2::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_use_sync", "enable"), &BLTAnimationNodeBlend2::set_use_sync);
+	ClassDB::bind_method(D_METHOD("is_using_sync"), &BLTAnimationNodeBlend2::is_using_sync);
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "sync"), "set_use_sync", "is_using_sync");
 }
 
-void AnimationBlend2Node::get_parameter_list(List<PropertyInfo> *p_list) const {
+void BLTAnimationNodeBlend2::get_parameter_list(List<PropertyInfo> *p_list) const {
 	p_list->push_back(PropertyInfo(Variant::FLOAT, blend_weight_pname, PROPERTY_HINT_RANGE, "0,1,0.01,or_less,or_greater"));
 }
 
-void AnimationBlend2Node::set_parameter(const StringName &p_name, const Variant &p_value) {
+void BLTAnimationNodeBlend2::set_parameter(const StringName &p_name, const Variant &p_value) {
 	_set(p_name, p_value);
 }
 
-Variant AnimationBlend2Node::get_parameter(const StringName &p_name) const {
+Variant BLTAnimationNodeBlend2::get_parameter(const StringName &p_name) const {
 	Variant result;
 	_get(p_name, result);
 	return result;
 }
 
-Variant AnimationBlend2Node::get_parameter_default_value(const StringName &p_parameter) const {
+Variant BLTAnimationNodeBlend2::get_parameter_default_value(const StringName &p_parameter) const {
 	if (p_parameter == blend_weight_pname) {
 		return blend_weight;
 	}
@@ -361,12 +364,12 @@ Variant AnimationBlend2Node::get_parameter_default_value(const StringName &p_par
 	return Variant();
 }
 
-void AnimationBlend2Node::_get_property_list(List<PropertyInfo> *p_list) const {
+void BLTAnimationNodeBlend2::_get_property_list(List<PropertyInfo> *p_list) const {
 	p_list->push_back(PropertyInfo(Variant::FLOAT, blend_weight_pname, PROPERTY_HINT_RANGE, "0,1,0.01,or_less,or_greater"));
 	p_list->push_back(PropertyInfo(Variant::BOOL, sync_pname));
 }
 
-bool AnimationBlend2Node::_get(const StringName &p_name, Variant &r_value) const {
+bool BLTAnimationNodeBlend2::_get(const StringName &p_name, Variant &r_value) const {
 	if (p_name == blend_weight_pname) {
 		r_value = blend_weight;
 		return true;
@@ -380,7 +383,7 @@ bool AnimationBlend2Node::_get(const StringName &p_name, Variant &r_value) const
 	return false;
 }
 
-bool AnimationBlend2Node::_set(const StringName &p_name, const Variant &p_value) {
+bool BLTAnimationNodeBlend2::_set(const StringName &p_name, const Variant &p_value) {
 	if (p_name == blend_weight_pname) {
 		blend_weight = p_value;
 		return true;

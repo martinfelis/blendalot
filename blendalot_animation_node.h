@@ -227,13 +227,13 @@ struct GraphEvaluationContext {
 };
 
 /**
- * @class SyncedAnimationNode
+ * @class BLTAnimationNode
  * Base class for all nodes in an SyncedAnimationGraph including BlendTree nodes and StateMachine states.
  */
-class SyncedAnimationNode : public Resource {
-	GDCLASS(SyncedAnimationNode, Resource);
+class BLTAnimationNode : public Resource {
+	GDCLASS(BLTAnimationNode, Resource);
 
-	friend class SyncedAnimationGraph;
+	friend class BLTAnimationGraph;
 
 protected:
 	static void _bind_methods();
@@ -265,20 +265,20 @@ public:
 	StringName name;
 	Vector2 position;
 
-	virtual ~SyncedAnimationNode() override = default;
+	virtual ~BLTAnimationNode() override = default;
 	virtual bool initialize(GraphEvaluationContext &context) {
 		node_time_info = {};
 		return true;
 	}
 
-	virtual void activate_inputs(const Vector<Ref<SyncedAnimationNode>> &input_nodes) {
+	virtual void activate_inputs(const Vector<Ref<BLTAnimationNode>> &input_nodes) {
 		// By default, all inputs nodes are activated.
-		for (const Ref<SyncedAnimationNode> &node : input_nodes) {
+		for (const Ref<BLTAnimationNode> &node : input_nodes) {
 			node->active = true;
 			node->node_time_info.is_synced = node_time_info.is_synced;
 		}
 	}
-	virtual void calculate_sync_track(const Vector<Ref<SyncedAnimationNode>> &input_nodes) {
+	virtual void calculate_sync_track(const Vector<Ref<BLTAnimationNode>> &input_nodes) {
 		// By default, use the SyncTrack of the first input.
 		if (input_nodes.size() > 0) {
 			node_time_info.sync_track = input_nodes[0]->node_time_info.sync_track;
@@ -314,11 +314,11 @@ public:
 	}
 
 	// Creates a list of nodes nested within the current node. E.g. all nodes within a BlendTree node.
-	virtual void get_child_nodes(List<Ref<SyncedAnimationNode>> *r_child_nodes) const {}
+	virtual void get_child_nodes(List<Ref<BLTAnimationNode>> *r_child_nodes) const {}
 };
 
-class AnimationSamplerNode : public SyncedAnimationNode {
-	GDCLASS(AnimationSamplerNode, SyncedAnimationNode);
+class BLTAnimationNodeSampler : public BLTAnimationNode {
+	GDCLASS(BLTAnimationNodeSampler, BLTAnimationNode);
 
 public:
 	StringName animation_name;
@@ -337,8 +337,8 @@ protected:
 	static void _bind_methods();
 };
 
-class OutputNode : public SyncedAnimationNode {
-	GDCLASS(OutputNode, SyncedAnimationNode);
+class BLTAnimationNodeOutput : public BLTAnimationNode {
+	GDCLASS(BLTAnimationNodeOutput, BLTAnimationNode);
 
 public:
 	void get_input_names(Vector<StringName> &inputs) const override {
@@ -346,8 +346,8 @@ public:
 	}
 };
 
-class AnimationBlend2Node : public SyncedAnimationNode {
-	GDCLASS(AnimationBlend2Node, SyncedAnimationNode);
+class BLTAnimationNodeBlend2 : public BLTAnimationNode {
+	GDCLASS(BLTAnimationNodeBlend2, BLTAnimationNode);
 
 public:
 	float blend_weight = 0.0f;
@@ -359,7 +359,7 @@ public:
 	}
 
 	bool initialize(GraphEvaluationContext &context) override {
-		bool result = SyncedAnimationNode::initialize(context);
+		bool result = BLTAnimationNode::initialize(context);
 
 		if (sync) {
 			// TODO: do we always want looping in this case or do we traverse the graph to check what's reasonable?
@@ -368,7 +368,7 @@ public:
 
 		return result;
 	}
-	void activate_inputs(const Vector<Ref<SyncedAnimationNode>> &input_nodes) override {
+	void activate_inputs(const Vector<Ref<BLTAnimationNode>> &input_nodes) override {
 		input_nodes[0]->active = true;
 		input_nodes[1]->active = true;
 
@@ -377,7 +377,7 @@ public:
 		input_nodes[1]->node_time_info.is_synced = node_time_info.is_synced || sync;
 	}
 
-	void calculate_sync_track(const Vector<Ref<SyncedAnimationNode>> &input_nodes) override {
+	void calculate_sync_track(const Vector<Ref<BLTAnimationNode>> &input_nodes) override {
 		if (node_time_info.is_synced || sync) {
 			assert(input_nodes[0]->node_time_info.loop_mode == input_nodes[1]->node_time_info.loop_mode);
 			node_time_info.sync_track = SyncTrack::blend(blend_weight, input_nodes[0]->node_time_info.sync_track, input_nodes[1]->node_time_info.sync_track);
@@ -385,7 +385,7 @@ public:
 	}
 
 	void update_time(double p_delta) override {
-		SyncedAnimationNode::update_time(p_delta);
+		BLTAnimationNode::update_time(p_delta);
 
 		if (sync && !node_time_info.is_synced) {
 			if (node_time_info.loop_mode != Animation::LOOP_NONE) {
@@ -422,17 +422,17 @@ private:
 	StringName sync_pname = PNAME("sync");
 };
 
-struct BlendTreeConnection {
-	const Ref<SyncedAnimationNode> source_node = nullptr;
-	const Ref<SyncedAnimationNode> target_node = nullptr;
+struct BLTBlendTreeConnection {
+	const Ref<BLTAnimationNode> source_node = nullptr;
+	const Ref<BLTAnimationNode> target_node = nullptr;
 	const StringName target_port_name = "";
 };
 
 /**
- * @class BlendTreeGraph
+ * @class BLTBlendTreeGraph
  * Helper class that is used to build runtime blend trees and also to validate connections.
  */
-struct BlendTreeGraph {
+struct BLTBlendTreeGraph {
 	struct NodeConnectionInfo {
 		int parent_node_index = -1;
 		HashSet<int> input_subtree_node_indices; // Contains all nodes down to the tree leaves that influence this node.
@@ -440,7 +440,7 @@ struct BlendTreeGraph {
 
 		NodeConnectionInfo() = default;
 
-		explicit NodeConnectionInfo(const SyncedAnimationNode *node) {
+		explicit NodeConnectionInfo(const BLTAnimationNode *node) {
 			parent_node_index = -1;
 			for (int i = 0; i < node->get_input_count(); i++) {
 				connected_child_node_index_at_port.push_back(-1);
@@ -477,22 +477,22 @@ struct BlendTreeGraph {
 		}
 	};
 
-	Vector<Ref<SyncedAnimationNode>> nodes; // All added nodes
+	Vector<Ref<BLTAnimationNode>> nodes; // All added nodes
 	LocalVector<NodeConnectionInfo> node_connection_info;
-	LocalVector<BlendTreeConnection> connections;
+	LocalVector<BLTBlendTreeConnection> connections;
 
-	BlendTreeGraph() {
-		Ref<OutputNode> output_node;
+	BLTBlendTreeGraph() {
+		Ref<BLTAnimationNodeOutput> output_node;
 		output_node.instantiate();
 		output_node->name = "Output";
 		add_node(output_node);
 	}
 
-	Ref<SyncedAnimationNode> get_output_node() const {
+	Ref<BLTAnimationNode> get_output_node() const {
 		return nodes[0];
 	}
 
-	int find_node_index(const Ref<SyncedAnimationNode> &node) const {
+	int find_node_index(const Ref<BLTAnimationNode> &node) const {
 		for (int i = 0; i < nodes.size(); i++) {
 			if (nodes[i] == node) {
 				return i;
@@ -512,7 +512,7 @@ struct BlendTreeGraph {
 		return -1;
 	}
 
-	void add_node(const Ref<SyncedAnimationNode> &node) {
+	void add_node(const Ref<BLTAnimationNode> &node) {
 		StringName node_base_name = node->name;
 		if (node_base_name.is_empty()) {
 			node_base_name = node->get_class_name();
@@ -532,7 +532,7 @@ struct BlendTreeGraph {
 	void sort_nodes_and_references() {
 		LocalVector<int> sorted_node_indices = get_sorted_node_indices();
 
-		Vector<Ref<SyncedAnimationNode>> sorted_nodes;
+		Vector<Ref<BLTAnimationNode>> sorted_nodes;
 		LocalVector<NodeConnectionInfo> old_node_connection_info = node_connection_info;
 		for (unsigned int i = 0; i < sorted_node_indices.size(); i++) {
 			int node_index = sorted_node_indices[i];
@@ -581,7 +581,7 @@ struct BlendTreeGraph {
 		add_index_and_update_subtrees_recursive(node_parent, node_connection_info[node_parent].parent_node_index);
 	}
 
-	bool add_connection(const Ref<SyncedAnimationNode> &source_node, const Ref<SyncedAnimationNode> &target_node, const StringName &target_port_name) {
+	bool add_connection(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name) {
 		if (!is_connection_valid(source_node, target_node, target_port_name)) {
 			return false;
 		}
@@ -592,14 +592,14 @@ struct BlendTreeGraph {
 
 		node_connection_info[source_node_index].parent_node_index = target_node_index;
 		node_connection_info[target_node_index].connected_child_node_index_at_port[target_input_port_index] = source_node_index;
-		connections.push_back(BlendTreeConnection{ source_node, target_node, target_port_name });
+		connections.push_back(BLTBlendTreeConnection{ source_node, target_node, target_port_name });
 
 		add_index_and_update_subtrees_recursive(source_node_index, target_node_index);
 
 		return true;
 	}
 
-	bool is_connection_valid(const Ref<SyncedAnimationNode> &source_node, const Ref<SyncedAnimationNode> &target_node, StringName target_port_name) {
+	bool is_connection_valid(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, StringName target_port_name) {
 		int source_node_index = find_node_index(source_node);
 		if (source_node_index == -1) {
 			print_error("Cannot connect nodes: source node not found.");
@@ -640,10 +640,10 @@ struct BlendTreeGraph {
 	}
 };
 
-class SyncedBlendTree : public SyncedAnimationNode {
-	GDCLASS(SyncedBlendTree, SyncedAnimationNode);
+class BLTAnimationNodeBlendTree : public BLTAnimationNode {
+	GDCLASS(BLTAnimationNodeBlendTree, BLTAnimationNode);
 
-	BlendTreeGraph tree_graph;
+	BLTBlendTreeGraph tree_graph;
 	bool tree_initialized = false;
 
 	void sort_nodes() {
@@ -654,7 +654,7 @@ class SyncedBlendTree : public SyncedAnimationNode {
 	void setup_runtime_data() {
 		// Add nodes and allocate runtime data
 		for (int i = 0; i < tree_graph.nodes.size(); i++) {
-			const Ref<SyncedAnimationNode> node = tree_graph.nodes[i];
+			const Ref<BLTAnimationNode> node = tree_graph.nodes[i];
 
 			NodeRuntimeData node_runtime_data;
 			for (int ni = 0; ni < node->get_input_count(); ni++) {
@@ -667,7 +667,7 @@ class SyncedBlendTree : public SyncedAnimationNode {
 
 		// Populate runtime data (only now is this.nodes populated to retrieve the nodes)
 		for (int i = 0; i < tree_graph.nodes.size(); i++) {
-			Ref<SyncedAnimationNode> node = tree_graph.nodes[i];
+			Ref<BLTAnimationNode> node = tree_graph.nodes[i];
 			NodeRuntimeData &node_runtime_data = _node_runtime_data[i];
 
 			for (int port_index = 0; port_index < node->get_input_count(); port_index++) {
@@ -678,23 +678,24 @@ class SyncedBlendTree : public SyncedAnimationNode {
 	}
 
 protected:
+	static void _bind_methods();
 	void _get_property_list(List<PropertyInfo> *p_list) const;
 	bool _get(const StringName &p_name, Variant &r_value) const;
 	bool _set(const StringName &p_name, const Variant &p_value);
 
 public:
 	struct NodeRuntimeData {
-		Vector<Ref<SyncedAnimationNode>> input_nodes;
+		Vector<Ref<BLTAnimationNode>> input_nodes;
 		LocalVector<AnimationData *> input_data;
 		AnimationData *output_data = nullptr;
 	};
 	LocalVector<NodeRuntimeData> _node_runtime_data;
 
-	Ref<SyncedAnimationNode> get_output_node() const {
+	Ref<BLTAnimationNode> get_output_node() const {
 		return tree_graph.nodes[0];
 	}
 
-	int find_node_index(const Ref<SyncedAnimationNode> &node) const {
+	int find_node_index(const Ref<BLTAnimationNode> &node) const {
 		return tree_graph.find_node_index(node);
 	}
 
@@ -702,7 +703,7 @@ public:
 		return tree_graph.find_node_index_by_name(name);
 	}
 
-	Ref<SyncedAnimationNode> get_node(int node_index) {
+	Ref<BLTAnimationNode> get_node(int node_index) {
 		if (node_index < 0 || node_index > tree_graph.nodes.size()) {
 			return nullptr;
 		}
@@ -710,7 +711,7 @@ public:
 		return tree_graph.nodes[node_index];
 	}
 
-	void add_node(const Ref<SyncedAnimationNode> &node) {
+	void add_node(const Ref<BLTAnimationNode> &node) {
 		if (tree_initialized) {
 			print_error("Cannot add node to BlendTree: BlendTree already initialized.");
 			return;
@@ -719,7 +720,7 @@ public:
 		tree_graph.add_node(node);
 	}
 
-	bool add_connection(const Ref<SyncedAnimationNode> &source_node, const Ref<SyncedAnimationNode> &target_node, const StringName &target_port_name) {
+	bool add_connection(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name) {
 		if (tree_initialized) {
 			print_error("Cannot add connection to BlendTree: BlendTree already initialized.");
 			return false;
@@ -733,7 +734,7 @@ public:
 		sort_nodes();
 		setup_runtime_data();
 
-		for (const Ref<SyncedAnimationNode> &node : tree_graph.nodes) {
+		for (const Ref<BLTAnimationNode> &node : tree_graph.nodes) {
 			if (!node->initialize(context)) {
 				return false;
 			}
@@ -744,12 +745,12 @@ public:
 		return true;
 	}
 
-	void activate_inputs(const Vector<Ref<SyncedAnimationNode>> &input_nodes) override {
+	void activate_inputs(const Vector<Ref<BLTAnimationNode>> &input_nodes) override {
 		GodotProfileZone("SyncedBlendTree::activate_inputs");
 
 		tree_graph.nodes[0]->active = true;
 		for (int i = 0; i < tree_graph.nodes.size(); i++) {
-			const Ref<SyncedAnimationNode> &node = tree_graph.nodes[i];
+			const Ref<BLTAnimationNode> &node = tree_graph.nodes[i];
 
 			if (!node->active) {
 				continue;
@@ -760,10 +761,10 @@ public:
 		}
 	}
 
-	void calculate_sync_track(const Vector<Ref<SyncedAnimationNode>> &input_nodes) override {
+	void calculate_sync_track(const Vector<Ref<BLTAnimationNode>> &input_nodes) override {
 		GodotProfileZone("SyncedBlendTree::calculate_sync_track");
 		for (int i = tree_graph.nodes.size() - 1; i > 0; i--) {
-			const Ref<SyncedAnimationNode> &node = tree_graph.nodes[i];
+			const Ref<BLTAnimationNode> &node = tree_graph.nodes[i];
 
 			if (!node->active) {
 				continue;
@@ -782,13 +783,13 @@ public:
 		tree_graph.nodes[0]->node_time_info.position += p_delta;
 
 		for (int i = 1; i < tree_graph.nodes.size(); i++) {
-			const Ref<SyncedAnimationNode> &node = tree_graph.nodes[i];
+			const Ref<BLTAnimationNode> &node = tree_graph.nodes[i];
 
 			if (!node->active) {
 				continue;
 			}
 
-			const Ref<SyncedAnimationNode> &node_parent = tree_graph.nodes[tree_graph.node_connection_info[i].parent_node_index];
+			const Ref<BLTAnimationNode> &node_parent = tree_graph.nodes[tree_graph.node_connection_info[i].parent_node_index];
 
 			if (node->node_time_info.is_synced) {
 				node->update_time(node_parent->node_time_info.sync_position);
@@ -802,7 +803,7 @@ public:
 		ZoneScopedN("SyncedBlendTree::evaluate");
 
 		for (int i = tree_graph.nodes.size() - 1; i > 0; i--) {
-			const Ref<SyncedAnimationNode> &node = tree_graph.nodes[i];
+			const Ref<BLTAnimationNode> &node = tree_graph.nodes[i];
 
 			if (!node->active) {
 				continue;
@@ -832,8 +833,8 @@ public:
 		}
 	}
 
-	void get_child_nodes(List<Ref<SyncedAnimationNode>> *r_child_nodes) const override {
-		for (const Ref<SyncedAnimationNode> &node : tree_graph.nodes) {
+	void get_child_nodes(List<Ref<BLTAnimationNode>> *r_child_nodes) const override {
+		for (const Ref<BLTAnimationNode> &node : tree_graph.nodes) {
 			r_child_nodes->push_back(node.ptr());
 		}
 	}

@@ -18,9 +18,9 @@ func _process(delta: float) -> void:
 
 func _on_blend_weight_slider_value_changed(value: float) -> void:
 	mixamo_amy_walk_limp.get_node("AnimationTree").set("parameters/Blend2/blend_amount", value)
-	mixamo_amy_walk_limp_synced.get_node("SyncedAnimationGraph").set("parameters/AnimationBlend2Node/blend_amount", value)
+	mixamo_amy_walk_limp_synced.get_node("SyncedAnimationGraph").set("parameters/BLTAnimationNodeBlend2/blend_amount", value)
 
 	mixamo_amy_walk_run.get_node("AnimationTree").set("parameters/Blend2/blend_amount", value)
-	mixamo_amy_walk_run_synced.get_node("SyncedAnimationGraph").set("parameters/AnimationBlend2Node/blend_amount", value)
+	mixamo_amy_walk_run_synced.get_node("SyncedAnimationGraph").set("parameters/BLTAnimationNodeBlend2/blend_amount", value)
 
 	blend_weight_label.text = str(value)

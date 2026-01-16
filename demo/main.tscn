@@ -4,8 +4,8 @@
 [ext_resource type="Script" uid="uid://bjvgqujpqumj7" path="res://main.gd" id="1_1bvp3"]
 [ext_resource type="AnimationLibrary" uid="uid://dwubn740aqx51" path="res://animation_library.res" id="3_1bvp3"]
 [ext_resource type="AnimationNodeBlendTree" uid="uid://dqy0dgwsm8t46" path="res://animation_tree_walk_limp.tres" id="3_272bh"]
-[ext_resource type="SyncedBlendTree" uid="uid://2qfwr1xkiw0s" path="res://synced_blend_tree_walk_limp.tres" id="4_lquwl"]
-[ext_resource type="SyncedBlendTree" uid="uid://qsk64ax2o47f" path="res://synced_blend_tree_walk_run.tres" id="5_7mycd"]
+[ext_resource type="BLTAnimationNodeBlendTree" uid="uid://2qfwr1xkiw0s" path="res://synced_blend_tree_walk_limp.tres" id="4_lquwl"]
+[ext_resource type="BLTAnimationNodeBlendTree" uid="uid://qsk64ax2o47f" path="res://synced_blend_tree_walk_run.tres" id="5_7mycd"]
 [ext_resource type="AnimationNodeBlendTree" uid="uid://vsf71o82lkld" path="res://animation_tree_walk_run.tres" id="6_5vw27"]
 
 [sub_resource type="Theme" id="Theme_272bh"]
@@ -32,12 +32,12 @@ sky = SubResource("Sky_1bvp3")
 tonemap_mode = 2
 glow_enabled = true
 
-[node name="Main" type="Node3D"]
+[node name="Main" type="Node3D" unique_id=933302313]
 script = ExtResource("1_1bvp3")
 
-[node name="UI" type="CanvasLayer" parent="."]
+[node name="UI" type="CanvasLayer" parent="." unique_id=833570844]
 
-[node name="MarginContainer" type="MarginContainer" parent="UI"]
+[node name="MarginContainer" type="MarginContainer" parent="UI" unique_id=2079852348]
 anchors_preset = 7
 anchor_left = 0.5
 anchor_top = 1.0
@@ -52,15 +52,15 @@ size_flags_horizontal = 4
 size_flags_vertical = 8
 theme = SubResource("Theme_272bh")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="UI/MarginContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="UI/MarginContainer" unique_id=965781454]
 layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="Label" type="Label" parent="UI/MarginContainer/HBoxContainer"]
+[node name="Label" type="Label" parent="UI/MarginContainer/HBoxContainer" unique_id=634588892]
 layout_mode = 2
 text = "Blend Weight"
 
-[node name="BlendWeightSlider" type="HSlider" parent="UI/MarginContainer/HBoxContainer"]
+[node name="BlendWeightSlider" type="HSlider" parent="UI/MarginContainer/HBoxContainer" unique_id=708139207]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
@@ -68,105 +68,101 @@ size_flags_vertical = 4
 max_value = 1.0
 step = 0.001
 
-[node name="BlendWeightLabel" type="Label" parent="UI/MarginContainer/HBoxContainer"]
+[node name="BlendWeightLabel" type="Label" parent="UI/MarginContainer/HBoxContainer" unique_id=1745243570]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
 text = "0.0"
 horizontal_alignment = 2
 
-[node name="MarginContainer2" type="MarginContainer" parent="UI"]
+[node name="MarginContainer2" type="MarginContainer" parent="UI" unique_id=1639984576]
 anchors_preset = 10
 anchor_right = 1.0
 offset_bottom = 23.0
 grow_horizontal = 2
 theme_override_constants/margin_top = 80
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="UI/MarginContainer2"]
+[node name="HBoxContainer2" type="HBoxContainer" parent="UI/MarginContainer2" unique_id=1134641196]
 layout_mode = 2
 size_flags_vertical = 0
 theme_override_constants/separation = 400
 alignment = 1
 
-[node name="Label" type="Label" parent="UI/MarginContainer2/HBoxContainer2"]
+[node name="Label" type="Label" parent="UI/MarginContainer2/HBoxContainer2" unique_id=1630716301]
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
 text = "Unsynced"
 
-[node name="EmptyLabel" type="Label" parent="UI/MarginContainer2/HBoxContainer2"]
+[node name="EmptyLabel" type="Label" parent="UI/MarginContainer2/HBoxContainer2" unique_id=991022601]
 layout_mode = 2
 
-[node name="Label3" type="Label" parent="UI/MarginContainer2/HBoxContainer2"]
+[node name="Label3" type="Label" parent="UI/MarginContainer2/HBoxContainer2" unique_id=736671898]
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
 text = "Synced"
 
-[node name="Level" type="Node3D" parent="."]
+[node name="Level" type="Node3D" parent="." unique_id=1485026735]
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="Level"]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Level" unique_id=2025315417]
 mesh = SubResource("PlaneMesh_h2yge")
 skeleton = NodePath("../..")
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="Level"]
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="Level" unique_id=468068224]
 transform = Transform3D(1, 0, 0, 0, 0.14081486, 0.99003595, 0, -0.99003595, 0.14081486, 0, 2.0531263, 4.9494514)
 shadow_enabled = true
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="Level"]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="Level" unique_id=1787092986]
 environment = SubResource("Environment_lquwl")
 
-[node name="Camera3D" type="Camera3D" parent="Level"]
+[node name="Camera3D" type="Camera3D" parent="Level" unique_id=1534208216]
 transform = Transform3D(1, 0, 0, 0, 0.95413065, 0.29939055, 0, -0.29939055, 0.95413065, 0, 1.649, 3.197)
 fov = 36.8
 
-[node name="Characters" type="Node3D" parent="."]
+[node name="Characters" type="Node3D" parent="." unique_id=1282309438]
 
-[node name="MixamoAmyWalkLimp" parent="Characters" instance=ExtResource("1_0xm2m")]
+[node name="MixamoAmyWalkLimp" parent="Characters" unique_id=829927137 instance=ExtResource("1_0xm2m")]
 unique_name_in_owner = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.4, 0, 0)
 
-[node name="AnimationTree" type="AnimationTree" parent="Characters/MixamoAmyWalkLimp"]
+[node name="AnimationTree" type="AnimationTree" parent="Characters/MixamoAmyWalkLimp" unique_id=1713995200]
 tree_root = ExtResource("3_272bh")
 anim_player = NodePath("../AnimationPlayer")
 parameters/Blend2/blend_amount = 0.0
 
-[node name="MixamoAmyWalkRun" parent="Characters" instance=ExtResource("1_0xm2m")]
+[node name="MixamoAmyWalkRun" parent="Characters" unique_id=1431806836 instance=ExtResource("1_0xm2m")]
 unique_name_in_owner = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 0, 0)
 
-[node name="AnimationTree" type="AnimationTree" parent="Characters/MixamoAmyWalkRun"]
+[node name="AnimationTree" type="AnimationTree" parent="Characters/MixamoAmyWalkRun" unique_id=1079690622]
 tree_root = ExtResource("6_5vw27")
 anim_player = NodePath("../AnimationPlayer")
 parameters/Blend2/blend_amount = 0.0
 
-[node name="MixamoAmyWalkLimpSynced" parent="Characters" instance=ExtResource("1_0xm2m")]
+[node name="MixamoAmyWalkLimpSynced" parent="Characters" unique_id=1018815116 instance=ExtResource("1_0xm2m")]
 unique_name_in_owner = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 0, 0)
 
-[node name="AnimationPlayer2" type="AnimationPlayer" parent="Characters/MixamoAmyWalkLimpSynced"]
-libraries = {
-&"animation_library": ExtResource("3_1bvp3")
-}
+[node name="AnimationPlayer2" type="AnimationPlayer" parent="Characters/MixamoAmyWalkLimpSynced" unique_id=379737684]
+libraries/animation_library = ExtResource("3_1bvp3")
 
-[node name="SyncedAnimationGraph" type="SyncedAnimationGraph" parent="Characters/MixamoAmyWalkLimpSynced"]
+[node name="SyncedAnimationGraph" type="BLTAnimationGraph" parent="Characters/MixamoAmyWalkLimpSynced" unique_id=1866796918]
 animation_player = NodePath("../AnimationPlayer2")
 tree_root = ExtResource("4_lquwl")
 skeleton = NodePath("../Armature/Skeleton3D")
-parameters/AnimationBlend2Node/blend_amount = 0.0
+parameters/BLTAnimationNodeBlend2/blend_amount = 0.4
 
-[node name="MixamoAmyWalkRunSynced" parent="Characters" instance=ExtResource("1_0xm2m")]
+[node name="MixamoAmyWalkRunSynced" parent="Characters" unique_id=2088190993 instance=ExtResource("1_0xm2m")]
 unique_name_in_owner = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.4, 0, 0)
 
-[node name="AnimationPlayer2" type="AnimationPlayer" parent="Characters/MixamoAmyWalkRunSynced"]
-libraries = {
-&"animation_library": ExtResource("3_1bvp3")
-}
+[node name="AnimationPlayer2" type="AnimationPlayer" parent="Characters/MixamoAmyWalkRunSynced" unique_id=1255239074]
+libraries/animation_library = ExtResource("3_1bvp3")
 
-[node name="SyncedAnimationGraph" type="SyncedAnimationGraph" parent="Characters/MixamoAmyWalkRunSynced"]
+[node name="SyncedAnimationGraph" type="BLTAnimationGraph" parent="Characters/MixamoAmyWalkRunSynced" unique_id=1602406394]
 animation_player = NodePath("../AnimationPlayer2")
 tree_root = ExtResource("5_7mycd")
 skeleton = NodePath("../Armature/Skeleton3D")
-parameters/AnimationBlend2Node/blend_amount = 0.0
+parameters/BLTAnimationNodeBlend2/blend_amount = 0.4
 
 [connection signal="value_changed" from="UI/MarginContainer/HBoxContainer/BlendWeightSlider" to="." method="_on_blend_weight_slider_value_changed"]
 
