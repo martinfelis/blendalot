@@ -3,8 +3,6 @@
 #include "scene/animation/animation_player.h"
 #include "synced_animation_node.h"
 
-#include <cassert>
-
 class Skeleton3D;
 
 class SyncedAnimationGraph : public Node {

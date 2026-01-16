@@ -1,6 +1,7 @@
 #include "synced_animation_graph.h"
 
 #include "core/os/time.h"
+#include "core/profiling/profiling.h"
 #include "scene/3d/skeleton_3d.h"
 #include "scene/animation/animation_player.h"
 
@@ -141,6 +142,8 @@ void SyncedAnimationGraph::_tree_changed() {
 }
 
 void SyncedAnimationGraph::_notification(int p_what) {
+	GodotProfileZone("SyncedAnimationGraph::_notification");
+
 	switch (p_what) {
 		case Node::NOTIFICATION_READY: {
 			_setup_evaluation_context();
@@ -292,6 +295,8 @@ void SyncedAnimationGraph::_process_graph(double p_delta, bool p_update_only) {
 		return;
 	}
 
+	GodotProfileZone("SyncedAnimationGraph::_process_graph");
+
 	_update_properties();
 
 	root_animation_node->activate_inputs(Vector<Ref<SyncedAnimationNode>>());
@@ -303,6 +308,8 @@ void SyncedAnimationGraph::_process_graph(double p_delta, bool p_update_only) {
 }
 
 void SyncedAnimationGraph::_apply_animation_data(const AnimationData &output_data) const {
+	GodotProfileZone("SyncedAnimationGraph::_apply_animation_data");
+
 	for (const KeyValue<Animation::TypeHash, AnimationData::TrackValue *> &K : output_data.track_values) {
 		const AnimationData::TrackValue *track_value = K.value;
 		switch (track_value->type) {

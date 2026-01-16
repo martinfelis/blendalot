@@ -1,9 +1,10 @@
 #pragma once
 
-#include "scene/animation/animation_player.h"
-
 #include "core/io/resource.h"
+#include "core/profiling/profiling.h"
+
 #include "scene/3d/skeleton_3d.h"
+#include "scene/animation/animation_player.h"
 #include "sync_track.h"
 
 #include <cassert>
@@ -113,9 +114,8 @@ struct AnimationData {
 	};
 
 	AnimationData() = default;
-	~AnimationData() {
-		_clear_values();
-	}
+	~AnimationData() = default;
+
 	AnimationData(const AnimationData &other) {
 		for (const KeyValue<Animation::TypeHash, TrackValue *> &K : other.track_values) {
 			track_values.insert(K.key, K.value->clone());
@@ -165,6 +165,8 @@ struct AnimationData {
 	}
 
 	void blend(const AnimationData &to_data, const float lambda) {
+		GodotProfileZone("AnimationData::blend");
+
 		if (!has_same_tracks(to_data)) {
 			print_error("Cannot blend AnimationData: tracks do not match.");
 			return;
@@ -502,7 +504,7 @@ struct BlendTreeGraph {
 		LocalVector<int> sorted_node_indices = get_sorted_node_indices();
 
 		Vector<Ref<SyncedAnimationNode>> sorted_nodes;
-		Vector<NodeConnectionInfo> old_node_connection_info = node_connection_info;
+		LocalVector<NodeConnectionInfo> old_node_connection_info = node_connection_info;
 		for (unsigned int i = 0; i < sorted_node_indices.size(); i++) {
 			int node_index = sorted_node_indices[i];
 			sorted_nodes.push_back(nodes[node_index]);
@@ -714,6 +716,8 @@ public:
 	}
 
 	void activate_inputs(Vector<Ref<SyncedAnimationNode>> input_nodes) override {
+		GodotProfileZone("SyncedBlendTree::activate_inputs");
+
 		tree_graph.nodes[0]->active = true;
 		for (int i = 0; i < tree_graph.nodes.size(); i++) {
 			const Ref<SyncedAnimationNode> &node = tree_graph.nodes[i];
@@ -728,6 +732,7 @@ public:
 	}
 
 	void calculate_sync_track(Vector<Ref<SyncedAnimationNode>> input_nodes) override {
+		GodotProfileZone("SyncedBlendTree::calculate_sync_track");
 		for (int i = tree_graph.nodes.size() - 1; i > 0; i--) {
 			const Ref<SyncedAnimationNode> &node = tree_graph.nodes[i];
 
@@ -742,6 +747,8 @@ public:
 	}
 
 	void update_time(double p_delta) override {
+		GodotProfileZone("SyncedBlendTree::update_time");
+
 		tree_graph.nodes[0]->node_time_info.delta = p_delta;
 		tree_graph.nodes[0]->node_time_info.position += p_delta;
 
@@ -763,6 +770,8 @@ public:
 	}
 
 	void evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &input_datas, AnimationData &output_data) override {
+		ZoneScopedN("SyncedBlendTree::evaluate");
+
 		for (int i = tree_graph.nodes.size() - 1; i > 0; i--) {
 			const Ref<SyncedAnimationNode> &node = tree_graph.nodes[i];
 

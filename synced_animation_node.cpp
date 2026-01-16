@@ -135,7 +135,9 @@ bool SyncedBlendTree::_set(const StringName &p_name, const Variant &p_value) {
 }
 
 void AnimationData::sample_from_animation(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d, double p_time) {
-	const Vector<Animation::Track *> tracks = animation->get_tracks();
+	GodotProfileZone("AnimationData::sample_from_animation");
+
+	const LocalVector<Animation::Track *> tracks = animation->get_tracks();
 	Animation::Track *const *tracks_ptr = tracks.ptr();
 
 	int count = tracks.size();
@@ -250,6 +252,8 @@ void AnimationSamplerNode::update_time(double p_time) {
 }
 
 void AnimationSamplerNode::evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) {
+	GodotProfileZone("AnimationSamplerNode::evaluate");
+
 	assert(inputs.size() == 0);
 
 	if (node_time_info.is_synced) {
@@ -276,6 +280,8 @@ void AnimationSamplerNode::_bind_methods() {
 }
 
 void AnimationBlend2Node::evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) {
+	GodotProfileZone("AnimationBlend2Node::evaluate");
+
 	output = *inputs[0];
 	output.blend(*inputs[1], blend_weight);
 }
