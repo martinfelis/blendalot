@@ -282,7 +282,7 @@ void AnimationSamplerNode::_bind_methods() {
 void AnimationBlend2Node::evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) {
 	GodotProfileZone("AnimationBlend2Node::evaluate");
 
-	output = *inputs[0];
+	output = std::move(*inputs[0]);
 	output.blend(*inputs[1], blend_weight);
 }
 

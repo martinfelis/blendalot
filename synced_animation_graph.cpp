@@ -344,8 +344,6 @@ void SyncedAnimationGraph::_apply_animation_data(const AnimationData &output_dat
 			}
 		}
 	}
-
-	graph_context.skeleton_3d->force_update_all_bone_transforms();
 }
 
 void SyncedAnimationGraph::_set_process(bool p_process, bool p_force) {
