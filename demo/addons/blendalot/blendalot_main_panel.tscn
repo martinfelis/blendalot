@@ -1,0 +1,33 @@
+[gd_scene load_steps=2 format=3 uid="uid://31c6depvs0y1"]
+
+[ext_resource type="Script" uid="uid://dvulvuytt81lw" path="res://addons/blendalot/blendalot_main_panel.gd" id="1_427jg"]
+
+[node name="BlendalotMainPanel" type="Control" unique_id=1259518158]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1_427jg")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=2044593527]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HitMeButton" type="Button" parent="VBoxContainer" unique_id=1060776498]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Hit me!"
+
+[node name="GraphFrame" type="GraphFrame" parent="VBoxContainer" unique_id=184673233]
+layout_mode = 2
+size_flags_vertical = 3
+
+[connection signal="pressed" from="VBoxContainer/HitMeButton" to="." method="_on_hit_me_button_pressed"]
