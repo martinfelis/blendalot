@@ -428,221 +428,79 @@ struct BLTBlendTreeConnection {
 	const StringName target_port_name = "";
 };
 
-/**
- * @class BLTBlendTreeGraph
- * Helper class that is used to build runtime blend trees and also to validate connections.
- */
-struct BLTBlendTreeGraph {
-	struct NodeConnectionInfo {
-		int parent_node_index = -1;
-		HashSet<int> input_subtree_node_indices; // Contains all nodes down to the tree leaves that influence this node.
-		LocalVector<int> connected_child_node_index_at_port; // Contains for each input port the index of the node that is connected to it.
-
-		NodeConnectionInfo() = default;
-
-		explicit NodeConnectionInfo(const BLTAnimationNode *node) {
-			parent_node_index = -1;
-			for (int i = 0; i < node->get_input_count(); i++) {
-				connected_child_node_index_at_port.push_back(-1);
-			}
-		}
-
-		void _print_subtree() const {
-			String result = vformat("subtree node indices (%d): ", input_subtree_node_indices.size());
-			bool is_first = true;
-			for (int index : input_subtree_node_indices) {
-				if (is_first) {
-					result += vformat("%d", index);
-					is_first = false;
-				} else {
-					result += vformat(", %d", index);
-				}
-			}
-			print_line(result);
-		}
-
-		void apply_node_mapping(const LocalVector<int> &node_index_mapping) {
-			// Map connected node indices
-			for (unsigned int j = 0; j < connected_child_node_index_at_port.size(); j++) {
-				int connected_node_index = connected_child_node_index_at_port[j];
-				connected_child_node_index_at_port[j] = node_index_mapping.find(connected_node_index);
-			}
-
-			// Map connected subtrees
-			HashSet<int> old_indices = input_subtree_node_indices;
-			input_subtree_node_indices.clear();
-			for (int old_index : old_indices) {
-				input_subtree_node_indices.insert(node_index_mapping.find(old_index));
-			}
-		}
-	};
-
-	Vector<Ref<BLTAnimationNode>> nodes; // All added nodes
-	LocalVector<NodeConnectionInfo> node_connection_info;
-	LocalVector<BLTBlendTreeConnection> connections;
-
-	BLTBlendTreeGraph() {
-		Ref<BLTAnimationNodeOutput> output_node;
-		output_node.instantiate();
-		output_node->name = "Output";
-		add_node(output_node);
-	}
-
-	Ref<BLTAnimationNode> get_output_node() const {
-		return nodes[0];
-	}
-
-	int find_node_index(const Ref<BLTAnimationNode> &node) const {
-		for (int i = 0; i < nodes.size(); i++) {
-			if (nodes[i] == node) {
-				return i;
-			}
-		}
-
-		return -1;
-	}
-
-	int find_node_index_by_name(const StringName &name) const {
-		for (int i = 0; i < nodes.size(); i++) {
-			if (nodes[i]->name == name) {
-				return i;
-			}
-		}
-
-		return -1;
-	}
-
-	void add_node(const Ref<BLTAnimationNode> &node) {
-		StringName node_base_name = node->name;
-		if (node_base_name.is_empty()) {
-			node_base_name = node->get_class_name();
-		}
-		node->name = node_base_name;
-
-		int number_suffix = 1;
-		while (find_node_index_by_name(node->name) != -1) {
-			node->name = vformat("%s %d", node_base_name, number_suffix);
-			number_suffix++;
-		}
-
-		nodes.push_back(node);
-		node_connection_info.push_back(NodeConnectionInfo(node.ptr()));
-	}
-
-	void sort_nodes_and_references() {
-		LocalVector<int> sorted_node_indices = get_sorted_node_indices();
-
-		Vector<Ref<BLTAnimationNode>> sorted_nodes;
-		LocalVector<NodeConnectionInfo> old_node_connection_info = node_connection_info;
-		for (unsigned int i = 0; i < sorted_node_indices.size(); i++) {
-			int node_index = sorted_node_indices[i];
-			sorted_nodes.push_back(nodes[node_index]);
-			node_connection_info[i] = old_node_connection_info[node_index];
-		}
-		nodes = sorted_nodes;
-
-		for (NodeConnectionInfo &connection_info : node_connection_info) {
-			if (connection_info.parent_node_index != -1) {
-				connection_info.parent_node_index = sorted_node_indices[connection_info.parent_node_index];
-			}
-			connection_info.apply_node_mapping(sorted_node_indices);
-		}
-	}
-
-	LocalVector<int> get_sorted_node_indices() {
-		LocalVector<int> result;
-
-		sort_nodes_recursive(0, result);
-		result.reverse();
-
-		return result;
-	}
-
-	void sort_nodes_recursive(int node_index, LocalVector<int> &result) {
-		for (int input_node_index : node_connection_info[node_index].connected_child_node_index_at_port) {
-			if (input_node_index >= 0) {
-				sort_nodes_recursive(input_node_index, result);
-			}
-		}
-		result.push_back(node_index);
-	}
-
-	void add_index_and_update_subtrees_recursive(int node, int node_parent) {
-		if (node_parent == -1) {
-			return;
-		}
-
-		node_connection_info[node_parent].input_subtree_node_indices.insert(node);
-
-		for (int index : node_connection_info[node].input_subtree_node_indices) {
-			node_connection_info[node_parent].input_subtree_node_indices.insert(index);
-		}
-
-		add_index_and_update_subtrees_recursive(node_parent, node_connection_info[node_parent].parent_node_index);
-	}
-
-	bool add_connection(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name) {
-		if (!is_connection_valid(source_node, target_node, target_port_name)) {
-			return false;
-		}
-
-		int source_node_index = find_node_index(source_node);
-		int target_node_index = find_node_index(target_node);
-		int target_input_port_index = target_node->get_input_index(target_port_name);
-
-		node_connection_info[source_node_index].parent_node_index = target_node_index;
-		node_connection_info[target_node_index].connected_child_node_index_at_port[target_input_port_index] = source_node_index;
-		connections.push_back(BLTBlendTreeConnection{ source_node, target_node, target_port_name });
-
-		add_index_and_update_subtrees_recursive(source_node_index, target_node_index);
-
-		return true;
-	}
-
-	bool is_connection_valid(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, StringName target_port_name) {
-		int source_node_index = find_node_index(source_node);
-		if (source_node_index == -1) {
-			print_error("Cannot connect nodes: source node not found.");
-			return false;
-		}
-
-		if (node_connection_info[source_node_index].parent_node_index != -1) {
-			print_error("Cannot connect node: source node already has a parent.");
-			return false;
-		}
-
-		int target_node_index = find_node_index(target_node);
-		if (target_node_index == -1) {
-			print_error("Cannot connect nodes: target node not found.");
-			return false;
-		}
-
-		Vector<StringName> target_inputs;
-		target_node->get_input_names(target_inputs);
-
-		if (!target_inputs.has(target_port_name)) {
-			print_error("Cannot connect nodes: target port not found.");
-			return false;
-		}
-
-		int target_input_port_index = target_node->get_input_index(target_port_name);
-		if (node_connection_info[target_node_index].connected_child_node_index_at_port[target_input_port_index] != -1) {
-			print_error("Cannot connect node: target port already connected");
-			return false;
-		}
-
-		if (node_connection_info[source_node_index].input_subtree_node_indices.has(target_node_index)) {
-			print_error("Cannot connect node: connection would create loop.");
-			return false;
-		}
-
-		return true;
-	}
-};
-
 class BLTAnimationNodeBlendTree : public BLTAnimationNode {
 	GDCLASS(BLTAnimationNodeBlendTree, BLTAnimationNode);
 
+public:
+	enum ConnectionError {
+		CONNECTION_OK,
+		CONNECTION_ERROR_GRAPH_ALREADY_INITIALIZED,
+		CONNECTION_ERROR_NO_SOURCE_NODE,
+		CONNECTION_ERROR_NO_TARGET_NODE,
+		CONNECTION_ERROR_PARENT_EXISTS,
+		CONNECTION_ERROR_TARGET_PORT_NOT_FOUND,
+		CONNECTION_ERROR_TARGET_PORT_ALREADY_CONNECTED,
+		CONNECTION_ERROR_CONNECTION_CREATES_LOOP,
+	};
+
+	/**
+	 * @class BLTBlendTreeGraph
+	 * Helper class that is used to build runtime blend trees and also to validate connections.
+	 */
+	struct BLTBlendTreeGraph {
+		struct NodeConnectionInfo {
+			int parent_node_index = -1;
+			HashSet<int> input_subtree_node_indices; // Contains all nodes down to the tree leaves that influence this node.
+			LocalVector<int> connected_child_node_index_at_port; // Contains for each input port the index of the node that is connected to it.
+
+			NodeConnectionInfo() = default;
+
+			explicit NodeConnectionInfo(const BLTAnimationNode *node) {
+				parent_node_index = -1;
+				for (int i = 0; i < node->get_input_count(); i++) {
+					connected_child_node_index_at_port.push_back(-1);
+				}
+			}
+
+			void apply_node_mapping(const LocalVector<int> &node_index_mapping) {
+				// Map connected node indices
+				for (unsigned int j = 0; j < connected_child_node_index_at_port.size(); j++) {
+					int connected_node_index = connected_child_node_index_at_port[j];
+					connected_child_node_index_at_port[j] = node_index_mapping.find(connected_node_index);
+				}
+
+				// Map connected subtrees
+				HashSet<int> old_indices = input_subtree_node_indices;
+				input_subtree_node_indices.clear();
+				for (int old_index : old_indices) {
+					input_subtree_node_indices.insert(node_index_mapping.find(old_index));
+				}
+			}
+
+			void _print_subtree() const;
+		};
+
+		Vector<Ref<BLTAnimationNode>> nodes; // All added nodes
+		LocalVector<NodeConnectionInfo> node_connection_info;
+		LocalVector<BLTBlendTreeConnection> connections;
+
+		BLTBlendTreeGraph();
+
+		Ref<BLTAnimationNode> get_output_node();
+
+		int find_node_index(const Ref<BLTAnimationNode> &node) const;
+		int find_node_index_by_name(const StringName &name) const;
+		void sort_nodes_and_references();
+		LocalVector<int> get_sorted_node_indices();
+		void sort_nodes_recursive(int node_index, LocalVector<int> &result);
+		void add_index_and_update_subtrees_recursive(int node, int node_parent);
+		ConnectionError is_connection_valid(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, StringName target_port_name) const;
+
+		void add_node(const Ref<BLTAnimationNode> &node);
+		ConnectionError add_connection(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name);
+	};
+
+private:
 	BLTBlendTreeGraph tree_graph;
 	bool tree_initialized = false;
 
@@ -720,10 +578,10 @@ public:
 		tree_graph.add_node(node);
 	}
 
-	bool add_connection(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name) {
+	ConnectionError add_connection(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name) {
 		if (tree_initialized) {
 			print_error("Cannot add connection to BlendTree: BlendTree already initialized.");
-			return false;
+			return CONNECTION_ERROR_GRAPH_ALREADY_INITIALIZED;
 		}
 
 		return tree_graph.add_connection(source_node, target_node, target_port_name);
@@ -745,7 +603,8 @@ public:
 		return true;
 	}
 
-	void activate_inputs(const Vector<Ref<BLTAnimationNode>> &input_nodes) override {
+	void
+	activate_inputs(const Vector<Ref<BLTAnimationNode>> &input_nodes) override {
 		GodotProfileZone("SyncedBlendTree::activate_inputs");
 
 		tree_graph.nodes[0]->active = true;
@@ -839,3 +698,5 @@ public:
 		}
 	}
 };
+
+VARIANT_ENUM_CAST(BLTAnimationNodeBlendTree::ConnectionError)

@@ -12,6 +12,19 @@ extends Node3D
 func _ready() -> void:
 	blend_weight_slider.value = 0.5
 
+	var blend_tree: BLTAnimationNodeBlendTree = BLTAnimationNodeBlendTree.new()
+	var output_node: BLTAnimationNodeOutput = blend_tree.get_output_node()
+	var sampler_node_1: BLTAnimationNodeSampler = BLTAnimationNodeSampler.new()
+	
+	sampler_node_1.animation = "animation_library/Walk-InPlace"
+	
+	blend_tree.add_node(sampler_node_1)
+	var result = blend_tree.add_connection(sampler_node_1, output_node, "Input")
+	var anim_graph: BLTAnimationGraph = mixamo_amy_walk_run_synced.get_node("SyncedAnimationGraph")
+	
+	anim_graph.tree_root = blend_tree
+
+
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:
 	pass

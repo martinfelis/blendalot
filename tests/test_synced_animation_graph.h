@@ -142,7 +142,7 @@ struct SyncedAnimationGraphFixture {
 namespace TestSyncedAnimationGraph {
 
 TEST_CASE("[SyncedAnimationGraph] Test BlendTree construction") {
-	BlendTreeGraph tree_constructor;
+	BLTAnimationNodeBlendTree::BLTBlendTreeGraph tree_constructor;
 
 	Ref<BLTAnimationNodeSampler> animation_sampler_node0;
 	animation_sampler_node0.instantiate();
@@ -174,7 +174,7 @@ TEST_CASE("[SyncedAnimationGraph] Test BlendTree construction") {
 	// Sampler1 -+ Blend0 -\
 	// Sampler2 -----------+ Blend1 - Output
 
-	CHECK(tree_constructor.add_connection(animation_sampler_node0, node_blend0, "Input0"));
+	CHECK(BLTAnimationNodeBlendTree::CONNECTION_OK == tree_constructor.add_connection(animation_sampler_node0, node_blend0, "Input0"));
 
 	// Ensure that subtree is properly updated
 	int sampler0_index = tree_constructor.find_node_index(animation_sampler_node0);
@@ -182,12 +182,16 @@ TEST_CASE("[SyncedAnimationGraph] Test BlendTree construction") {
 	CHECK(tree_constructor.node_connection_info[blend0_index].input_subtree_node_indices.has(sampler0_index));
 
 	// Connect blend0 to blend1
-	CHECK(tree_constructor.add_connection(node_blend0, node_blend1, "Input0"));
+	CHECK(BLTAnimationNodeBlendTree::CONNECTION_OK == tree_constructor.add_connection(node_blend0, node_blend1, "Input0"));
+
+	// Creating a loop must fail
+	CHECK(BLTAnimationNodeBlendTree::CONNECTION_ERROR_CONNECTION_CREATES_LOOP == tree_constructor.add_connection(node_blend1, node_blend0, "Input1"));
+
+	// Correct connection of Sampler1 to Blend0
+	CHECK(BLTAnimationNodeBlendTree::CONNECTION_OK == tree_constructor.add_connection(animation_sampler_node1, node_blend0, "Input1"));
 
 	// Connecting to an already connected port must fail
-	CHECK(!tree_constructor.add_connection(animation_sampler_node1, node_blend0, "Input0"));
-	// Correct connection of Sampler1 to Blend0
-	CHECK(tree_constructor.add_connection(animation_sampler_node1, node_blend0, "Input1"));
+	CHECK(BLTAnimationNodeBlendTree::CONNECTION_ERROR_TARGET_PORT_ALREADY_CONNECTED == tree_constructor.add_connection(animation_sampler_node2, node_blend0, "Input0"));
 
 	// Ensure that subtree is properly updated
 	int sampler1_index = tree_constructor.find_node_index(animation_sampler_node0);
@@ -196,12 +200,9 @@ TEST_CASE("[SyncedAnimationGraph] Test BlendTree construction") {
 	CHECK(tree_constructor.node_connection_info[blend1_index].input_subtree_node_indices.has(sampler0_index));
 	CHECK(tree_constructor.node_connection_info[blend1_index].input_subtree_node_indices.has(blend0_index));
 
-	// Creating a loop must fail
-	CHECK(!tree_constructor.add_connection(node_blend1, node_blend0, "Input1"));
-
 	// Perform remaining connections
-	CHECK(tree_constructor.add_connection(node_blend1, tree_constructor.get_output_node(), "Input"));
-	CHECK(tree_constructor.add_connection(animation_sampler_node2, node_blend1, "Input1"));
+	CHECK(BLTAnimationNodeBlendTree::CONNECTION_OK == tree_constructor.add_connection(node_blend1, tree_constructor.get_output_node(), "Input"));
+	CHECK(BLTAnimationNodeBlendTree::CONNECTION_OK == tree_constructor.add_connection(animation_sampler_node2, node_blend1, "Input1"));
 
 	// Output node must have all nodes in its subtree:
 	CHECK(tree_constructor.node_connection_info[0].input_subtree_node_indices.has(1));
@@ -286,7 +287,7 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 	animation_sampler_node->animation_name = "animation_library/TestAnimationA";
 
 	synced_blend_tree_node->add_node(animation_sampler_node);
-	REQUIRE(synced_blend_tree_node->add_connection(animation_sampler_node, synced_blend_tree_node->get_output_node(), "Input"));
+	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == synced_blend_tree_node->add_connection(animation_sampler_node, synced_blend_tree_node->get_output_node(), "Input"));
 
 	synced_blend_tree_node->initialize(synced_animation_graph->get_context());
 
@@ -337,9 +338,9 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 	// Connect nodes
 	Vector<StringName> blend2_inputs;
 	blend2_node->get_input_names(blend2_inputs);
-	REQUIRE(synced_blend_tree_node->add_connection(animation_sampler_node_a, blend2_node, blend2_inputs[0]));
-	REQUIRE(synced_blend_tree_node->add_connection(animation_sampler_node_b, blend2_node, blend2_inputs[1]));
-	REQUIRE(synced_blend_tree_node->add_connection(blend2_node, synced_blend_tree_node->get_output_node(), "Input"));
+	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == synced_blend_tree_node->add_connection(animation_sampler_node_a, blend2_node, blend2_inputs[0]));
+	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == synced_blend_tree_node->add_connection(animation_sampler_node_b, blend2_node, blend2_inputs[1]));
+	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == synced_blend_tree_node->add_connection(blend2_node, synced_blend_tree_node->get_output_node(), "Input"));
 
 	synced_blend_tree_node->initialize(synced_animation_graph->get_context());
 
@@ -430,7 +431,7 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 		// Test saving and loading of the blend tree to a resource
 		ResourceSaver::save(synced_blend_tree_node, "synced_blend_tree_node.tres");
 
-		REQUIRE(ClassDB::class_exists("AnimationSamplerNode"));
+		REQUIRE(ClassDB::class_exists("BLTAnimationNodeSampler"));
 
 		// Load blend tree
 		Ref<BLTAnimationNodeBlendTree> loaded_synced_blend_tree = ResourceLoader::load("synced_blend_tree_node.tres");
