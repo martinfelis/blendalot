@@ -295,6 +295,10 @@ void BLTAnimationGraph::_process_graph(double p_delta, bool p_update_only) {
 		return;
 	}
 
+	if (graph_context.skeleton_3d == nullptr) {
+		return;
+	}
+
 	GodotProfileZone("SyncedAnimationGraph::_process_graph");
 
 	_update_properties();
