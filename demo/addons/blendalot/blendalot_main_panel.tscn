@@ -13,7 +13,7 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 script = ExtResource("1_427jg")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=2044593527]
+[node name="BlendTreeEditorContainer" type="VBoxContainer" parent="." unique_id=2044593527]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -21,13 +21,78 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="HitMeButton" type="Button" parent="VBoxContainer" unique_id=1060776498]
+[node name="HBoxContainer" type="HBoxContainer" parent="BlendTreeEditorContainer" unique_id=1742071203]
+layout_mode = 2
+
+[node name="ResetGraphButton" type="Button" parent="BlendTreeEditorContainer/HBoxContainer" unique_id=1060776498]
 layout_mode = 2
 size_flags_horizontal = 0
-text = "Hit me!"
+text = "Reset"
 
-[node name="GraphFrame" type="GraphFrame" parent="VBoxContainer" unique_id=184673233]
+[node name="FileNameLineEdit" type="LineEdit" parent="BlendTreeEditorContainer/HBoxContainer" unique_id=2033619565]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+text = "editor_test_tree.tres"
+
+[node name="SaveButton" type="Button" parent="BlendTreeEditorContainer/HBoxContainer" unique_id=597228263]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Save
+"
+
+[node name="LoadButton" type="Button" parent="BlendTreeEditorContainer/HBoxContainer" unique_id=559146765]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Load
+"
+
+[node name="AddNodeButton" type="Button" parent="BlendTreeEditorContainer/HBoxContainer" unique_id=985452697]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Add Node"
+
+[node name="TreeOptionButton" type="OptionButton" parent="BlendTreeEditorContainer/HBoxContainer" unique_id=760974122]
+unique_name_in_owner = true
+layout_mode = 2
+selected = 0
+item_count = 2
+popup/item_0/text = "AnimationSampler"
+popup/item_0/id = 1
+popup/item_1/text = "Blend2"
+popup/item_1/id = 2
+
+[node name="InstantiateTreeButton" type="Button" parent="BlendTreeEditorContainer/HBoxContainer" unique_id=127759440]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Instantiate"
+
+[node name="Panel" type="Panel" parent="BlendTreeEditorContainer" unique_id=424652158]
 layout_mode = 2
 size_flags_vertical = 3
 
-[connection signal="pressed" from="VBoxContainer/HitMeButton" to="." method="_on_hit_me_button_pressed"]
+[node name="AddNodePopupMenu" type="PopupMenu" parent="BlendTreeEditorContainer/Panel" unique_id=2020489213]
+unique_name_in_owner = true
+oversampling_override = 1.0
+
+[node name="BlendTreeGraphEdit" type="GraphEdit" parent="BlendTreeEditorContainer/Panel" unique_id=387715755]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[connection signal="pressed" from="BlendTreeEditorContainer/HBoxContainer/ResetGraphButton" to="." method="_on_reset_graph_button_pressed"]
+[connection signal="pressed" from="BlendTreeEditorContainer/HBoxContainer/SaveButton" to="." method="_on_save_button_pressed"]
+[connection signal="pressed" from="BlendTreeEditorContainer/HBoxContainer/LoadButton" to="." method="_on_load_button_pressed"]
+[connection signal="pressed" from="BlendTreeEditorContainer/HBoxContainer/AddNodeButton" to="." method="_on_add_node_button_pressed"]
+[connection signal="pressed" from="BlendTreeEditorContainer/HBoxContainer/InstantiateTreeButton" to="." method="_on_instantiate_tree_button_pressed"]
+[connection signal="index_pressed" from="BlendTreeEditorContainer/Panel/AddNodePopupMenu" to="." method="_on_add_node_popup_menu_index_pressed"]
+[connection signal="begin_node_move" from="BlendTreeEditorContainer/Panel/BlendTreeGraphEdit" to="." method="_on_blend_tree_graph_edit_begin_node_move"]
+[connection signal="connection_request" from="BlendTreeEditorContainer/Panel/BlendTreeGraphEdit" to="." method="_on_blend_tree_graph_edit_connection_request"]
+[connection signal="end_node_move" from="BlendTreeEditorContainer/Panel/BlendTreeGraphEdit" to="." method="_on_blend_tree_graph_edit_end_node_move"]
+[connection signal="node_deselected" from="BlendTreeEditorContainer/Panel/BlendTreeGraphEdit" to="." method="_on_blend_tree_graph_edit_node_deselected"]
+[connection signal="node_selected" from="BlendTreeEditorContainer/Panel/BlendTreeGraphEdit" to="." method="_on_blend_tree_graph_edit_node_selected"]
+[connection signal="popup_request" from="BlendTreeEditorContainer/Panel/BlendTreeGraphEdit" to="." method="_on_blend_tree_graph_edit_popup_request"]

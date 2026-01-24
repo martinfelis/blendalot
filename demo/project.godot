@@ -23,3 +23,7 @@ window/size/viewport_height=1024
 [dotnet]
 
 project/assembly_name="Synced Blend Tree Test"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/blendalot/plugin.cfg")
