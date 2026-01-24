@@ -146,27 +146,27 @@ TEST_CASE("[SyncedAnimationGraph] Test BlendTree construction") {
 
 	Ref<BLTAnimationNodeSampler> animation_sampler_node0;
 	animation_sampler_node0.instantiate();
-	animation_sampler_node0->name = "Sampler0";
+	animation_sampler_node0->set_name("Sampler0");
 	tree_constructor.add_node(animation_sampler_node0);
 
 	Ref<BLTAnimationNodeSampler> animation_sampler_node1;
 	animation_sampler_node1.instantiate();
-	animation_sampler_node1->name = "Sampler1";
+	animation_sampler_node1->set_name("Sampler1");
 	tree_constructor.add_node(animation_sampler_node1);
 
 	Ref<BLTAnimationNodeSampler> animation_sampler_node2;
 	animation_sampler_node2.instantiate();
-	animation_sampler_node2->name = "Sampler2";
+	animation_sampler_node2->set_name("Sampler2");
 	tree_constructor.add_node(animation_sampler_node2);
 
 	Ref<BLTAnimationNodeBlend2> node_blend0;
 	node_blend0.instantiate();
-	node_blend0->name = "Blend0";
+	node_blend0->set_name("Blend0");
 	tree_constructor.add_node(node_blend0);
 
 	Ref<BLTAnimationNodeBlend2> node_blend1;
 	node_blend1.instantiate();
-	node_blend1->name = "Blend1";
+	node_blend1->set_name("Blend1");
 	tree_constructor.add_node(node_blend1);
 
 	// Tree
@@ -201,7 +201,7 @@ TEST_CASE("[SyncedAnimationGraph] Test BlendTree construction") {
 	CHECK(tree_constructor.node_connection_info[blend1_index].input_subtree_node_indices.has(blend0_index));
 
 	// Perform remaining connections
-	CHECK(BLTAnimationNodeBlendTree::CONNECTION_OK == tree_constructor.add_connection(node_blend1, tree_constructor.get_output_node(), "Input"));
+	CHECK(BLTAnimationNodeBlendTree::CONNECTION_OK == tree_constructor.add_connection(node_blend1, tree_constructor.get_output_node(), "Output"));
 	CHECK(BLTAnimationNodeBlendTree::CONNECTION_OK == tree_constructor.add_connection(animation_sampler_node2, node_blend1, "Input1"));
 
 	// Output node must have all nodes in its subtree:
@@ -287,7 +287,7 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 	animation_sampler_node->animation_name = "animation_library/TestAnimationA";
 
 	synced_blend_tree_node->add_node(animation_sampler_node);
-	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == synced_blend_tree_node->add_connection(animation_sampler_node, synced_blend_tree_node->get_output_node(), "Input"));
+	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == synced_blend_tree_node->add_connection(animation_sampler_node, synced_blend_tree_node->get_output_node(), "Output"));
 
 	synced_blend_tree_node->initialize(synced_animation_graph->get_context());
 
@@ -329,18 +329,17 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 	// Blend2
 	Ref<BLTAnimationNodeBlend2> blend2_node;
 	blend2_node.instantiate();
-	blend2_node->name = "Blend2";
+	blend2_node->set_name("Blend2");
 	blend2_node->blend_weight = 0.5;
 	blend2_node->sync = false;
 
 	synced_blend_tree_node->add_node(blend2_node);
 
 	// Connect nodes
-	Vector<StringName> blend2_inputs;
-	blend2_node->get_input_names(blend2_inputs);
+	Vector<StringName> blend2_inputs = blend2_node->get_input_names();
 	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == synced_blend_tree_node->add_connection(animation_sampler_node_a, blend2_node, blend2_inputs[0]));
 	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == synced_blend_tree_node->add_connection(animation_sampler_node_b, blend2_node, blend2_inputs[1]));
-	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == synced_blend_tree_node->add_connection(blend2_node, synced_blend_tree_node->get_output_node(), "Input"));
+	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == synced_blend_tree_node->add_connection(blend2_node, synced_blend_tree_node->get_output_node(), "Output"));
 
 	synced_blend_tree_node->initialize(synced_animation_graph->get_context());
 
@@ -437,7 +436,7 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 		Ref<BLTAnimationNodeBlendTree> loaded_synced_blend_tree = ResourceLoader::load("synced_blend_tree_node.tres");
 		REQUIRE(loaded_synced_blend_tree.is_valid());
 
-		Ref<BLTAnimationNodeBlend2> loaded_blend2_node = loaded_synced_blend_tree->get_node(loaded_synced_blend_tree->find_node_index_by_name("Blend2"));
+		Ref<BLTAnimationNodeBlend2> loaded_blend2_node = loaded_synced_blend_tree->get_node_by_index(loaded_synced_blend_tree->find_node_index_by_name("Blend2"));
 		REQUIRE(loaded_blend2_node.is_valid());
 		CHECK(loaded_blend2_node->sync == false);
 		CHECK(loaded_blend2_node->blend_weight == blend2_node->blend_weight);

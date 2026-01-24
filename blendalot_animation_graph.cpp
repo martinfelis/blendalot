@@ -51,7 +51,7 @@ void BLTAnimationGraph::_update_properties_for_node(const String &p_base_path, R
 	p_node->get_child_nodes(&children);
 
 	for (const Ref<BLTAnimationNode> &child_node : children) {
-		_update_properties_for_node(p_base_path + child_node->name + "/", child_node);
+		_update_properties_for_node(p_base_path + child_node->get_name() + "/", child_node);
 	}
 }
 

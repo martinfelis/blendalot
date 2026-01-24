@@ -5,9 +5,17 @@
 #include "blendalot_animation_node.h"
 
 void BLTAnimationNode::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_position", "position"), &BLTAnimationNode::set_position);
+	ClassDB::bind_method(D_METHOD("get_position"), &BLTAnimationNode::get_position);
+	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "position"), "set_position", "get_position");
+
 	ADD_SIGNAL(MethodInfo("tree_changed"));
 	ADD_SIGNAL(MethodInfo("animation_node_renamed", PropertyInfo(Variant::INT, "object_id"), PropertyInfo(Variant::STRING, "old_name"), PropertyInfo(Variant::STRING, "new_name")));
 	ADD_SIGNAL(MethodInfo("animation_node_removed", PropertyInfo(Variant::INT, "object_id"), PropertyInfo(Variant::STRING, "name")));
+
+	ClassDB::bind_method(D_METHOD("get_input_names"), &BLTAnimationNode::get_input_names_as_typed_array);
+	ClassDB::bind_method(D_METHOD("get_input_count"), &BLTAnimationNode::get_input_count);
+	ClassDB::bind_method(D_METHOD("get_input_index"), &BLTAnimationNode::get_input_index);
 }
 
 void BLTAnimationNode::get_parameter_list(List<PropertyInfo> *r_list) const {
@@ -42,8 +50,13 @@ void BLTAnimationNode::_animation_node_removed(const ObjectID &p_oid, const Stri
 
 void BLTAnimationNodeBlendTree::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("add_node", "animation_node"), &BLTAnimationNodeBlendTree::add_node);
+	ClassDB::bind_method(D_METHOD("get_node", "node_name"), &BLTAnimationNodeBlendTree::get_node);
 	ClassDB::bind_method(D_METHOD("get_output_node"), &BLTAnimationNodeBlendTree::get_output_node);
+	ClassDB::bind_method(D_METHOD("get_node_names"), &BLTAnimationNodeBlendTree::get_node_names_as_typed_array);
+
+	ClassDB::bind_method(D_METHOD("is_connection_valid", "source_node", "target_node", "target_port_name"), &BLTAnimationNodeBlendTree::is_connection_valid);
 	ClassDB::bind_method(D_METHOD("add_connection", "source_node", "target_node", "target_port_name"), &BLTAnimationNodeBlendTree::add_connection);
+	ClassDB::bind_method(D_METHOD("get_connections"), &BLTAnimationNodeBlendTree::get_connections_as_array);
 
 	BIND_CONSTANT(CONNECTION_OK);
 	BIND_CONSTANT(CONNECTION_ERROR_GRAPH_ALREADY_INITIALIZED);
@@ -57,7 +70,7 @@ void BLTAnimationNodeBlendTree::_bind_methods() {
 
 void BLTAnimationNodeBlendTree::_get_property_list(List<PropertyInfo> *p_list) const {
 	for (const Ref<BLTAnimationNode> &node : tree_graph.nodes) {
-		String prop_name = node->name;
+		String prop_name = node->get_name();
 		if (prop_name != "Output") {
 			p_list->push_back(PropertyInfo(Variant::OBJECT, "nodes/" + prop_name + "/node", PROPERTY_HINT_RESOURCE_TYPE, "AnimationNode", PROPERTY_USAGE_NO_EDITOR));
 		}
@@ -93,9 +106,9 @@ bool BLTAnimationNodeBlendTree::_get(const StringName &p_name, Variant &r_value)
 
 		int idx = 0;
 		for (const BLTBlendTreeConnection &connection : tree_graph.connections) {
-			conns[idx * 3 + 0] = connection.target_node->name;
+			conns[idx * 3 + 0] = connection.target_node->get_name();
 			conns[idx * 3 + 1] = connection.target_node->get_input_index(connection.target_port_name);
-			conns[idx * 3 + 2] = connection.source_node->name;
+			conns[idx * 3 + 2] = connection.source_node->get_name();
 			idx++;
 		}
 
@@ -115,7 +128,7 @@ bool BLTAnimationNodeBlendTree::_set(const StringName &p_name, const Variant &p_
 		if (what == "node") {
 			Ref<BLTAnimationNode> anode = p_value;
 			if (anode.is_valid()) {
-				anode->name = node_name;
+				anode->set_name(node_name);
 				add_node(anode);
 			}
 			return true;
@@ -138,8 +151,7 @@ bool BLTAnimationNodeBlendTree::_set(const StringName &p_name, const Variant &p_
 			int source_node_index = find_node_index_by_name(conns[i + 2]);
 
 			Ref<BLTAnimationNode> target_node = tree_graph.nodes[target_node_index];
-			Vector<StringName> target_input_names;
-			target_node->get_input_names(target_input_names);
+			Vector<StringName> target_input_names = target_node->get_input_names();
 
 			add_connection(tree_graph.nodes[source_node_index], target_node, target_input_names[target_node_port_index]);
 		}
@@ -255,11 +267,13 @@ void AnimationDataAllocator::register_track_values(const Ref<Animation> &animati
 }
 
 bool BLTAnimationNodeSampler::initialize(GraphEvaluationContext &context) {
-	BLTAnimationNode::initialize(context);
+	if (!BLTAnimationNode::initialize(context)) {
+		return false;
+	}
 
 	animation = context.animation_player->get_animation(animation_name);
 	if (!animation.is_valid()) {
-		print_error(vformat("Cannot initialize node %s: animation '%s' not found in animation player.", name, animation_name));
+		print_error(vformat("Cannot initialize node %s: animation '%s' not found in animation player.", get_name(), animation_name));
 		return false;
 	}
 
@@ -412,7 +426,7 @@ bool BLTAnimationNodeBlend2::_set(const StringName &p_name, const Variant &p_val
 BLTAnimationNodeBlendTree::BLTBlendTreeGraph::BLTBlendTreeGraph() {
 	Ref<BLTAnimationNodeOutput> output_node;
 	output_node.instantiate();
-	output_node->name = "Output";
+	output_node->set_name("Output");
 	add_node(output_node);
 }
 
@@ -432,7 +446,7 @@ int BLTAnimationNodeBlendTree::BLTBlendTreeGraph::find_node_index(const Ref<BLTA
 
 int BLTAnimationNodeBlendTree::BLTBlendTreeGraph::find_node_index_by_name(const StringName &name) const {
 	for (int i = 0; i < nodes.size(); i++) {
-		if (nodes[i]->name == name) {
+		if (nodes[i]->get_name() == name) {
 			return i;
 		}
 	}
@@ -441,15 +455,15 @@ int BLTAnimationNodeBlendTree::BLTBlendTreeGraph::find_node_index_by_name(const 
 }
 
 void BLTAnimationNodeBlendTree::BLTBlendTreeGraph::add_node(const Ref<BLTAnimationNode> &node) {
-	StringName node_base_name = node->name;
+	StringName node_base_name = node->get_name();
 	if (node_base_name.is_empty()) {
 		node_base_name = node->get_class_name();
 	}
-	node->name = node_base_name;
+	node->set_name(node_base_name);
 
 	int number_suffix = 1;
-	while (find_node_index_by_name(node->name) != -1) {
-		node->name = vformat("%s %d", node_base_name, number_suffix);
+	while (find_node_index_by_name(node->get_name()) != -1) {
+		node->set_name(vformat("%s %d", node_base_name, number_suffix));
 		number_suffix++;
 	}
 
@@ -546,8 +560,7 @@ BLTAnimationNodeBlendTree::ConnectionError BLTAnimationNodeBlendTree::BLTBlendTr
 		return CONNECTION_ERROR_NO_TARGET_NODE;
 	}
 
-	Vector<StringName> target_inputs;
-	target_node->get_input_names(target_inputs);
+	Vector<StringName> target_inputs = target_node->get_input_names();
 
 	if (!target_inputs.has(target_port_name)) {
 		print_error("Cannot connect nodes: target port not found.");

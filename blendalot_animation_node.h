@@ -262,7 +262,6 @@ public:
 	NodeTimeInfo node_time_info;
 	bool active = false;
 
-	StringName name;
 	Vector2 position;
 
 	virtual ~BLTAnimationNode() override = default;
@@ -285,6 +284,7 @@ public:
 			node_time_info.loop_mode = input_nodes[0]->node_time_info.loop_mode;
 		}
 	}
+
 	virtual void update_time(double p_time) {
 		if (node_time_info.is_synced) {
 			node_time_info.sync_position = p_time;
@@ -293,6 +293,7 @@ public:
 			node_time_info.position += p_time;
 		}
 	}
+
 	virtual void evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &input_datas, AnimationData &output_data) {
 		// By default, use the AnimationData of the first input.
 		if (input_datas.size() > 0) {
@@ -300,16 +301,32 @@ public:
 		}
 	}
 
-	virtual void get_input_names(Vector<StringName> &inputs) const {}
+	void set_position(const Vector2 &p_position) {
+		position = p_position;
+	}
+
+	Vector2 get_position() const {
+		return position;
+	}
+
+	virtual Vector<StringName> get_input_names() const { return {}; }
+
+	TypedArray<StringName> get_input_names_as_typed_array() const {
+		TypedArray<StringName> typed_arr;
+		Vector<StringName> vec = get_input_names();
+		typed_arr.resize(vec.size());
+		for (uint32_t i = 0; i < vec.size(); i++) {
+			typed_arr[i] = vec[i];
+		}
+		return typed_arr;
+	}
 
 	int get_input_index(const StringName &port_name) const {
-		Vector<StringName> inputs;
-		get_input_names(inputs);
+		Vector<StringName> inputs = get_input_names();
 		return inputs.find(port_name);
 	}
 	int get_input_count() const {
-		Vector<StringName> inputs;
-		get_input_names(inputs);
+		Vector<StringName> inputs = get_input_names();
 		return inputs.size();
 	}
 
@@ -341,8 +358,8 @@ class BLTAnimationNodeOutput : public BLTAnimationNode {
 	GDCLASS(BLTAnimationNodeOutput, BLTAnimationNode);
 
 public:
-	void get_input_names(Vector<StringName> &inputs) const override {
-		inputs.push_back("Input");
+	Vector<StringName> get_input_names() const override {
+		return { "Output" };
 	}
 };
 
@@ -353,20 +370,21 @@ public:
 	float blend_weight = 0.0f;
 	bool sync = true;
 
-	void get_input_names(Vector<StringName> &inputs) const override {
-		inputs.push_back("Input0");
-		inputs.push_back("Input1");
+	Vector<StringName> get_input_names() const override {
+		return { "Input0", "Input1" };
 	}
 
 	bool initialize(GraphEvaluationContext &context) override {
-		bool result = BLTAnimationNode::initialize(context);
+		if (!BLTAnimationNode::initialize(context)) {
+			return false;
+		}
 
 		if (sync) {
 			// TODO: do we always want looping in this case or do we traverse the graph to check what's reasonable?
 			node_time_info.loop_mode = Animation::LOOP_LINEAR;
 		}
 
-		return result;
+		return true;
 	}
 	void activate_inputs(const Vector<Ref<BLTAnimationNode>> &input_nodes) override {
 		input_nodes[0]->active = true;
@@ -549,24 +567,12 @@ public:
 	};
 	LocalVector<NodeRuntimeData> _node_runtime_data;
 
-	Ref<BLTAnimationNode> get_output_node() const {
-		return tree_graph.nodes[0];
-	}
-
 	int find_node_index(const Ref<BLTAnimationNode> &node) const {
 		return tree_graph.find_node_index(node);
 	}
 
 	int find_node_index_by_name(const StringName &name) const {
 		return tree_graph.find_node_index_by_name(name);
-	}
-
-	Ref<BLTAnimationNode> get_node(int node_index) {
-		if (node_index < 0 || node_index > tree_graph.nodes.size()) {
-			return nullptr;
-		}
-
-		return tree_graph.nodes[node_index];
 	}
 
 	void add_node(const Ref<BLTAnimationNode> &node) {
@@ -578,6 +584,51 @@ public:
 		tree_graph.add_node(node);
 	}
 
+	TypedArray<StringName> get_node_names_as_typed_array() const {
+		Vector<StringName> vec;
+		for (const Ref<BLTAnimationNode> &node : tree_graph.nodes) {
+			vec.push_back(node->get_name());
+		}
+
+		TypedArray<StringName> typed_arr;
+		typed_arr.resize(vec.size());
+		for (uint32_t i = 0; i < vec.size(); i++) {
+			typed_arr[i] = vec[i];
+		}
+		return typed_arr;
+	}
+
+	Ref<BLTAnimationNode> get_node(const StringName &node_name) const {
+		int node_index = tree_graph.find_node_index_by_name(node_name);
+
+		if (node_index >= 0) {
+			return tree_graph.nodes[node_index];
+		}
+
+		return nullptr;
+	}
+
+	Ref<BLTAnimationNode> get_node_by_index(int node_index) const {
+		if (node_index < 0 || node_index > tree_graph.nodes.size()) {
+			return nullptr;
+		}
+
+		return tree_graph.nodes[node_index];
+	}
+
+	Ref<BLTAnimationNode> get_output_node() const {
+		return tree_graph.nodes[0];
+	}
+
+	ConnectionError is_connection_valid(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name) {
+		if (tree_initialized) {
+			print_error("Cannot add connection to BlendTree: BlendTree already initialized.");
+			return CONNECTION_ERROR_GRAPH_ALREADY_INITIALIZED;
+		}
+
+		return tree_graph.is_connection_valid(source_node, target_node, target_port_name);
+	}
+
 	ConnectionError add_connection(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name) {
 		if (tree_initialized) {
 			print_error("Cannot add connection to BlendTree: BlendTree already initialized.");
@@ -587,8 +638,23 @@ public:
 		return tree_graph.add_connection(source_node, target_node, target_port_name);
 	}
 
+	Array get_connections_as_array() const {
+		Array result;
+		for (const BLTBlendTreeConnection &connection : tree_graph.connections) {
+			result.push_back(connection.source_node);
+			result.push_back(connection.target_node);
+			result.push_back(connection.target_port_name);
+		}
+
+		return result;
+	}
+
 	// overrides from SyncedAnimationNode
 	bool initialize(GraphEvaluationContext &context) override {
+		if (!BLTAnimationNode::initialize(context)) {
+			return false;
+		}
+
 		sort_nodes();
 		setup_runtime_data();
 
