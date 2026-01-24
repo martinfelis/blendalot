@@ -468,7 +468,10 @@ void BLTAnimationNodeBlendTree::BLTBlendTreeGraph::add_node(const Ref<BLTAnimati
 	}
 
 	nodes.push_back(node);
-	node_connection_info.push_back(NodeConnectionInfo(node.ptr()));
+
+	NodeConnectionInfo connection_info(node.ptr());
+	connection_info.input_subtree_node_indices.insert(nodes.size() - 1);
+	node_connection_info.push_back(connection_info);
 }
 
 void BLTAnimationNodeBlendTree::BLTBlendTreeGraph::sort_nodes_and_references() {
@@ -509,37 +512,30 @@ void BLTAnimationNodeBlendTree::BLTBlendTreeGraph::sort_nodes_recursive(int node
 	result.push_back(node_index);
 }
 
-void BLTAnimationNodeBlendTree::BLTBlendTreeGraph::add_index_and_update_subtrees_recursive(int node, int node_parent) {
-	if (node_parent == -1) {
+void BLTAnimationNodeBlendTree::BLTBlendTreeGraph::add_index_and_update_subtrees_recursive(int node_index, int node_parent_index) {
+	if (node_parent_index == -1) {
 		return;
 	}
 
-	node_connection_info[node_parent].input_subtree_node_indices.insert(node);
+	node_connection_info[node_parent_index].input_subtree_node_indices.insert(node_index);
 
-	for (int index : node_connection_info[node].input_subtree_node_indices) {
-		node_connection_info[node_parent].input_subtree_node_indices.insert(index);
+	for (int index : node_connection_info[node_index].input_subtree_node_indices) {
+		node_connection_info[node_parent_index].input_subtree_node_indices.insert(index);
 	}
 
-	add_index_and_update_subtrees_recursive(node_parent, node_connection_info[node_parent].parent_node_index);
+	add_index_and_update_subtrees_recursive(node_parent_index, node_connection_info[node_parent_index].parent_node_index);
 }
 
-BLTAnimationNodeBlendTree::ConnectionError BLTAnimationNodeBlendTree::BLTBlendTreeGraph::add_connection(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name) {
-	ConnectionError result = is_connection_valid(source_node, target_node, target_port_name);
-	if (result != CONNECTION_OK) {
-		return result;
+void BLTAnimationNodeBlendTree::BLTBlendTreeGraph::remove_subtree_and_update_subtrees_recursive(int node_index, const HashSet<int> &removed_subtree_indices) {
+	NodeConnectionInfo &connection_info = node_connection_info[node_index];
+
+	for (int subtree_node_index : removed_subtree_indices) {
+		connection_info.input_subtree_node_indices.erase(subtree_node_index);
 	}
 
-	int source_node_index = find_node_index(source_node);
-	int target_node_index = find_node_index(target_node);
-	int target_input_port_index = target_node->get_input_index(target_port_name);
-
-	node_connection_info[source_node_index].parent_node_index = target_node_index;
-	node_connection_info[target_node_index].connected_child_node_index_at_port[target_input_port_index] = source_node_index;
-	connections.push_back(BLTBlendTreeConnection{ source_node, target_node, target_port_name });
-
-	add_index_and_update_subtrees_recursive(source_node_index, target_node_index);
-
-	return CONNECTION_OK;
+	if (connection_info.parent_node_index != -1) {
+		remove_subtree_and_update_subtrees_recursive(connection_info.parent_node_index, removed_subtree_indices);
+	}
 }
 
 BLTAnimationNodeBlendTree::ConnectionError BLTAnimationNodeBlendTree::BLTBlendTreeGraph::is_connection_valid(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, StringName target_port_name) const {
@@ -576,6 +572,56 @@ BLTAnimationNodeBlendTree::ConnectionError BLTAnimationNodeBlendTree::BLTBlendTr
 	if (node_connection_info[source_node_index].input_subtree_node_indices.has(target_node_index)) {
 		print_error("Cannot connect node: connection would create loop.");
 		return CONNECTION_ERROR_CONNECTION_CREATES_LOOP;
+	}
+
+	return CONNECTION_OK;
+}
+
+BLTAnimationNodeBlendTree::ConnectionError BLTAnimationNodeBlendTree::BLTBlendTreeGraph::add_connection(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name) {
+	ConnectionError result = is_connection_valid(source_node, target_node, target_port_name);
+	if (result != CONNECTION_OK) {
+		return result;
+	}
+
+	int source_node_index = find_node_index(source_node);
+	int target_node_index = find_node_index(target_node);
+	int target_input_port_index = target_node->get_input_index(target_port_name);
+
+	node_connection_info[source_node_index].parent_node_index = target_node_index;
+	node_connection_info[target_node_index].connected_child_node_index_at_port[target_input_port_index] = source_node_index;
+	connections.push_back(BLTBlendTreeConnection{ source_node, target_node, target_port_name });
+
+	add_index_and_update_subtrees_recursive(source_node_index, target_node_index);
+
+	return CONNECTION_OK;
+}
+
+int BLTAnimationNodeBlendTree::BLTBlendTreeGraph::find_connection_index(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name) const {
+	for (uint32_t i = 0; i < connections.size(); i++) {
+		if (connections[i].source_node == source_node && connections[i].target_node == target_node && connections[i].target_port_name == target_port_name) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+BLTAnimationNodeBlendTree::ConnectionError BLTAnimationNodeBlendTree::BLTBlendTreeGraph::remove_connection(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name) {
+	int source_node_index = find_node_index(source_node);
+	NodeConnectionInfo &connection_info = node_connection_info[source_node_index];
+
+	if (connection_info.parent_node_index != -1) {
+		NodeConnectionInfo &parent_connection_info = node_connection_info[connection_info.parent_node_index];
+		parent_connection_info.input_subtree_node_indices.erase(source_node_index);
+		parent_connection_info.connected_child_node_index_at_port[target_node->get_input_index(target_port_name)] = -1;
+
+		remove_subtree_and_update_subtrees_recursive(connection_info.parent_node_index, connection_info.input_subtree_node_indices);
+
+		connection_info.parent_node_index = -1;
+
+		uint32_t connection_index = find_connection_index(source_node, target_node, target_port_name);
+		assert(connection_index >= 0);
+		connections.remove_at(connection_index);
 	}
 
 	return CONNECTION_OK;

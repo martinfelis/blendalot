@@ -213,10 +213,10 @@ TEST_CASE("[SyncedAnimationGraph] Test BlendTree construction") {
 
 	tree_constructor.sort_nodes_and_references();
 
-	// Check that for node i all input nodes have a node index j > i.
+	// Check that for node i all input nodes have a node index j >= i (i is part of the subtree)
 	for (unsigned int i = 0; i < tree_constructor.nodes.size(); i++) {
 		for (int input_index : tree_constructor.node_connection_info[i].input_subtree_node_indices) {
-			CHECK(input_index > i);
+			CHECK(input_index >= i);
 		}
 	}
 }
@@ -452,6 +452,77 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 		CHECK(hip_bone_position.x == doctest::Approx(0.3));
 		CHECK(hip_bone_position.y == doctest::Approx(0.6));
 		CHECK(hip_bone_position.z == doctest::Approx(0.9));
+	}
+}
+
+TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph][BlendTreeGraph][ChangeConnectivity] BlendTreeGraph with various nodes and connections that are removed") {
+	BLTAnimationNodeBlendTree::BLTBlendTreeGraph blend_tree_graph;
+
+	// TestAnimationA
+	Ref<BLTAnimationNodeSampler> animation_sampler_node_a;
+	animation_sampler_node_a.instantiate();
+	animation_sampler_node_a->animation_name = "animation_library/TestAnimationA";
+
+	blend_tree_graph.add_node(animation_sampler_node_a);
+
+	// TestAnimationB
+	Ref<BLTAnimationNodeSampler> animation_sampler_node_b;
+	animation_sampler_node_b.instantiate();
+	animation_sampler_node_b->animation_name = "animation_library/TestAnimationB";
+
+	blend_tree_graph.add_node(animation_sampler_node_b);
+
+	// TestAnimationB
+	Ref<BLTAnimationNodeSampler> animation_sampler_node_c;
+	animation_sampler_node_c.instantiate();
+	animation_sampler_node_c->animation_name = "animation_library/TestAnimationC";
+
+	blend_tree_graph.add_node(animation_sampler_node_c);
+
+	// Blend2A
+	Ref<BLTAnimationNodeBlend2> blend2_node_a;
+	blend2_node_a.instantiate();
+	blend2_node_a->set_name("Blend2A");
+	blend2_node_a->blend_weight = 0.5;
+	blend2_node_a->sync = false;
+
+	blend_tree_graph.add_node(blend2_node_a);
+
+	// Blend2B
+	Ref<BLTAnimationNodeBlend2> blend2_node_b;
+	blend2_node_b.instantiate();
+	blend2_node_b->set_name("Blend2A");
+	blend2_node_b->blend_weight = 0.5;
+	blend2_node_b->sync = false;
+
+	blend_tree_graph.add_node(blend2_node_b);
+
+	// Connect nodes: Subgraph Output, Blend2A, SamplerA
+	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(blend2_node_a, blend_tree_graph.get_output_node(), "Output"));
+	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(animation_sampler_node_a, blend2_node_a, "Input0"));
+
+	// Connect nodes: Subgraph Blend2A, SamplerB, SamplerB
+	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(animation_sampler_node_b, blend2_node_b, "Input0"));
+	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(animation_sampler_node_c, blend2_node_b, "Input1"));
+
+	HashSet<int> subgraph_output_initial = blend_tree_graph.node_connection_info[0].input_subtree_node_indices;
+	HashSet<int> subgraph_blend2a_initial = blend_tree_graph.node_connection_info[blend_tree_graph.find_node_index(blend2_node_a)].input_subtree_node_indices;
+	HashSet<int> subgraph_blend2b_initial = blend_tree_graph.node_connection_info[blend_tree_graph.find_node_index(blend2_node_b)].input_subtree_node_indices;
+
+	// Add and remove connection
+	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(blend2_node_b, blend2_node_a, "Input1"));
+	blend_tree_graph.remove_connection(blend2_node_b, blend2_node_a, "Input1");
+	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.is_connection_valid(blend2_node_b, blend2_node_a, "Input1"));
+
+	// Check that we have the same subgraphs as before the connection
+	CHECK(subgraph_output_initial == blend_tree_graph.node_connection_info[0].input_subtree_node_indices);
+	CHECK(subgraph_blend2a_initial == blend_tree_graph.node_connection_info[blend_tree_graph.find_node_index(blend2_node_a)].input_subtree_node_indices);
+	CHECK(subgraph_blend2b_initial == blend_tree_graph.node_connection_info[blend_tree_graph.find_node_index(blend2_node_b)].input_subtree_node_indices);
+
+	// Check that we also do not
+	for (const BLTBlendTreeConnection &connection : blend_tree_graph.connections) {
+		bool connection_equals_removed_connection = connection.source_node == blend2_node_b && connection.target_node == blend2_node_a && connection.target_port_name == "Input1";
+		CHECK(connection_equals_removed_connection == false);
 	}
 }
 

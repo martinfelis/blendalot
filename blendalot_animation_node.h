@@ -441,9 +441,9 @@ private:
 };
 
 struct BLTBlendTreeConnection {
-	const Ref<BLTAnimationNode> source_node = nullptr;
-	const Ref<BLTAnimationNode> target_node = nullptr;
-	const StringName target_port_name = "";
+	Ref<BLTAnimationNode> source_node = nullptr;
+	Ref<BLTAnimationNode> target_node = nullptr;
+	StringName target_port_name = "";
 };
 
 class BLTAnimationNodeBlendTree : public BLTAnimationNode {
@@ -495,7 +495,19 @@ public:
 				}
 			}
 
-			void _print_subtree() const;
+			void _print_subtree() const {
+				String result = vformat("subtree node indices (%d): ", input_subtree_node_indices.size());
+				bool is_first = true;
+				for (int index : input_subtree_node_indices) {
+					if (is_first) {
+						result += vformat("%d", index);
+						is_first = false;
+					} else {
+						result += vformat(", %d", index);
+					}
+				}
+				print_line(result);
+			}
 		};
 
 		Vector<Ref<BLTAnimationNode>> nodes; // All added nodes
@@ -505,17 +517,20 @@ public:
 		BLTBlendTreeGraph();
 
 		Ref<BLTAnimationNode> get_output_node();
-
 		int find_node_index(const Ref<BLTAnimationNode> &node) const;
 		int find_node_index_by_name(const StringName &name) const;
 		void sort_nodes_and_references();
 		LocalVector<int> get_sorted_node_indices();
 		void sort_nodes_recursive(int node_index, LocalVector<int> &result);
-		void add_index_and_update_subtrees_recursive(int node, int node_parent);
-		ConnectionError is_connection_valid(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, StringName target_port_name) const;
+		void add_index_and_update_subtrees_recursive(int node_index, int node_parent_index);
+		void remove_subtree_and_update_subtrees_recursive(int node, const HashSet<int> &removed_subtree_indices);
 
 		void add_node(const Ref<BLTAnimationNode> &node);
+
+		ConnectionError is_connection_valid(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, StringName target_port_name) const;
 		ConnectionError add_connection(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name);
+		int find_connection_index(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name) const;
+		ConnectionError remove_connection(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name);
 	};
 
 private:
@@ -636,6 +651,15 @@ public:
 		}
 
 		return tree_graph.add_connection(source_node, target_node, target_port_name);
+	}
+
+	ConnectionError remove_connection(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name) {
+		if (tree_initialized) {
+			print_error("Cannot remove connection to BlendTree: BlendTree already initialized.");
+			return CONNECTION_ERROR_GRAPH_ALREADY_INITIALIZED;
+		}
+
+		return tree_graph.remove_connection(source_node, target_node, target_port_name);
 	}
 
 	Array get_connections_as_array() const {
