@@ -23,7 +23,7 @@ void BLTAnimationGraph::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_tree_root", "animation_node"), &BLTAnimationGraph::set_root_animation_node);
 	ClassDB::bind_method(D_METHOD("get_tree_root"), &BLTAnimationGraph::get_root_animation_node);
-	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "tree_root", PROPERTY_HINT_RESOURCE_TYPE, "SyncedAnimationNode"), "set_tree_root", "get_tree_root");
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "tree_root", PROPERTY_HINT_RESOURCE_TYPE, "BLTAnimationNode"), "set_tree_root", "get_tree_root");
 
 	ClassDB::bind_method(D_METHOD("set_skeleton", "skeleton"), &BLTAnimationGraph::set_skeleton);
 	ClassDB::bind_method(D_METHOD("get_skeleton"), &BLTAnimationGraph::get_skeleton);

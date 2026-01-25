@@ -505,24 +505,59 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(animation_sampler_node_b, blend2_node_b, "Input0"));
 	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(animation_sampler_node_c, blend2_node_b, "Input1"));
 
-	HashSet<int> subgraph_output_initial = blend_tree_graph.node_connection_info[0].input_subtree_node_indices;
-	HashSet<int> subgraph_blend2a_initial = blend_tree_graph.node_connection_info[blend_tree_graph.find_node_index(blend2_node_a)].input_subtree_node_indices;
-	HashSet<int> subgraph_blend2b_initial = blend_tree_graph.node_connection_info[blend_tree_graph.find_node_index(blend2_node_b)].input_subtree_node_indices;
+	SUBCASE("Add and remove a connection") {
+		HashSet<int> subgraph_output_initial = blend_tree_graph.node_connection_info[0].input_subtree_node_indices;
+		HashSet<int> subgraph_blend2a_initial = blend_tree_graph.node_connection_info[blend_tree_graph.find_node_index(blend2_node_a)].input_subtree_node_indices;
+		HashSet<int> subgraph_blend2b_initial = blend_tree_graph.node_connection_info[blend_tree_graph.find_node_index(blend2_node_b)].input_subtree_node_indices;
 
-	// Add and remove connection
-	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(blend2_node_b, blend2_node_a, "Input1"));
-	blend_tree_graph.remove_connection(blend2_node_b, blend2_node_a, "Input1");
-	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.is_connection_valid(blend2_node_b, blend2_node_a, "Input1"));
+		// Add and remove connection
+		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(blend2_node_b, blend2_node_a, "Input1"));
+		blend_tree_graph.remove_connection(blend2_node_b, blend2_node_a, "Input1");
+		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.is_connection_valid(blend2_node_b, blend2_node_a, "Input1"));
 
-	// Check that we have the same subgraphs as before the connection
-	CHECK(subgraph_output_initial == blend_tree_graph.node_connection_info[0].input_subtree_node_indices);
-	CHECK(subgraph_blend2a_initial == blend_tree_graph.node_connection_info[blend_tree_graph.find_node_index(blend2_node_a)].input_subtree_node_indices);
-	CHECK(subgraph_blend2b_initial == blend_tree_graph.node_connection_info[blend_tree_graph.find_node_index(blend2_node_b)].input_subtree_node_indices);
+		// Check that we have the same subgraphs as before the connection
+		CHECK(subgraph_output_initial == blend_tree_graph.node_connection_info[0].input_subtree_node_indices);
+		CHECK(subgraph_blend2a_initial == blend_tree_graph.node_connection_info[blend_tree_graph.find_node_index(blend2_node_a)].input_subtree_node_indices);
+		CHECK(subgraph_blend2b_initial == blend_tree_graph.node_connection_info[blend_tree_graph.find_node_index(blend2_node_b)].input_subtree_node_indices);
 
-	// Check that we also do not
-	for (const BLTBlendTreeConnection &connection : blend_tree_graph.connections) {
-		bool connection_equals_removed_connection = connection.source_node == blend2_node_b && connection.target_node == blend2_node_a && connection.target_port_name == "Input1";
-		CHECK(connection_equals_removed_connection == false);
+		// Check that we also do not
+		for (const BLTBlendTreeConnection &connection : blend_tree_graph.connections) {
+			bool connection_equals_removed_connection = connection.source_node == blend2_node_b && connection.target_node == blend2_node_a && connection.target_port_name == "Input1";
+			CHECK(connection_equals_removed_connection == false);
+		}
+	}
+
+	SUBCASE("Remove a node") {
+		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(blend2_node_b, blend2_node_a, "Input1"));
+
+		int animation_sampler_node_b_index_pre_remove = blend_tree_graph.find_node_index(animation_sampler_node_b);
+		int blend2_node_a_index_pre_remove = blend_tree_graph.find_node_index(blend2_node_a);
+		int blend2_node_b_index_pre_remove = blend_tree_graph.find_node_index(blend2_node_b);
+
+		CHECK(blend_tree_graph.node_connection_info[0].input_subtree_node_indices.size() == 6);
+		CHECK(blend_tree_graph.node_connection_info[blend2_node_a_index_pre_remove].input_subtree_node_indices.size() == 5);
+
+		blend_tree_graph.remove_node(animation_sampler_node_a);
+
+		for (const BLTBlendTreeConnection &connection : blend_tree_graph.connections) {
+			bool is_connection_with_removed_node = connection.source_node == animation_sampler_node_a || connection.target_node == animation_sampler_node_a;
+			CHECK(is_connection_with_removed_node == false);
+		}
+
+		int animation_sampler_node_b_index_post_remove = blend_tree_graph.find_node_index(animation_sampler_node_b);
+		int blend2_node_a_index_post_remove = blend_tree_graph.find_node_index(blend2_node_a);
+		int blend2_node_b_index_post_remove = blend_tree_graph.find_node_index(blend2_node_b);
+
+		CHECK(blend_tree_graph.find_node_index(animation_sampler_node_a) == -1);
+		CHECK(blend2_node_b_index_post_remove == blend2_node_b_index_pre_remove - 1);
+		CHECK(animation_sampler_node_b_index_post_remove == animation_sampler_node_b_index_pre_remove - 1);
+
+		CHECK(blend_tree_graph.node_connection_info[0].input_subtree_node_indices.size() == 5);
+		CHECK(blend_tree_graph.node_connection_info[blend2_node_a_index_post_remove].input_subtree_node_indices.size() == 4);
+		CHECK(blend_tree_graph.node_connection_info[blend2_node_a_index_post_remove].connected_child_node_index_at_port[0] == -1);
+		CHECK(blend_tree_graph.node_connection_info[blend2_node_a_index_post_remove].connected_child_node_index_at_port[1] == blend2_node_b_index_post_remove);
+		CHECK(blend_tree_graph.node_connection_info[blend2_node_b_index_post_remove].input_subtree_node_indices.has(blend2_node_b_index_post_remove));
+		CHECK(blend_tree_graph.node_connection_info[blend2_node_b_index_post_remove].input_subtree_node_indices.has(animation_sampler_node_b_index_post_remove));
 	}
 }
 

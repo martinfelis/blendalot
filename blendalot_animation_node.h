@@ -510,7 +510,7 @@ public:
 			}
 		};
 
-		Vector<Ref<BLTAnimationNode>> nodes; // All added nodes
+		LocalVector<Ref<BLTAnimationNode>> nodes; // All added nodes
 		LocalVector<NodeConnectionInfo> node_connection_info;
 		LocalVector<BLTBlendTreeConnection> connections;
 
@@ -526,6 +526,7 @@ public:
 		void remove_subtree_and_update_subtrees_recursive(int node, const HashSet<int> &removed_subtree_indices);
 
 		void add_node(const Ref<BLTAnimationNode> &node);
+		void remove_node(const Ref<BLTAnimationNode> &node);
 
 		ConnectionError is_connection_valid(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, StringName target_port_name) const;
 		ConnectionError add_connection(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name);
@@ -544,7 +545,7 @@ private:
 
 	void setup_runtime_data() {
 		// Add nodes and allocate runtime data
-		for (int i = 0; i < tree_graph.nodes.size(); i++) {
+		for (uint32_t i = 0; i < tree_graph.nodes.size(); i++) {
 			const Ref<BLTAnimationNode> node = tree_graph.nodes[i];
 
 			NodeRuntimeData node_runtime_data;
@@ -557,7 +558,7 @@ private:
 		}
 
 		// Populate runtime data (only now is this.nodes populated to retrieve the nodes)
-		for (int i = 0; i < tree_graph.nodes.size(); i++) {
+		for (uint32_t i = 0; i < tree_graph.nodes.size(); i++) {
 			Ref<BLTAnimationNode> node = tree_graph.nodes[i];
 			NodeRuntimeData &node_runtime_data = _node_runtime_data[i];
 
@@ -599,6 +600,15 @@ public:
 		tree_graph.add_node(node);
 	}
 
+	void remove_node(const Ref<BLTAnimationNode> &node) {
+		if (tree_initialized) {
+			print_error("Cannot remove node from BlendTree: BlendTree already initialized.");
+			return;
+		}
+
+		tree_graph.remove_node(node);
+	}
+
 	TypedArray<StringName> get_node_names_as_typed_array() const {
 		Vector<StringName> vec;
 		for (const Ref<BLTAnimationNode> &node : tree_graph.nodes) {
@@ -624,7 +634,7 @@ public:
 	}
 
 	Ref<BLTAnimationNode> get_node_by_index(int node_index) const {
-		if (node_index < 0 || node_index > tree_graph.nodes.size()) {
+		if (node_index < 0 || node_index > static_cast<int>(tree_graph.nodes.size())) {
 			return nullptr;
 		}
 
@@ -673,7 +683,7 @@ public:
 		return result;
 	}
 
-	// overrides from SyncedAnimationNode
+	// overrides from BLTAnimationNode
 	bool initialize(GraphEvaluationContext &context) override {
 		if (!BLTAnimationNode::initialize(context)) {
 			return false;
@@ -698,7 +708,7 @@ public:
 		GodotProfileZone("SyncedBlendTree::activate_inputs");
 
 		tree_graph.nodes[0]->active = true;
-		for (int i = 0; i < tree_graph.nodes.size(); i++) {
+		for (uint32_t i = 0; i < tree_graph.nodes.size(); i++) {
 			const Ref<BLTAnimationNode> &node = tree_graph.nodes[i];
 
 			if (!node->active) {
@@ -712,7 +722,7 @@ public:
 
 	void calculate_sync_track(const Vector<Ref<BLTAnimationNode>> &input_nodes) override {
 		GodotProfileZone("SyncedBlendTree::calculate_sync_track");
-		for (int i = tree_graph.nodes.size() - 1; i > 0; i--) {
+		for (uint32_t i = tree_graph.nodes.size() - 1; i > 0; i--) {
 			const Ref<BLTAnimationNode> &node = tree_graph.nodes[i];
 
 			if (!node->active) {
@@ -731,7 +741,7 @@ public:
 		tree_graph.nodes[0]->node_time_info.delta = p_delta;
 		tree_graph.nodes[0]->node_time_info.position += p_delta;
 
-		for (int i = 1; i < tree_graph.nodes.size(); i++) {
+		for (uint32_t i = 1; i < tree_graph.nodes.size(); i++) {
 			const Ref<BLTAnimationNode> &node = tree_graph.nodes[i];
 
 			if (!node->active) {
@@ -751,7 +761,7 @@ public:
 	void evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &input_datas, AnimationData &output_data) override {
 		ZoneScopedN("SyncedBlendTree::evaluate");
 
-		for (int i = tree_graph.nodes.size() - 1; i > 0; i--) {
+		for (uint32_t i = tree_graph.nodes.size() - 1; i > 0; i--) {
 			const Ref<BLTAnimationNode> &node = tree_graph.nodes[i];
 
 			if (!node->active) {

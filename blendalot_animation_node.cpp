@@ -50,12 +50,14 @@ void BLTAnimationNode::_animation_node_removed(const ObjectID &p_oid, const Stri
 
 void BLTAnimationNodeBlendTree::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("add_node", "animation_node"), &BLTAnimationNodeBlendTree::add_node);
+	ClassDB::bind_method(D_METHOD("remove_node", "animation_node"), &BLTAnimationNodeBlendTree::remove_node);
 	ClassDB::bind_method(D_METHOD("get_node", "node_name"), &BLTAnimationNodeBlendTree::get_node);
 	ClassDB::bind_method(D_METHOD("get_output_node"), &BLTAnimationNodeBlendTree::get_output_node);
 	ClassDB::bind_method(D_METHOD("get_node_names"), &BLTAnimationNodeBlendTree::get_node_names_as_typed_array);
 
 	ClassDB::bind_method(D_METHOD("is_connection_valid", "source_node", "target_node", "target_port_name"), &BLTAnimationNodeBlendTree::is_connection_valid);
 	ClassDB::bind_method(D_METHOD("add_connection", "source_node", "target_node", "target_port_name"), &BLTAnimationNodeBlendTree::add_connection);
+	ClassDB::bind_method(D_METHOD("remove_connection", "source_node", "target_node", "target_port_name"), &BLTAnimationNodeBlendTree::remove_connection);
 	ClassDB::bind_method(D_METHOD("get_connections"), &BLTAnimationNodeBlendTree::get_connections_as_array);
 
 	BIND_CONSTANT(CONNECTION_OK);
@@ -435,7 +437,7 @@ Ref<BLTAnimationNode> BLTAnimationNodeBlendTree::BLTBlendTreeGraph::get_output_n
 }
 
 int BLTAnimationNodeBlendTree::BLTBlendTreeGraph::find_node_index(const Ref<BLTAnimationNode> &node) const {
-	for (int i = 0; i < nodes.size(); i++) {
+	for (uint32_t i = 0; i < nodes.size(); i++) {
 		if (nodes[i] == node) {
 			return i;
 		}
@@ -445,7 +447,7 @@ int BLTAnimationNodeBlendTree::BLTBlendTreeGraph::find_node_index(const Ref<BLTA
 }
 
 int BLTAnimationNodeBlendTree::BLTBlendTreeGraph::find_node_index_by_name(const StringName &name) const {
-	for (int i = 0; i < nodes.size(); i++) {
+	for (uint32_t i = 0; i < nodes.size(); i++) {
 		if (nodes[i]->get_name() == name) {
 			return i;
 		}
@@ -472,6 +474,42 @@ void BLTAnimationNodeBlendTree::BLTBlendTreeGraph::add_node(const Ref<BLTAnimati
 	NodeConnectionInfo connection_info(node.ptr());
 	connection_info.input_subtree_node_indices.insert(nodes.size() - 1);
 	node_connection_info.push_back(connection_info);
+}
+
+void BLTAnimationNodeBlendTree::BLTBlendTreeGraph::remove_node(const Ref<BLTAnimationNode> &node) {
+	int removed_node_index = find_node_index(node);
+	assert(removed_node_index >= 0);
+
+	// Remove all connections to and from this node
+	for (uint32_t i = connections.size() - 1; i > 0; i--) {
+		if (connections[i].source_node == node || connections[i].target_node == node) {
+			remove_connection(connections[i].source_node, connections[i].target_node, connections[i].target_port_name);
+		}
+	}
+
+	// Remove the data directly related to this node
+	node_connection_info.remove_at(removed_node_index);
+	nodes.remove_at(removed_node_index);
+
+	// Ensure all indices are cleaned up.
+	for (NodeConnectionInfo &connection_info : node_connection_info) {
+		for (unsigned int j = 0; j < connection_info.connected_child_node_index_at_port.size(); j++) {
+			if (connection_info.connected_child_node_index_at_port[j] > removed_node_index) {
+				connection_info.connected_child_node_index_at_port[j] = connection_info.connected_child_node_index_at_port[j] - 1;
+			}
+		}
+
+		// Map connected subtrees
+		HashSet<int> old_indices = connection_info.input_subtree_node_indices;
+		connection_info.input_subtree_node_indices.clear();
+		for (int old_index : old_indices) {
+			if (old_index > removed_node_index) {
+				connection_info.input_subtree_node_indices.insert(old_index - 1);
+			} else {
+				connection_info.input_subtree_node_indices.insert(old_index);
+			}
+		}
+	}
 }
 
 void BLTAnimationNodeBlendTree::BLTBlendTreeGraph::sort_nodes_and_references() {
