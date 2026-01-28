@@ -1,11 +1,10 @@
-[gd_scene load_steps=14 format=3 uid="uid://svj53e2xoio"]
+[gd_scene format=3 uid="uid://svj53e2xoio"]
 
 [ext_resource type="PackedScene" uid="uid://d1xcqdqr1qeu6" path="res://assets/MixamoAmy.glb" id="1_0xm2m"]
 [ext_resource type="Script" uid="uid://bjvgqujpqumj7" path="res://main.gd" id="1_1bvp3"]
 [ext_resource type="AnimationLibrary" uid="uid://dwubn740aqx51" path="res://animation_library.res" id="3_1bvp3"]
 [ext_resource type="AnimationNodeBlendTree" uid="uid://dqy0dgwsm8t46" path="res://animation_tree_walk_limp.tres" id="3_272bh"]
 [ext_resource type="BLTAnimationNodeBlendTree" uid="uid://2qfwr1xkiw0s" path="res://synced_blend_tree_walk_limp.tres" id="4_lquwl"]
-[ext_resource type="BLTAnimationNodeBlendTree" uid="uid://qsk64ax2o47f" path="res://synced_blend_tree_walk_run.tres" id="5_7mycd"]
 [ext_resource type="AnimationNodeBlendTree" uid="uid://vsf71o82lkld" path="res://animation_tree_walk_run.tres" id="6_5vw27"]
 
 [sub_resource type="Theme" id="Theme_272bh"]
@@ -31,6 +30,17 @@ background_mode = 2
 sky = SubResource("Sky_1bvp3")
 tonemap_mode = 2
 glow_enabled = true
+
+[sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_7mycd"]
+resource_name = "BLTAnimationNodeSampler"
+position = Vector2(149.47485, 361.29053)
+animation = &"animation_library/Walk-InPlace"
+
+[sub_resource type="BLTAnimationNodeBlendTree" id="BLTAnimationNodeBlendTree_272bh"]
+nodes/Output/position = Vector2(602.0149, 281.4305)
+nodes/BLTAnimationNodeSampler/node = SubResource("BLTAnimationNodeSampler_7mycd")
+nodes/BLTAnimationNodeSampler/position = Vector2(149.47485, 361.29053)
+node_connections = ["Output", 0, "BLTAnimationNodeSampler"]
 
 [node name="Main" type="Node3D" unique_id=933302313]
 script = ExtResource("1_1bvp3")
@@ -156,13 +166,13 @@ unique_name_in_owner = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.4, 0, 0)
 
 [node name="AnimationPlayer2" type="AnimationPlayer" parent="Characters/MixamoAmyWalkRunSynced" unique_id=1255239074]
+active = false
 libraries/animation_library = ExtResource("3_1bvp3")
 
 [node name="SyncedAnimationGraph" type="BLTAnimationGraph" parent="Characters/MixamoAmyWalkRunSynced" unique_id=1602406394]
 animation_player = NodePath("../AnimationPlayer2")
-tree_root = ExtResource("5_7mycd")
+tree_root = SubResource("BLTAnimationNodeBlendTree_272bh")
 skeleton = NodePath("../Armature/Skeleton3D")
-parameters/BLTAnimationNodeBlend2/blend_amount = 0.4
 
 [connection signal="value_changed" from="UI/MarginContainer/HBoxContainer/BlendWeightSlider" to="." method="_on_blend_weight_slider_value_changed"]
 

@@ -1,4 +1,5 @@
 @tool
+class_name BlendalotMainPanel
 extends Control
 
 @onready var blend_tree_graph_edit: GraphEdit = %BlendTreeGraphEdit
@@ -20,6 +21,8 @@ var registered_nodes = [
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
+	add_node_popup_menu.clear(true)
+	
 	for node_name in registered_nodes:
 		add_node_popup_menu.add_item(node_name)
 
@@ -61,6 +64,9 @@ func _on_add_node_button_pressed() -> void:
 func _on_reset_graph_button_pressed() -> void:
 	_reset_editor()
 	_update_editor_from_blend_tree()
+	
+	var graph_rect:Rect2 = blend_tree_graph_edit.get_rect()
+	blend_tree_graph_edit.scroll_offset = graph_rect.size * -0.5 - Vector2(200,0)
 
 
 func _reset_editor():
@@ -78,6 +84,15 @@ func _reset_editor():
 	graph_node_to_blend_tree_node = {}
 	selected_nodes = {}
 
+
+func edit_blend_tree(blend_tree_animation_node:BLTAnimationNode):
+	print("Starting to edit blend_tree_animation_node " + str(blend_tree_animation_node))
+	print("Owner: %s" % blend_tree_animation_node)
+	_reset_editor()
+	blend_tree = blend_tree_animation_node
+	
+	_update_editor_nodes_from_blend_tree()
+	_update_editor_connections_from_blend_tree()
 
 func _update_editor_nodes_from_blend_tree():
 	for node_name in blend_tree.get_node_names():
@@ -190,8 +205,9 @@ func _on_blend_tree_graph_edit_begin_node_move() -> void:
 	pass # Replace with function body.
 
 
-func _on_blend_tree_graph_edit_node_selected(node: Node) -> void:
-	selected_nodes[node] = node
+func _on_blend_tree_graph_edit_node_selected(graph_node: Node) -> void:
+	selected_nodes[graph_node] = graph_node
+	EditorInterface.get_inspector().edit(graph_node_to_blend_tree_node[graph_node])
 
 
 func _on_blend_tree_graph_edit_node_deselected(node: Node) -> void:
@@ -203,7 +219,7 @@ func _on_blend_tree_graph_edit_popup_request(at_position: Vector2) -> void:
 	add_node_popup_menu.position = get_screen_position() + get_local_mouse_position()
 	add_node_popup_menu.reset_size()
 	add_node_popup_menu.popup()
-	new_node_position = at_position
+	new_node_position = blend_tree_graph_edit.scroll_offset + at_position
 
 
 func _on_add_node_popup_menu_index_pressed(index: int) -> void:
@@ -220,3 +236,36 @@ func _on_add_node_popup_menu_index_pressed(index: int) -> void:
 		graph_node.position_offset = new_node_position
 	
 	new_node_position = Vector2.INF
+
+
+func _on_blend_tree_graph_edit_delete_nodes_request(nodes: Array[StringName]) -> void:
+	for node_name:StringName in nodes:
+		print("remove node '%s'" % node_name)
+		var blend_tree_node:BLTAnimationNode = blend_tree.get_node(node_name)
+		if blend_tree_node == null:
+			push_error("Cannot delete node '%s': node not found." % node_name)
+			continue
+		
+		var graph_node:GraphNode = blend_tree_node_to_graph_node[blend_tree_node]
+		blend_tree.remove_node(blend_tree_node)
+		blend_tree_node_to_graph_node.erase(blend_tree_node)
+		
+		graph_node_to_blend_tree_node.erase(graph_node)
+		blend_tree_graph_edit.remove_child(graph_node)
+		graph_node.queue_free()
+		
+		blend_tree_graph_edit.clear_connections()
+		
+		if node_name in selected_nodes.keys():
+			selected_nodes.erase(node_name)
+
+
+func _on_blend_tree_graph_edit_disconnection_request(from_node: StringName, from_port: int, to_node: StringName, to_port: int) -> void:
+	print("removing connection")
+	
+	var blend_tree_source_node = blend_tree.get_node(from_node)
+	var blend_tree_target_node = blend_tree.get_node(to_node)
+	var target_port_name = blend_tree_target_node.get_input_names()[to_port]
+	blend_tree.remove_connection(blend_tree_source_node, blend_tree_target_node, target_port_name)
+	
+	blend_tree_graph_edit.disconnect_node(from_node, from_port, to_node, to_port)

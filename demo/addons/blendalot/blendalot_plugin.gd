@@ -3,7 +3,7 @@ extends EditorPlugin
 
 const MainPanel = preload("res://addons/blendalot/blendalot_main_panel.tscn")
 
-var main_panel_instance
+var main_panel_instance:BlendalotMainPanel
 
 func _enable_plugin() -> void:
 	# Add autoloads here.
@@ -47,3 +47,10 @@ func _get_plugin_icon():
 
 func _handles(obj: Object) -> bool:
 	return obj is BLTAnimationNodeBlendTree
+
+func _edit(object: Object):
+	if object is BLTAnimationNodeBlendTree:
+		main_panel_instance.edit_blend_tree(object)
+		return
+	
+	print("Cannot (yet) edit object " + str(object))
