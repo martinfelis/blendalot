@@ -4,7 +4,7 @@
 
 #include "tests/test_macros.h"
 
-namespace TestSyncedAnimationGraph {
+namespace TestBlendalotAnimationGraph {
 
 TEST_CASE("[SyncedAnimationGraph][SyncTrack] Basic") {
 	SyncTrack track_a;
