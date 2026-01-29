@@ -477,11 +477,16 @@ void BLTAnimationNodeBlendTree::BLTBlendTreeGraph::add_node(const Ref<BLTAnimati
 }
 
 void BLTAnimationNodeBlendTree::BLTBlendTreeGraph::remove_node(const Ref<BLTAnimationNode> &node) {
+	if (node == get_output_node()) {
+		// Output node not allowed to be removed
+		return;
+	}
+
 	int removed_node_index = find_node_index(node);
 	assert(removed_node_index >= 0);
 
 	// Remove all connections to and from this node
-	for (uint32_t i = connections.size() - 1; i > 0; i--) {
+	for (int i = static_cast<int>(connections.size()) - 1; i >= 0; i--) {
 		if (connections[i].source_node == node || connections[i].target_node == node) {
 			remove_connection(connections[i].source_node, connections[i].target_node, connections[i].target_port_name);
 		}

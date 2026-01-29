@@ -111,7 +111,7 @@ Some nodes have special names in the Blend Tree:
 Except for the output node of a Blend Tree the following properties hold:
 
 * all Blend Tree nodes only operate on properties they own and any other data (e.g. inputs and outputs) are specified
-  via arguments to `SyncedAnimationNode::evaluate(context, inputs, output)` function of the node.
+  via arguments to `BLTAnimationNode::evaluate(context, inputs, output)` function of the node.
 
 Advantages:
 

@@ -210,9 +210,9 @@ func _on_blend_tree_graph_edit_node_selected(graph_node: Node) -> void:
 	EditorInterface.get_inspector().edit(graph_node_to_blend_tree_node[graph_node])
 
 
-func _on_blend_tree_graph_edit_node_deselected(node: Node) -> void:
-	if selected_nodes.has(node):
-		selected_nodes.erase(node)
+func _on_blend_tree_graph_edit_node_deselected(graph_node: Node) -> void:
+	if selected_nodes.has(graph_node):
+		selected_nodes.erase(graph_node)
 
 
 func _on_blend_tree_graph_edit_popup_request(at_position: Vector2) -> void:
@@ -238,26 +238,41 @@ func _on_add_node_popup_menu_index_pressed(index: int) -> void:
 	new_node_position = Vector2.INF
 
 
+func _blend_tree_graph_edit_remove_node_connections(graph_node:GraphNode):
+	var node_connections:Array = []
+	
+	for connection:Dictionary in blend_tree_graph_edit.connections:
+		if connection["from_node"] == graph_node.name or connection["to_node"] == graph_node.name:
+			node_connections.append(connection)
+	
+	for node_connection:Dictionary in node_connections:
+		print("Removing connection %s" % str(node_connection))
+		blend_tree_graph_edit.disconnect_node(node_connection["from_node"], node_connection["from_port"], node_connection["to_node"], node_connection["to_port"])
+
+
 func _on_blend_tree_graph_edit_delete_nodes_request(nodes: Array[StringName]) -> void:
 	for node_name:StringName in nodes:
 		print("remove node '%s'" % node_name)
 		var blend_tree_node:BLTAnimationNode = blend_tree.get_node(node_name)
+		
 		if blend_tree_node == null:
 			push_error("Cannot delete node '%s': node not found." % node_name)
+			continue
+		
+		if blend_tree_node == blend_tree.get_output_node():
+			push_warning("Output node not allowed to be removed.")
 			continue
 		
 		var graph_node:GraphNode = blend_tree_node_to_graph_node[blend_tree_node]
 		blend_tree.remove_node(blend_tree_node)
 		blend_tree_node_to_graph_node.erase(blend_tree_node)
 		
+		_blend_tree_graph_edit_remove_node_connections(graph_node)
 		graph_node_to_blend_tree_node.erase(graph_node)
 		blend_tree_graph_edit.remove_child(graph_node)
-		graph_node.queue_free()
+		_on_blend_tree_graph_edit_node_deselected(graph_node)
 		
-		blend_tree_graph_edit.clear_connections()
-		
-		if node_name in selected_nodes.keys():
-			selected_nodes.erase(node_name)
+		EditorInterface.get_inspector().edit(null)
 
 
 func _on_blend_tree_graph_edit_disconnection_request(from_node: StringName, from_port: int, to_node: StringName, to_port: int) -> void:

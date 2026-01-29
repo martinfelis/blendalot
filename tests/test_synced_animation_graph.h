@@ -501,7 +501,7 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(blend2_node_a, blend_tree_graph.get_output_node(), "Output"));
 	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(animation_sampler_node_a, blend2_node_a, "Input0"));
 
-	// Connect nodes: Subgraph Blend2A, SamplerB, SamplerB
+	// Connect nodes: Subgraph Blend2A, SamplerB, SamplerC
 	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(animation_sampler_node_b, blend2_node_b, "Input0"));
 	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(animation_sampler_node_c, blend2_node_b, "Input1"));
 
@@ -537,27 +537,53 @@ TEST_CASE_FIXTURE(SyncedAnimationGraphFixture, "[SceneTree][SyncedAnimationGraph
 		CHECK(blend_tree_graph.node_connection_info[0].input_subtree_node_indices.size() == 6);
 		CHECK(blend_tree_graph.node_connection_info[blend2_node_a_index_pre_remove].input_subtree_node_indices.size() == 5);
 
-		blend_tree_graph.remove_node(animation_sampler_node_a);
+		SUBCASE("Remove animation_sampler_node_a") {
+			blend_tree_graph.remove_node(animation_sampler_node_a);
 
-		for (const BLTBlendTreeConnection &connection : blend_tree_graph.connections) {
-			bool is_connection_with_removed_node = connection.source_node == animation_sampler_node_a || connection.target_node == animation_sampler_node_a;
-			CHECK(is_connection_with_removed_node == false);
+			for (const BLTBlendTreeConnection &connection : blend_tree_graph.connections) {
+				bool is_connection_with_removed_node = connection.source_node == animation_sampler_node_a || connection.target_node == animation_sampler_node_a;
+				CHECK(is_connection_with_removed_node == false);
+			}
+
+			int animation_sampler_node_b_index_post_remove = blend_tree_graph.find_node_index(animation_sampler_node_b);
+			int blend2_node_a_index_post_remove = blend_tree_graph.find_node_index(blend2_node_a);
+			int blend2_node_b_index_post_remove = blend_tree_graph.find_node_index(blend2_node_b);
+
+			CHECK(blend_tree_graph.find_node_index(animation_sampler_node_a) == -1);
+			CHECK(blend2_node_b_index_post_remove == blend2_node_b_index_pre_remove - 1);
+			CHECK(animation_sampler_node_b_index_post_remove == animation_sampler_node_b_index_pre_remove - 1);
+
+			CHECK(blend_tree_graph.node_connection_info[0].input_subtree_node_indices.size() == 5);
+			CHECK(blend_tree_graph.node_connection_info[blend2_node_a_index_post_remove].input_subtree_node_indices.size() == 4);
+			CHECK(blend_tree_graph.node_connection_info[blend2_node_a_index_post_remove].connected_child_node_index_at_port[0] == -1);
+			CHECK(blend_tree_graph.node_connection_info[blend2_node_a_index_post_remove].connected_child_node_index_at_port[1] == blend2_node_b_index_post_remove);
+			CHECK(blend_tree_graph.node_connection_info[blend2_node_b_index_post_remove].input_subtree_node_indices.has(blend2_node_b_index_post_remove));
+			CHECK(blend_tree_graph.node_connection_info[blend2_node_b_index_post_remove].input_subtree_node_indices.has(animation_sampler_node_b_index_post_remove));
 		}
 
-		int animation_sampler_node_b_index_post_remove = blend_tree_graph.find_node_index(animation_sampler_node_b);
-		int blend2_node_a_index_post_remove = blend_tree_graph.find_node_index(blend2_node_a);
-		int blend2_node_b_index_post_remove = blend_tree_graph.find_node_index(blend2_node_b);
+		SUBCASE("Remove blend2_node_a") {
+			blend_tree_graph.remove_node(blend2_node_a);
 
-		CHECK(blend_tree_graph.find_node_index(animation_sampler_node_a) == -1);
-		CHECK(blend2_node_b_index_post_remove == blend2_node_b_index_pre_remove - 1);
-		CHECK(animation_sampler_node_b_index_post_remove == animation_sampler_node_b_index_pre_remove - 1);
+			for (const BLTBlendTreeConnection &connection : blend_tree_graph.connections) {
+				bool is_connection_with_removed_node = connection.source_node == blend2_node_a || connection.target_node == blend2_node_a;
+				CHECK(is_connection_with_removed_node == false);
+			}
 
-		CHECK(blend_tree_graph.node_connection_info[0].input_subtree_node_indices.size() == 5);
-		CHECK(blend_tree_graph.node_connection_info[blend2_node_a_index_post_remove].input_subtree_node_indices.size() == 4);
-		CHECK(blend_tree_graph.node_connection_info[blend2_node_a_index_post_remove].connected_child_node_index_at_port[0] == -1);
-		CHECK(blend_tree_graph.node_connection_info[blend2_node_a_index_post_remove].connected_child_node_index_at_port[1] == blend2_node_b_index_post_remove);
-		CHECK(blend_tree_graph.node_connection_info[blend2_node_b_index_post_remove].input_subtree_node_indices.has(blend2_node_b_index_post_remove));
-		CHECK(blend_tree_graph.node_connection_info[blend2_node_b_index_post_remove].input_subtree_node_indices.has(animation_sampler_node_b_index_post_remove));
+			int animation_sampler_node_b_index_post_remove = blend_tree_graph.find_node_index(animation_sampler_node_b);
+			int animation_sampler_node_c_index_post_remove = blend_tree_graph.find_node_index(animation_sampler_node_c);
+			int blend2_node_b_index_post_remove = blend_tree_graph.find_node_index(blend2_node_b);
+
+			CHECK(blend_tree_graph.find_node_index(blend2_node_a) == -1);
+			CHECK(blend2_node_b_index_post_remove == blend2_node_b_index_pre_remove - 1);
+			CHECK(animation_sampler_node_b_index_post_remove == animation_sampler_node_b_index_pre_remove);
+
+			CHECK(blend_tree_graph.node_connection_info[0].input_subtree_node_indices.size() == 1);
+			CHECK(blend_tree_graph.node_connection_info[blend2_node_b_index_post_remove].input_subtree_node_indices.size() == 3);
+			blend_tree_graph.node_connection_info[blend2_node_b_index_post_remove]._print_subtree();
+			CHECK(blend_tree_graph.node_connection_info[blend2_node_b_index_post_remove].input_subtree_node_indices.has(blend2_node_b_index_post_remove));
+			CHECK(blend_tree_graph.node_connection_info[blend2_node_b_index_post_remove].input_subtree_node_indices.has(animation_sampler_node_b_index_post_remove));
+			CHECK(blend_tree_graph.node_connection_info[blend2_node_b_index_post_remove].input_subtree_node_indices.has(animation_sampler_node_c_index_post_remove));
+		}
 	}
 }
 
