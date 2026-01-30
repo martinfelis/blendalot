@@ -5,6 +5,7 @@
 
 #include "scene/3d/skeleton_3d.h"
 #include "scene/animation/animation_player.h"
+#include "scene/resources/animation_library.h"
 #include "sync_track.h"
 
 #include <cassert>
@@ -245,7 +246,7 @@ protected:
 	virtual void set_parameter(const StringName &p_name, const Variant &p_value);
 	virtual Variant get_parameter(const StringName &p_name) const;
 
-	virtual void _tree_changed();
+	virtual void _node_changed();
 	virtual void _animation_node_renamed(const ObjectID &p_oid, const String &p_old_name, const String &p_new_name);
 	virtual void _animation_node_removed(const ObjectID &p_oid, const StringName &p_node);
 
@@ -273,6 +274,11 @@ public:
 	virtual void activate_inputs(const Vector<Ref<BLTAnimationNode>> &input_nodes) {
 		// By default, all inputs nodes are activated.
 		for (const Ref<BLTAnimationNode> &node : input_nodes) {
+			if (node.ptr() == nullptr) {
+				// TODO: add checking whether tree can be evaluated, i.e. whether all inputs are properly connected.
+				continue;
+			}
+
 			node->active = true;
 			node->node_time_info.is_synced = node_time_info.is_synced;
 		}
@@ -339,9 +345,13 @@ class BLTAnimationNodeSampler : public BLTAnimationNode {
 
 public:
 	StringName animation_name;
+	AnimationPlayer *animation_player = nullptr;
 
+	void set_animation_player(AnimationPlayer *p_player);
 	void set_animation(const StringName &p_name);
 	StringName get_animation() const;
+
+	TypedArray<StringName> get_animations_as_typed_array() const;
 
 private:
 	Ref<Animation> animation;
@@ -459,6 +469,7 @@ public:
 		CONNECTION_ERROR_TARGET_PORT_NOT_FOUND,
 		CONNECTION_ERROR_TARGET_PORT_ALREADY_CONNECTED,
 		CONNECTION_ERROR_CONNECTION_CREATES_LOOP,
+		CONNECTION_ERROR_CONNECTION_NOT_FOUND
 	};
 
 	/**
@@ -526,7 +537,7 @@ public:
 		void remove_subtree_and_update_subtrees_recursive(int node, const HashSet<int> &removed_subtree_indices);
 
 		void add_node(const Ref<BLTAnimationNode> &node);
-		void remove_node(const Ref<BLTAnimationNode> &node);
+		bool remove_node(const Ref<BLTAnimationNode> &node);
 
 		ConnectionError is_connection_valid(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, StringName target_port_name) const;
 		ConnectionError add_connection(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name);
@@ -537,6 +548,7 @@ public:
 private:
 	BLTBlendTreeGraph tree_graph;
 	bool tree_initialized = false;
+	GraphEvaluationContext *_graph_evaluation_context = nullptr;
 
 	void sort_nodes() {
 		_node_runtime_data.clear();
@@ -564,7 +576,11 @@ private:
 
 			for (int port_index = 0; port_index < node->get_input_count(); port_index++) {
 				const int connected_node_index = tree_graph.node_connection_info[i].connected_child_node_index_at_port[port_index];
-				node_runtime_data.input_nodes.push_back(tree_graph.nodes[connected_node_index]);
+				if (connected_node_index == -1) {
+					node_runtime_data.input_nodes.push_back(nullptr);
+				} else {
+					node_runtime_data.input_nodes.push_back(tree_graph.nodes[connected_node_index]);
+				}
 			}
 		}
 	}
@@ -587,26 +603,22 @@ public:
 		return tree_graph.find_node_index(node);
 	}
 
-	int find_node_index_by_name(const StringName &name) const {
-		return tree_graph.find_node_index_by_name(name);
+	int find_node_index_by_name(const StringName &p_name) const {
+		return tree_graph.find_node_index_by_name(p_name);
 	}
 
 	void add_node(const Ref<BLTAnimationNode> &node) {
-		if (tree_initialized) {
-			print_error("Cannot add node to BlendTree: BlendTree already initialized.");
-			return;
-		}
-
 		tree_graph.add_node(node);
+
+		if (_graph_evaluation_context != nullptr) {
+			node->initialize(*_graph_evaluation_context);
+		}
 	}
 
 	void remove_node(const Ref<BLTAnimationNode> &node) {
-		if (tree_initialized) {
-			print_error("Cannot remove node from BlendTree: BlendTree already initialized.");
-			return;
+		if (tree_graph.remove_node(node)) {
+			_node_changed();
 		}
-
-		tree_graph.remove_node(node);
 	}
 
 	TypedArray<StringName> get_node_names_as_typed_array() const {
@@ -646,30 +658,25 @@ public:
 	}
 
 	ConnectionError is_connection_valid(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name) {
-		if (tree_initialized) {
-			print_error("Cannot add connection to BlendTree: BlendTree already initialized.");
-			return CONNECTION_ERROR_GRAPH_ALREADY_INITIALIZED;
-		}
-
 		return tree_graph.is_connection_valid(source_node, target_node, target_port_name);
 	}
 
 	ConnectionError add_connection(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name) {
-		if (tree_initialized) {
-			print_error("Cannot add connection to BlendTree: BlendTree already initialized.");
-			return CONNECTION_ERROR_GRAPH_ALREADY_INITIALIZED;
+		ConnectionError result = tree_graph.add_connection(source_node, target_node, target_port_name);
+		if (result == CONNECTION_OK) {
+			_node_changed();
 		}
 
-		return tree_graph.add_connection(source_node, target_node, target_port_name);
+		return result;
 	}
 
 	ConnectionError remove_connection(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name) {
-		if (tree_initialized) {
-			print_error("Cannot remove connection to BlendTree: BlendTree already initialized.");
-			return CONNECTION_ERROR_GRAPH_ALREADY_INITIALIZED;
+		ConnectionError result = tree_graph.remove_connection(source_node, target_node, target_port_name);
+		if (result == CONNECTION_OK) {
+			_node_changed();
 		}
 
-		return tree_graph.remove_connection(source_node, target_node, target_port_name);
+		return result;
 	}
 
 	Array get_connections_as_array() const {
@@ -689,6 +696,8 @@ public:
 			return false;
 		}
 
+		_graph_evaluation_context = &context;
+
 		sort_nodes();
 		setup_runtime_data();
 
@@ -706,6 +715,11 @@ public:
 	void
 	activate_inputs(const Vector<Ref<BLTAnimationNode>> &input_nodes) override {
 		GodotProfileZone("SyncedBlendTree::activate_inputs");
+
+		// TODO: add checking whether tree can be evaluated, i.e. whether all inputs are properly connected.
+		if (tree_graph.nodes.size() == 1) {
+			return;
+		}
 
 		tree_graph.nodes[0]->active = true;
 		for (uint32_t i = 0; i < tree_graph.nodes.size(); i++) {
@@ -759,7 +773,7 @@ public:
 	}
 
 	void evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &input_datas, AnimationData &output_data) override {
-		ZoneScopedN("SyncedBlendTree::evaluate");
+		GodotProfileZone("SyncedBlendTree::evaluate");
 
 		for (uint32_t i = tree_graph.nodes.size() - 1; i > 0; i--) {
 			const Ref<BLTAnimationNode> &node = tree_graph.nodes[i];

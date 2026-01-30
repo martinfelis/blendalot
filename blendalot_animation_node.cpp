@@ -9,9 +9,10 @@ void BLTAnimationNode::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_position"), &BLTAnimationNode::get_position);
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "position"), "set_position", "get_position");
 
-	ADD_SIGNAL(MethodInfo("tree_changed"));
 	ADD_SIGNAL(MethodInfo("animation_node_renamed", PropertyInfo(Variant::INT, "object_id"), PropertyInfo(Variant::STRING, "old_name"), PropertyInfo(Variant::STRING, "new_name")));
 	ADD_SIGNAL(MethodInfo("animation_node_removed", PropertyInfo(Variant::INT, "object_id"), PropertyInfo(Variant::STRING, "name")));
+
+	ADD_SIGNAL(MethodInfo(SNAME("node_changed"), PropertyInfo(Variant::STRING_NAME, "node_name")));
 
 	ClassDB::bind_method(D_METHOD("get_input_names"), &BLTAnimationNode::get_input_names_as_typed_array);
 	ClassDB::bind_method(D_METHOD("get_input_count"), &BLTAnimationNode::get_input_count);
@@ -36,8 +37,8 @@ Variant BLTAnimationNode::get_parameter(const StringName &p_name) const {
 	return Variant();
 }
 
-void BLTAnimationNode::_tree_changed() {
-	emit_signal(SNAME("tree_changed"));
+void BLTAnimationNode::_node_changed() {
+	emit_signal(SNAME("node_changed"), get_name());
 }
 
 void BLTAnimationNode::_animation_node_renamed(const ObjectID &p_oid, const String &p_old_name, const String &p_new_name) {
@@ -59,7 +60,6 @@ void BLTAnimationNodeBlendTree::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("add_connection", "source_node", "target_node", "target_port_name"), &BLTAnimationNodeBlendTree::add_connection);
 	ClassDB::bind_method(D_METHOD("remove_connection", "source_node", "target_node", "target_port_name"), &BLTAnimationNodeBlendTree::remove_connection);
 	ClassDB::bind_method(D_METHOD("get_connections"), &BLTAnimationNodeBlendTree::get_connections_as_array);
-
 	BIND_CONSTANT(CONNECTION_OK);
 	BIND_CONSTANT(CONNECTION_ERROR_GRAPH_ALREADY_INITIALIZED);
 	BIND_CONSTANT(CONNECTION_ERROR_NO_SOURCE_NODE);
@@ -273,7 +273,12 @@ bool BLTAnimationNodeSampler::initialize(GraphEvaluationContext &context) {
 		return false;
 	}
 
-	animation = context.animation_player->get_animation(animation_name);
+	animation_player = context.animation_player;
+	if (animation_name.is_empty()) {
+		return true;
+	}
+
+	animation = animation_player->get_animation(animation_name);
 	if (!animation.is_valid()) {
 		print_error(vformat("Cannot initialize node %s: animation '%s' not found in animation player.", get_name(), animation_name));
 		return false;
@@ -333,6 +338,11 @@ void BLTAnimationNodeSampler::evaluate(GraphEvaluationContext &context, const Lo
 	output.sample_from_animation(animation, context.skeleton_3d, node_time_info.position);
 }
 
+void BLTAnimationNodeSampler::set_animation_player(AnimationPlayer *p_player) {
+	animation_player = p_player;
+	_node_changed();
+}
+
 void BLTAnimationNodeSampler::set_animation(const StringName &p_name) {
 	animation_name = p_name;
 }
@@ -341,11 +351,42 @@ StringName BLTAnimationNodeSampler::get_animation() const {
 	return animation_name;
 }
 
+TypedArray<StringName> BLTAnimationNodeSampler::get_animations_as_typed_array() const {
+	TypedArray<StringName> typed_arr;
+
+	if (animation_player == nullptr) {
+		print_error(vformat("BLTAnimationNodeSampler '%s' not yet initialized", get_name()));
+		return typed_arr;
+	}
+
+	Vector<StringName> vec;
+
+	List<StringName> animation_libraries;
+	animation_player->get_animation_library_list(&animation_libraries);
+
+	for (const StringName &library_name : animation_libraries) {
+		Ref<AnimationLibrary> library = animation_player->get_animation_library(library_name);
+		List<StringName> animation_list;
+		library->get_animation_list(&animation_list);
+		for (const StringName &library_animation : animation_list) {
+			vec.push_back(library_animation);
+		}
+	}
+
+	typed_arr.resize(vec.size());
+	for (uint32_t i = 0; i < vec.size(); i++) {
+		typed_arr[i] = vec[i];
+	}
+	return typed_arr;
+}
+
 void BLTAnimationNodeSampler::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_animation", "name"), &BLTAnimationNodeSampler::set_animation);
 	ClassDB::bind_method(D_METHOD("get_animation"), &BLTAnimationNodeSampler::get_animation);
 
 	ADD_PROPERTY(PropertyInfo(Variant::STRING_NAME, "animation"), "set_animation", "get_animation");
+
+	ClassDB::bind_method(D_METHOD("get_animations"), &BLTAnimationNodeSampler::get_animations_as_typed_array);
 }
 
 void BLTAnimationNodeBlend2::evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) {
@@ -476,10 +517,10 @@ void BLTAnimationNodeBlendTree::BLTBlendTreeGraph::add_node(const Ref<BLTAnimati
 	node_connection_info.push_back(connection_info);
 }
 
-void BLTAnimationNodeBlendTree::BLTBlendTreeGraph::remove_node(const Ref<BLTAnimationNode> &node) {
+bool BLTAnimationNodeBlendTree::BLTBlendTreeGraph::remove_node(const Ref<BLTAnimationNode> &node) {
 	if (node == get_output_node()) {
 		// Output node not allowed to be removed
-		return;
+		return false;
 	}
 
 	int removed_node_index = find_node_index(node);
@@ -515,6 +556,8 @@ void BLTAnimationNodeBlendTree::BLTBlendTreeGraph::remove_node(const Ref<BLTAnim
 			}
 		}
 	}
+
+	return true;
 }
 
 void BLTAnimationNodeBlendTree::BLTBlendTreeGraph::sort_nodes_and_references() {
@@ -665,6 +708,8 @@ BLTAnimationNodeBlendTree::ConnectionError BLTAnimationNodeBlendTree::BLTBlendTr
 		uint32_t connection_index = find_connection_index(source_node, target_node, target_port_name);
 		assert(connection_index >= 0);
 		connections.remove_at(connection_index);
+	} else {
+		return CONNECTION_ERROR_CONNECTION_NOT_FOUND;
 	}
 
 	return CONNECTION_OK;

@@ -23,7 +23,7 @@ private:
 	void _update_properties() const;
 	void _update_properties_for_node(const String &p_base_path, Ref<BLTAnimationNode> p_node) const;
 
-	void _tree_changed();
+	void _graph_changed(const StringName &node_name);
 
 protected:
 	void _notification(int p_what);
