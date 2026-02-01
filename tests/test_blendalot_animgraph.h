@@ -537,7 +537,14 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 		CHECK(blend_tree_graph.node_connection_info[0].input_subtree_node_indices.size() == 6);
 		CHECK(blend_tree_graph.node_connection_info[blend2_node_a_index_pre_remove].input_subtree_node_indices.size() == 5);
 
-		SUBCASE("Remove animation_sampler_node_a") {
+		SUBCASE("Removing the output node does nothing") {
+			int num_nodes = blend_tree_graph.nodes.size();
+			int num_connections = blend_tree_graph.connections.size();
+			CHECK(blend_tree_graph.remove_node(blend_tree_graph.get_output_node()) == false);
+			CHECK(blend_tree_graph.connections.size() == num_connections);
+		}
+
+		SUBCASE("Remove a node with no children") {
 			blend_tree_graph.remove_node(animation_sampler_node_a);
 
 			for (const BLTBlendTreeConnection &connection : blend_tree_graph.connections) {
@@ -561,8 +568,12 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 			CHECK(blend_tree_graph.node_connection_info[blend2_node_b_index_post_remove].input_subtree_node_indices.has(animation_sampler_node_b_index_post_remove));
 		}
 
-		SUBCASE("Remove blend2_node_a") {
+		SUBCASE("Remove a node with parent and children") {
+			int num_nodes = blend_tree_graph.nodes.size();
 			blend_tree_graph.remove_node(blend2_node_a);
+			blend_tree_graph.sort_nodes_and_references();
+
+			CHECK(blend_tree_graph.nodes.size() == num_nodes - 1);
 
 			for (const BLTBlendTreeConnection &connection : blend_tree_graph.connections) {
 				bool is_connection_with_removed_node = connection.source_node == blend2_node_a || connection.target_node == blend2_node_a;

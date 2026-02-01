@@ -545,6 +545,10 @@ bool BLTAnimationNodeBlendTree::BLTBlendTreeGraph::remove_node(const Ref<BLTAnim
 			}
 		}
 
+		if (connection_info.parent_node_index > removed_node_index) {
+			connection_info.parent_node_index--;
+		}
+
 		// Map connected subtrees
 		HashSet<int> old_indices = connection_info.input_subtree_node_indices;
 		connection_info.input_subtree_node_indices.clear();
@@ -563,13 +567,14 @@ bool BLTAnimationNodeBlendTree::BLTBlendTreeGraph::remove_node(const Ref<BLTAnim
 void BLTAnimationNodeBlendTree::BLTBlendTreeGraph::sort_nodes_and_references() {
 	LocalVector<int> sorted_node_indices = get_sorted_node_indices();
 
-	Vector<Ref<BLTAnimationNode>> sorted_nodes;
+	LocalVector<Ref<BLTAnimationNode>> sorted_nodes;
 	LocalVector<NodeConnectionInfo> old_node_connection_info = node_connection_info;
 	for (unsigned int i = 0; i < sorted_node_indices.size(); i++) {
 		int node_index = sorted_node_indices[i];
 		sorted_nodes.push_back(nodes[node_index]);
 		node_connection_info[i] = old_node_connection_info[node_index];
 	}
+
 	nodes = sorted_nodes;
 
 	for (NodeConnectionInfo &connection_info : node_connection_info) {
@@ -585,6 +590,20 @@ LocalVector<int> BLTAnimationNodeBlendTree::BLTBlendTreeGraph::get_sorted_node_i
 
 	sort_nodes_recursive(0, result);
 	result.reverse();
+
+	HashSet<int> connected_node_indices;
+	for (int node_index : result) {
+		connected_node_indices.insert(node_index);
+	}
+
+	// Ensure that nodes that are not reachable from the root node are still added to
+	// the sorted nodes indices.
+	for (Ref<BLTAnimationNode> &node : nodes) {
+		int node_index = find_node_index(node);
+		if (!connected_node_indices.has(node_index)) {
+			result.push_back(node_index);
+		}
+	}
 
 	return result;
 }
