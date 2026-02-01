@@ -16,7 +16,7 @@ void BLTAnimationNode::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_input_names"), &BLTAnimationNode::get_input_names_as_typed_array);
 	ClassDB::bind_method(D_METHOD("get_input_count"), &BLTAnimationNode::get_input_count);
-	ClassDB::bind_method(D_METHOD("get_input_index"), &BLTAnimationNode::get_input_index);
+	ClassDB::bind_method(D_METHOD("get_input_index", "node"), &BLTAnimationNode::get_input_index);
 }
 
 void BLTAnimationNode::get_parameter_list(List<PropertyInfo> *r_list) const {
