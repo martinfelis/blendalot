@@ -198,7 +198,7 @@ func _on_blend_tree_graph_edit_connection_request(from_node: StringName, from_po
 
 func _on_blend_tree_graph_edit_end_node_move() -> void:
 	for graph_node:GraphNode in selected_nodes.keys():
-		graph_node_to_blend_tree_node[graph_node].position = graph_node.position
+		graph_node_to_blend_tree_node[graph_node].position = graph_node.position_offset
 
 
 func _on_blend_tree_graph_edit_begin_node_move() -> void:
