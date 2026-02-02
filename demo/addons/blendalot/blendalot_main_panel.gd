@@ -56,7 +56,7 @@ func create_node_for_blt_node(blt_node: BLTAnimationNode) -> GraphNode:
 		result_graph_node.add_child(slot_label)
 		result_graph_node.set_slot(i + result_slot_offset, true, 1, Color.WHITE, false, 1, Color.BLACK)
 	
-	blt_node.node_changed.connect(_triggrer_animation_graph_initialize)
+	blt_node.node_changed.connect(_trigger_animation_graph_initialize)
 	
 	return result_graph_node
 
@@ -74,7 +74,7 @@ func _on_blend_tree_graph_edit_delete_nodes_request(nodes: Array[StringName]) ->
 			push_warning("Output node not allowed to be removed.")
 			continue
 		
-		blend_tree_node.node_changed.disconnect(_triggrer_animation_graph_initialize)
+		blend_tree_node.node_changed.disconnect(_trigger_animation_graph_initialize)
 		
 		var graph_node:GraphNode = blend_tree_node_to_graph_node[blend_tree_node]
 		blend_tree.remove_node(blend_tree_node)

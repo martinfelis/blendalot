@@ -1,4 +1,4 @@
-[gd_resource type="AnimationNodeBlendTree" load_steps=4 format=3 uid="uid://vsf71o82lkld"]
+[gd_resource type="AnimationNodeBlendTree" format=3 uid="uid://vsf71o82lkld"]
 
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_h2yge"]
 animation = &"Run-InPlace"
