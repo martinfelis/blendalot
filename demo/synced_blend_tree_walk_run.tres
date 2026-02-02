@@ -1,19 +1,25 @@
-[gd_resource type="BLTAnimationNodeBlendTree" load_steps=4 format=3 uid="uid://qsk64ax2o47f"]
+[gd_resource type="BLTAnimationNodeBlendTree" format=3 uid="uid://qsk64ax2o47f"]
 
 [sub_resource type="BLTAnimationNodeBlend2" id="BLTAnimationNodeBlend2_bvt3d"]
-blend_amount = 0.4
+resource_name = "BLTAnimationNodeBlend2"
+position = Vector2(-420, 220)
 
 [sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_sntl5"]
+resource_name = "BLTAnimationNodeSampler 1"
+position = Vector2(-1020, 380)
 animation = &"animation_library/Run-InPlace"
 
 [sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_n4m28"]
+resource_name = "BLTAnimationNodeSampler"
+position = Vector2(-880, 0)
 animation = &"animation_library/Walk-InPlace"
 
 [resource]
+nodes/Output/position = Vector2(180, 80)
 nodes/BLTAnimationNodeBlend2/node = SubResource("BLTAnimationNodeBlend2_bvt3d")
-nodes/BLTAnimationNodeBlend2/position = Vector2(0, 0)
+nodes/BLTAnimationNodeBlend2/position = Vector2(-420, 220)
 "nodes/BLTAnimationNodeSampler 1/node" = SubResource("BLTAnimationNodeSampler_sntl5")
-"nodes/BLTAnimationNodeSampler 1/position" = Vector2(0, 0)
+"nodes/BLTAnimationNodeSampler 1/position" = Vector2(-1020, 380)
 nodes/BLTAnimationNodeSampler/node = SubResource("BLTAnimationNodeSampler_n4m28")
-nodes/BLTAnimationNodeSampler/position = Vector2(0, 0)
-node_connections = [&"BLTAnimationNodeBlend2", 0, &"BLTAnimationNodeSampler", &"BLTAnimationNodeBlend2", 1, &"BLTAnimationNodeSampler 1", &"Output", 0, &"BLTAnimationNodeBlend2"]
+nodes/BLTAnimationNodeSampler/position = Vector2(-880, 0)
+node_connections = ["BLTAnimationNodeBlend2", 0, "BLTAnimationNodeSampler", "BLTAnimationNodeBlend2", 1, "BLTAnimationNodeSampler 1", "Output", 0, "BLTAnimationNodeBlend2"]

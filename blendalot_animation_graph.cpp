@@ -256,6 +256,8 @@ NodePath BLTAnimationGraph::get_animation_player() const {
 }
 
 void BLTAnimationGraph::set_root_animation_node(const Ref<BLTAnimationNode> &p_animation_node) {
+	print_line(vformat("setting root node to node %s", p_animation_node->get_name()));
+
 	if (root_animation_node.is_valid()) {
 		root_animation_node->disconnect(SNAME("node_changed"), callable_mp(this, &BLTAnimationGraph::_graph_changed));
 	}
@@ -265,7 +267,6 @@ void BLTAnimationGraph::set_root_animation_node(const Ref<BLTAnimationNode> &p_a
 	if (root_animation_node.is_valid()) {
 		_setup_graph();
 		root_animation_node->connect(SNAME("node_changed"), callable_mp(this, &BLTAnimationGraph::_graph_changed));
-		print_line(vformat("connected node_changed event to graph %x", (uintptr_t)this));
 	}
 
 	properties_dirty = true;
@@ -298,7 +299,7 @@ NodePath BLTAnimationGraph::get_skeleton() const {
 }
 
 void BLTAnimationGraph::_process_graph(double p_delta, bool p_update_only) {
-	if (!root_animation_node.is_valid()) {
+	if (!root_animation_node.is_valid() || is_graph_initialization_valid == false) {
 		return;
 	}
 
@@ -383,8 +384,8 @@ void BLTAnimationGraph::_setup_graph() {
 	}
 
 	print_line(vformat("_setup_graph() on graph %x and root node %x", (uintptr_t)(void *)(this), (uintptr_t)(root_animation_node.ptr())));
-
-	root_animation_node->initialize(graph_context);
+	is_graph_initialization_valid = root_animation_node->initialize(graph_context);
+	print_line(vformat("is_graph_initialization_valid = %s", is_graph_initialization_valid ? "true" : "false"));
 }
 
 BLTAnimationGraph::BLTAnimationGraph() {

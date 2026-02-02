@@ -274,35 +274,20 @@ bool BLTAnimationNodeSampler::initialize(GraphEvaluationContext &context) {
 	}
 
 	animation_player = context.animation_player;
-	if (animation_name.is_empty()) {
-		return true;
+
+	if (animation_player == nullptr) {
+		return false;
 	}
 
-	animation = animation_player->get_animation(animation_name);
-	if (!animation.is_valid()) {
-		print_error(vformat("Cannot initialize node %s: animation '%s' not found in animation player.", get_name(), animation_name));
+	if (animation_name.is_empty()) {
+		return false;
+	}
+
+	if (!set_animation(animation_name)) {
 		return false;
 	}
 
 	context.animation_data_allocator.register_track_values(animation, context.skeleton_3d);
-
-	node_time_info.loop_mode = animation->get_loop_mode();
-
-	// Initialize Sync Track from marker
-	LocalVector<float> sync_markers;
-	int marker_index = 0;
-	StringName marker_name = itos(marker_index);
-	while (animation->has_marker(marker_name)) {
-		sync_markers.push_back(animation->get_marker_time(marker_name));
-		marker_index++;
-		marker_name = itos(marker_index);
-	}
-
-	if (sync_markers.size() > 0) {
-		node_time_info.sync_track = SyncTrack::create_from_markers(animation->get_length(), sync_markers);
-	} else {
-		node_time_info.sync_track = SyncTrack::create_from_markers(animation->get_length(), { 0 });
-	}
 
 	return true;
 }
@@ -343,8 +328,52 @@ void BLTAnimationNodeSampler::set_animation_player(AnimationPlayer *p_player) {
 	_node_changed();
 }
 
-void BLTAnimationNodeSampler::set_animation(const StringName &p_name) {
+bool BLTAnimationNodeSampler::set_animation(const StringName &p_name) {
+	bool has_animation_name_changed = p_name != animation_name;
 	animation_name = p_name;
+
+	if (animation_player == nullptr) {
+		return false;
+	}
+
+	if (!animation_player->has_animation(p_name)) {
+		if (has_animation_name_changed) {
+			_node_changed();
+		}
+		return false;
+	}
+
+	animation = animation_player->get_animation(p_name);
+	if (!animation.is_valid()) {
+		print_error(vformat("Cannot initialize node %s: animation '%s' not found in animation player.", get_name(), animation_name));
+
+		_node_changed();
+		return false;
+	}
+
+	node_time_info.loop_mode = animation->get_loop_mode();
+
+	// Initialize Sync Track from marker
+	LocalVector<float> sync_markers;
+	int marker_index = 0;
+	StringName marker_name = itos(marker_index);
+	while (animation->has_marker(marker_name)) {
+		sync_markers.push_back(animation->get_marker_time(marker_name));
+		marker_index++;
+		marker_name = itos(marker_index);
+	}
+
+	if (sync_markers.size() > 0) {
+		node_time_info.sync_track = SyncTrack::create_from_markers(animation->get_length(), sync_markers);
+	} else {
+		node_time_info.sync_track = SyncTrack::create_from_markers(animation->get_length(), { 0 });
+	}
+
+	if (has_animation_name_changed) {
+		_node_changed();
+	}
+
+	return true;
 }
 
 StringName BLTAnimationNodeSampler::get_animation() const {

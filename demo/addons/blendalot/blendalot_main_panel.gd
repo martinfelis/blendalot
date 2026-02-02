@@ -7,6 +7,8 @@ extends Control
 @onready var tree_option_button: OptionButton = %TreeOptionButton
 @onready var add_node_popup_menu: PopupMenu = %AddNodePopupMenu
 
+var root_animation_node:BLTAnimationNode = null
+var last_edited_graph_node:GraphNode = null
 var blend_tree:BLTAnimationNodeBlendTree = BLTAnimationNodeBlendTree.new()
 var blend_tree_node_to_graph_node = {}
 var graph_node_to_blend_tree_node = {}
@@ -31,6 +33,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	pass
 
+
 func create_node_for_blt_node(blt_node: BLTAnimationNode) -> GraphNode:
 	var result_graph_node:GraphNode = GraphNode.new()
 	result_graph_node.name = blt_node.resource_name
@@ -53,15 +56,41 @@ func create_node_for_blt_node(blt_node: BLTAnimationNode) -> GraphNode:
 		result_graph_node.add_child(slot_label)
 		result_graph_node.set_slot(i + result_slot_offset, true, 1, Color.WHITE, false, 1, Color.BLACK)
 	
+	blt_node.node_changed.connect(_triggrer_animation_graph_initialize)
+	
 	return result_graph_node
 
 
-func _on_add_node_button_pressed() -> void:
-	blend_tree_graph_edit.add_child(create_node_for_blt_node(BLTAnimationNodeOutput.new()))
-	blend_tree_graph_edit.add_child(create_node_for_blt_node(BLTAnimationNodeBlend2.new()))
+func _on_blend_tree_graph_edit_delete_nodes_request(nodes: Array[StringName]) -> void:
+	for node_name:StringName in nodes:
+		print("remove node '%s'" % node_name)
+		var blend_tree_node:BLTAnimationNode = blend_tree.get_node(node_name)
+		
+		if blend_tree_node == null:
+			push_error("Cannot delete node '%s': node not found." % node_name)
+			continue
+		
+		if blend_tree_node == blend_tree.get_output_node():
+			push_warning("Output node not allowed to be removed.")
+			continue
+		
+		blend_tree_node.node_changed.disconnect(_triggrer_animation_graph_initialize)
+		
+		var graph_node:GraphNode = blend_tree_node_to_graph_node[blend_tree_node]
+		blend_tree.remove_node(blend_tree_node)
+		blend_tree_node_to_graph_node.erase(blend_tree_node)
+		
+		_blend_tree_graph_edit_remove_node_connections(graph_node)
+		graph_node_to_blend_tree_node.erase(graph_node)
+		blend_tree_graph_edit.remove_child(graph_node)
+		_on_blend_tree_graph_edit_node_deselected(graph_node)
+		
+		EditorInterface.get_inspector().edit(null)
 
 
 func _on_reset_graph_button_pressed() -> void:
+	EditorInterface.get_inspector().edit(null)
+
 	_reset_editor()
 	_update_editor_from_blend_tree()
 	
@@ -89,10 +118,12 @@ func edit_blend_tree(blend_tree_animation_node:BLTAnimationNode):
 	print("Starting to edit blend_tree_animation_node " + str(blend_tree_animation_node))
 	print("Owner: %s" % blend_tree_animation_node)
 	_reset_editor()
+	root_animation_node = blend_tree_animation_node
 	blend_tree = blend_tree_animation_node
 	
 	_update_editor_nodes_from_blend_tree()
 	_update_editor_connections_from_blend_tree()
+
 
 func _update_editor_nodes_from_blend_tree():
 	for node_name in blend_tree.get_node_names():
@@ -207,6 +238,7 @@ func _on_blend_tree_graph_edit_begin_node_move() -> void:
 
 func _on_blend_tree_graph_edit_node_selected(graph_node: Node) -> void:
 	selected_nodes[graph_node] = graph_node
+	last_edited_graph_node = graph_node
 	EditorInterface.get_inspector().edit(graph_node_to_blend_tree_node[graph_node])
 
 
@@ -224,13 +256,13 @@ func _on_blend_tree_graph_edit_popup_request(at_position: Vector2) -> void:
 
 func _on_add_node_popup_menu_index_pressed(index: int) -> void:
 	var new_blend_tree_node: BLTAnimationNode = ClassDB.instantiate(registered_nodes[index])
-	blend_tree.add_node(new_blend_tree_node)
+	blend_tree.add_node(new_blend_tree_node)	
+	
 	var graph_node:GraphNode = create_node_for_blt_node(new_blend_tree_node)
+	blend_tree_graph_edit.add_child(graph_node)
 	
 	graph_node_to_blend_tree_node[graph_node] = new_blend_tree_node
 	blend_tree_node_to_graph_node[new_blend_tree_node] = graph_node
-	
-	blend_tree_graph_edit.add_child(graph_node)
 	
 	if new_node_position != Vector2.INF:
 		graph_node.position_offset = new_node_position
@@ -250,31 +282,6 @@ func _blend_tree_graph_edit_remove_node_connections(graph_node:GraphNode):
 		blend_tree_graph_edit.disconnect_node(node_connection["from_node"], node_connection["from_port"], node_connection["to_node"], node_connection["to_port"])
 
 
-func _on_blend_tree_graph_edit_delete_nodes_request(nodes: Array[StringName]) -> void:
-	for node_name:StringName in nodes:
-		print("remove node '%s'" % node_name)
-		var blend_tree_node:BLTAnimationNode = blend_tree.get_node(node_name)
-		
-		if blend_tree_node == null:
-			push_error("Cannot delete node '%s': node not found." % node_name)
-			continue
-		
-		if blend_tree_node == blend_tree.get_output_node():
-			push_warning("Output node not allowed to be removed.")
-			continue
-		
-		var graph_node:GraphNode = blend_tree_node_to_graph_node[blend_tree_node]
-		blend_tree.remove_node(blend_tree_node)
-		blend_tree_node_to_graph_node.erase(blend_tree_node)
-		
-		_blend_tree_graph_edit_remove_node_connections(graph_node)
-		graph_node_to_blend_tree_node.erase(graph_node)
-		blend_tree_graph_edit.remove_child(graph_node)
-		_on_blend_tree_graph_edit_node_deselected(graph_node)
-		
-		EditorInterface.get_inspector().edit(null)
-
-
 func _on_blend_tree_graph_edit_disconnection_request(from_node: StringName, from_port: int, to_node: StringName, to_port: int) -> void:
 	print("removing connection")
 	
@@ -284,3 +291,12 @@ func _on_blend_tree_graph_edit_disconnection_request(from_node: StringName, from
 	blend_tree.remove_connection(blend_tree_source_node, blend_tree_target_node, target_port_name)
 	
 	blend_tree_graph_edit.disconnect_node(from_node, from_port, to_node, to_port)
+
+
+func _trigger_animation_graph_initialize(node_name:StringName) -> void:
+	root_animation_node.node_changed.emit("root")	
+
+
+func _on_visibility_changed() -> void:
+	if visible and is_instance_valid(last_edited_graph_node):
+		_on_blend_tree_graph_edit_node_selected(last_edited_graph_node)

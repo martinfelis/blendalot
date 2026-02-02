@@ -19,6 +19,7 @@ private:
 	mutable AHashMap<StringName, Pair<Ref<BLTAnimationNode>, StringName>> parameter_to_node_parameter_map;
 
 	mutable bool properties_dirty = true;
+	bool is_graph_initialization_valid = false;
 
 	void _update_properties() const;
 	void _update_properties_for_node(const String &p_base_path, Ref<BLTAnimationNode> p_node) const;

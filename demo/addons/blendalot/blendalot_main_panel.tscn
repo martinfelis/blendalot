@@ -47,10 +47,10 @@ size_flags_horizontal = 0
 text = "Load
 "
 
-[node name="AddNodeButton" type="Button" parent="BlendTreeEditorContainer/HBoxContainer" unique_id=985452697]
+[node name="ReinitializeButton" type="Button" parent="BlendTreeEditorContainer/HBoxContainer" unique_id=719949205]
 layout_mode = 2
 size_flags_horizontal = 0
-text = "Add Node"
+text = "Reinitialize"
 
 [node name="TreeOptionButton" type="OptionButton" parent="BlendTreeEditorContainer/HBoxContainer" unique_id=760974122]
 unique_name_in_owner = true
@@ -92,10 +92,11 @@ grow_horizontal = 2
 grow_vertical = 2
 right_disconnects = true
 
+[connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
 [connection signal="pressed" from="BlendTreeEditorContainer/HBoxContainer/ResetGraphButton" to="." method="_on_reset_graph_button_pressed"]
 [connection signal="pressed" from="BlendTreeEditorContainer/HBoxContainer/SaveButton" to="." method="_on_save_button_pressed"]
 [connection signal="pressed" from="BlendTreeEditorContainer/HBoxContainer/LoadButton" to="." method="_on_load_button_pressed"]
-[connection signal="pressed" from="BlendTreeEditorContainer/HBoxContainer/AddNodeButton" to="." method="_on_add_node_button_pressed"]
+[connection signal="pressed" from="BlendTreeEditorContainer/HBoxContainer/ReinitializeButton" to="." method="_trigger_animation_graph_initialize"]
 [connection signal="pressed" from="BlendTreeEditorContainer/HBoxContainer/InstantiateTreeButton" to="." method="_on_instantiate_tree_button_pressed"]
 [connection signal="index_pressed" from="BlendTreeEditorContainer/Panel/AddNodePopupMenu" to="." method="_on_add_node_popup_menu_index_pressed"]
 [connection signal="begin_node_move" from="BlendTreeEditorContainer/Panel/BlendTreeGraphEdit" to="." method="_on_blend_tree_graph_edit_begin_node_move"]

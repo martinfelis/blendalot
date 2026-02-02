@@ -542,6 +542,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 			int num_connections = blend_tree_graph.connections.size();
 			CHECK(blend_tree_graph.remove_node(blend_tree_graph.get_output_node()) == false);
 			CHECK(blend_tree_graph.connections.size() == num_connections);
+			CHECK(blend_tree_graph.nodes.size() == num_nodes);
 		}
 
 		SUBCASE("Remove a node with no children") {

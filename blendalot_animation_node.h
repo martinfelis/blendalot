@@ -348,7 +348,7 @@ public:
 	AnimationPlayer *animation_player = nullptr;
 
 	void set_animation_player(AnimationPlayer *p_player);
-	void set_animation(const StringName &p_name);
+	bool set_animation(const StringName &p_name);
 	StringName get_animation() const;
 
 	TypedArray<StringName> get_animations_as_typed_array() const;
@@ -394,6 +394,11 @@ public:
 			node_time_info.loop_mode = Animation::LOOP_LINEAR;
 		}
 
+		if (node_time_info.loop_mode != Animation::LOOP_LINEAR) {
+			print_line(vformat("Forcing loop mode to linear on nonde %s", get_name()));
+			node_time_info.loop_mode = Animation::LOOP_LINEAR;
+		}
+
 		return true;
 	}
 	void activate_inputs(const Vector<Ref<BLTAnimationNode>> &input_nodes) override {
@@ -421,9 +426,9 @@ public:
 					if (!Math::is_zero_approx(node_time_info.sync_track.duration)) {
 						node_time_info.position = Math::fposmod(static_cast<float>(node_time_info.position), node_time_info.sync_track.duration);
 						node_time_info.sync_position = node_time_info.sync_track.calc_sync_from_abs_time(node_time_info.position);
-					} else {
-						assert(false && !"Loop mode ping-pong not yet supported");
 					}
+				} else {
+					assert(false && !"Loop mode ping-pong not yet supported");
 				}
 			}
 		}
@@ -688,6 +693,10 @@ public:
 		}
 
 		return result;
+	}
+
+	void _tree_node_changed(const StringName &node_name) {
+		_node_changed();
 	}
 
 	// overrides from BLTAnimationNode
