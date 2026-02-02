@@ -149,7 +149,7 @@ void BLTAnimationGraph::_notification(int p_what) {
 	GodotProfileZone("SyncedAnimationGraph::_notification");
 
 	switch (p_what) {
-		case Node::NOTIFICATION_READY: {
+		case NOTIFICATION_ENTER_TREE: {
 			_setup_evaluation_context();
 			_setup_graph();
 
@@ -234,16 +234,9 @@ AnimationMixer::AnimationCallbackModeDiscrete BLTAnimationGraph::get_callback_mo
 }
 
 void BLTAnimationGraph::set_animation_player(const NodePath &p_path) {
-	animation_player_path = p_path;
-	if (p_path.is_empty()) {
-		//		set_root_node(SceneStringName(path_pp));
-		//		while (animation_libraries.size()) {
-		//			remove_animation_library(animation_libraries[0].name);
-		//		}
-	}
-	graph_context.animation_player = Object::cast_to<AnimationPlayer>(get_node_or_null(animation_player_path));
+	print_line(vformat("set_animation_player(%s) ", p_path));
 
-	print_line(vformat("Setting animation player of graph %x to %x", (uintptr_t)(this), (uintptr_t)graph_context.animation_player));
+	animation_player_path = p_path;
 
 	_setup_evaluation_context();
 	_setup_graph();
@@ -279,14 +272,9 @@ Ref<BLTAnimationNode> BLTAnimationGraph::get_root_animation_node() const {
 }
 
 void BLTAnimationGraph::set_skeleton(const NodePath &p_path) {
+	print_line(vformat("set_skeleton(%s) ", p_path));
+
 	skeleton_path = p_path;
-	if (p_path.is_empty()) {
-		//		set_root_node(SceneStringName(path_pp));
-		//		while (animation_libraries.size()) {
-		//			remove_animation_library(animation_libraries[0].name);
-		//		}
-	}
-	graph_context.skeleton_3d = Object::cast_to<Skeleton3D>(get_node_or_null(skeleton_path));
 
 	_setup_evaluation_context();
 	_setup_graph();
@@ -365,11 +353,20 @@ void BLTAnimationGraph::_set_process(bool p_process, bool p_force) {
 	processing = p_process;
 }
 
+void BLTAnimationGraph::_setup_animation_player() {
+	if (!is_inside_tree()) {
+		return;
+	}
+
+	graph_context.animation_player = Object::cast_to<AnimationPlayer>(get_node_or_null(animation_player_path));
+	print_line(vformat("AnimationPlayer of graph %x is now %x", (uintptr_t)(this), (uintptr_t)graph_context.animation_player));
+}
+
 void BLTAnimationGraph::_setup_evaluation_context() {
 	print_line("_setup_evaluation_context()");
 	_cleanup_evaluation_context();
 
-	graph_context.animation_player = Object::cast_to<AnimationPlayer>(get_node_or_null(animation_player_path));
+	_setup_animation_player();
 	graph_context.skeleton_3d = Object::cast_to<Skeleton3D>(get_node_or_null(skeleton_path));
 }
 

@@ -76,6 +76,7 @@ public:
 private:
 	void _set_process(bool p_process, bool p_force = false);
 
+	void _setup_animation_player();
 	void _setup_evaluation_context();
 	void _cleanup_evaluation_context();
 

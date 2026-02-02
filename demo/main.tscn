@@ -279,6 +279,7 @@ bones/66/position = Vector3(-0.014239848, 6.412128, 0.0079107955)
 active = false
 
 [node name="AnimationPlayer2" type="AnimationPlayer" parent="Characters/MixamoAmyWalkRunSynced" unique_id=1255239074]
+active = false
 libraries/animation_library = ExtResource("3_1bvp3")
 
 [node name="SyncedAnimationGraph" type="BLTAnimationGraph" parent="Characters/MixamoAmyWalkRunSynced" unique_id=1602406394]
