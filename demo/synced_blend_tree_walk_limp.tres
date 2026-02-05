@@ -16,11 +16,10 @@ graph_offset = Vector2(-1300, -40)
 animation = &"animation_library/Walk-InPlace"
 
 [resource]
-nodes/Output/position = null
 nodes/BLTAnimationNodeBlend2/node = SubResource("BLTAnimationNodeBlend2_bvt3d")
-nodes/BLTAnimationNodeBlend2/position = null
+nodes/BLTAnimationNodeBlend2/graph_offset = Vector2(-600, 180)
 "nodes/BLTAnimationNodeSampler 1/node" = SubResource("BLTAnimationNodeSampler_sntl5")
-"nodes/BLTAnimationNodeSampler 1/position" = null
+"nodes/BLTAnimationNodeSampler 1/graph_offset" = Vector2(-1200, 560)
 nodes/BLTAnimationNodeSampler/node = SubResource("BLTAnimationNodeSampler_n4m28")
-nodes/BLTAnimationNodeSampler/position = null
+nodes/BLTAnimationNodeSampler/graph_offset = Vector2(-1300, -40)
 node_connections = ["BLTAnimationNodeBlend2", 0, "BLTAnimationNodeSampler", "BLTAnimationNodeBlend2", 1, "BLTAnimationNodeSampler 1", "Output", 0, "BLTAnimationNodeBlend2"]

@@ -464,17 +464,11 @@ Variant BLTAnimationNodeBlend2::get_parameter_default_value(const StringName &p_
 
 void BLTAnimationNodeBlend2::_get_property_list(List<PropertyInfo> *p_list) const {
 	p_list->push_back(PropertyInfo(Variant::FLOAT, blend_weight_pname, PROPERTY_HINT_RANGE, "0,1,0.01,or_less,or_greater"));
-	p_list->push_back(PropertyInfo(Variant::BOOL, sync_pname));
 }
 
 bool BLTAnimationNodeBlend2::_get(const StringName &p_name, Variant &r_value) const {
 	if (p_name == blend_weight_pname) {
 		r_value = blend_weight;
-		return true;
-	}
-
-	if (p_name == sync_pname) {
-		r_value = sync;
 		return true;
 	}
 
@@ -484,11 +478,6 @@ bool BLTAnimationNodeBlend2::_get(const StringName &p_name, Variant &r_value) co
 bool BLTAnimationNodeBlend2::_set(const StringName &p_name, const Variant &p_value) {
 	if (p_name == blend_weight_pname) {
 		blend_weight = p_value;
-		return true;
-	}
-
-	if (p_name == sync_pname) {
-		sync = p_value;
 		return true;
 	}
 
