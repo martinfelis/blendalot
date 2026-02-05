@@ -38,7 +38,7 @@ func create_node_for_blt_node(blt_node: BLTAnimationNode) -> GraphNode:
 	var result_graph_node:GraphNode = GraphNode.new()
 	result_graph_node.name = blt_node.resource_name
 	result_graph_node.title = blt_node.resource_name
-	result_graph_node.position_offset = blt_node.position
+	result_graph_node.position_offset = blt_node.graph_offset
 	
 	var result_slot_offset = 0
 	
@@ -229,7 +229,7 @@ func _on_blend_tree_graph_edit_connection_request(from_node: StringName, from_po
 
 func _on_blend_tree_graph_edit_end_node_move() -> void:
 	for graph_node:GraphNode in selected_nodes.keys():
-		graph_node_to_blend_tree_node[graph_node].position = graph_node.position_offset
+		graph_node_to_blend_tree_node[graph_node].graph_offset = graph_node.position_offset
 
 
 func _on_blend_tree_graph_edit_begin_node_move() -> void:
@@ -266,6 +266,7 @@ func _on_add_node_popup_menu_index_pressed(index: int) -> void:
 	
 	if new_node_position != Vector2.INF:
 		graph_node.position_offset = new_node_position
+		new_blend_tree_node.graph_offset = new_node_position
 	
 	new_node_position = Vector2.INF
 

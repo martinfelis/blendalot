@@ -5,9 +5,9 @@
 #include "blendalot_animation_node.h"
 
 void BLTAnimationNode::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("set_position", "position"), &BLTAnimationNode::set_position);
-	ClassDB::bind_method(D_METHOD("get_position"), &BLTAnimationNode::get_position);
-	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "position"), "set_position", "get_position");
+	ClassDB::bind_method(D_METHOD("set_graph_offset", "offset"), &BLTAnimationNode::set_graph_offset);
+	ClassDB::bind_method(D_METHOD("get_graph_offset"), &BLTAnimationNode::get_graph_offset);
+	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "graph_offset", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_graph_offset", "get_graph_offset");
 
 	ADD_SIGNAL(MethodInfo("animation_node_renamed", PropertyInfo(Variant::INT, "object_id"), PropertyInfo(Variant::STRING, "old_name"), PropertyInfo(Variant::STRING, "new_name")));
 	ADD_SIGNAL(MethodInfo("animation_node_removed", PropertyInfo(Variant::INT, "object_id"), PropertyInfo(Variant::STRING, "name")));
@@ -76,7 +76,7 @@ void BLTAnimationNodeBlendTree::_get_property_list(List<PropertyInfo> *p_list) c
 		if (prop_name != "Output") {
 			p_list->push_back(PropertyInfo(Variant::OBJECT, "nodes/" + prop_name + "/node", PROPERTY_HINT_RESOURCE_TYPE, "AnimationNode", PROPERTY_USAGE_NO_EDITOR));
 		}
-		p_list->push_back(PropertyInfo(Variant::VECTOR2, "nodes/" + prop_name + "/position", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR));
+		p_list->push_back(PropertyInfo(Variant::VECTOR2, "nodes/" + prop_name + "/graph_offset", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR));
 	}
 
 	p_list->push_back(PropertyInfo(Variant::ARRAY, "node_connections", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR));
@@ -96,9 +96,9 @@ bool BLTAnimationNodeBlendTree::_get(const StringName &p_name, Variant &r_value)
 			}
 		}
 
-		if (what == "position") {
+		if (what == "graph_offset") {
 			if (node_index != -1) {
-				r_value = tree_graph.nodes[node_index]->position;
+				r_value = tree_graph.nodes[node_index]->graph_offset;
 				return true;
 			}
 		}
@@ -136,10 +136,10 @@ bool BLTAnimationNodeBlendTree::_set(const StringName &p_name, const Variant &p_
 			return true;
 		}
 
-		if (what == "position") {
+		if (what == "graph_offset") {
 			int node_index = find_node_index_by_name(node_name);
 			if (node_index > -1) {
-				tree_graph.nodes[node_index]->position = p_value;
+				tree_graph.nodes[node_index]->graph_offset = p_value;
 			}
 			return true;
 		}

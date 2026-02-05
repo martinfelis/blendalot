@@ -263,7 +263,7 @@ public:
 	NodeTimeInfo node_time_info;
 	bool active = false;
 
-	Vector2 position;
+	Vector2 graph_offset;
 
 	virtual ~BLTAnimationNode() override = default;
 	virtual bool initialize(GraphEvaluationContext &context) {
@@ -307,12 +307,12 @@ public:
 		}
 	}
 
-	void set_position(const Vector2 &p_position) {
-		position = p_position;
+	void set_graph_offset(const Vector2 &p_position) {
+		graph_offset = p_position;
 	}
 
-	Vector2 get_position() const {
-		return position;
+	Vector2 get_graph_offset() const {
+		return graph_offset;
 	}
 
 	virtual Vector<StringName> get_input_names() const { return {}; }

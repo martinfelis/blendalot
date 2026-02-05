@@ -1,12 +1,15 @@
-[gd_resource type="BLTAnimationNodeBlendTree" load_steps=4 format=3]
+[gd_resource type="BLTAnimationNodeBlendTree" format=3]
 
 [sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_bvt3d"]
+resource_name = "BLTAnimationNodeSampler 1"
 animation = &"animation_library/TestAnimationB"
 
 [sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_sntl5"]
+resource_name = "BLTAnimationNodeSampler"
 animation = &"animation_library/TestAnimationA"
 
 [sub_resource type="BLTAnimationNodeBlend2" id="BLTAnimationNodeBlend2_n4m28"]
+resource_name = "Blend2"
 sync = false
 blend_amount = 0.5
 sync = false
@@ -18,4 +21,4 @@ nodes/Blend2/position = Vector2(0, 0)
 "nodes/BLTAnimationNodeSampler 1/position" = Vector2(0, 0)
 nodes/BLTAnimationNodeSampler/node = SubResource("BLTAnimationNodeSampler_sntl5")
 nodes/BLTAnimationNodeSampler/position = Vector2(0, 0)
-node_connections = [&"Blend2", 0, &"BLTAnimationNodeSampler", &"Blend2", 1, &"BLTAnimationNodeSampler 1", &"Output", 0, &"Blend2"]
+node_connections = ["Blend2", 0, "BLTAnimationNodeSampler", "Blend2", 1, "BLTAnimationNodeSampler 1", "Output", 0, "Blend2"]

@@ -2,25 +2,25 @@
 
 [sub_resource type="BLTAnimationNodeBlend2" id="BLTAnimationNodeBlend2_bvt3d"]
 resource_name = "BLTAnimationNodeBlend2"
-position = Vector2(950.50195, 749.8301)
+graph_offset = Vector2(-600, 180)
 blend_amount = 1.0
 
 [sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_sntl5"]
 resource_name = "BLTAnimationNodeSampler 1"
-position = Vector2(101.323975, 1247.624)
+graph_offset = Vector2(-1200, 560)
 animation = &"animation_library/Limping-InPlace"
 
 [sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_n4m28"]
 resource_name = "BLTAnimationNodeSampler"
-position = Vector2(101.323975, 398.44608)
+graph_offset = Vector2(-1300, -40)
 animation = &"animation_library/Walk-InPlace"
 
 [resource]
-nodes/Output/position = Vector2(1741.1158, 925.52203)
+nodes/Output/position = null
 nodes/BLTAnimationNodeBlend2/node = SubResource("BLTAnimationNodeBlend2_bvt3d")
-nodes/BLTAnimationNodeBlend2/position = Vector2(950.50195, 749.8301)
+nodes/BLTAnimationNodeBlend2/position = null
 "nodes/BLTAnimationNodeSampler 1/node" = SubResource("BLTAnimationNodeSampler_sntl5")
-"nodes/BLTAnimationNodeSampler 1/position" = Vector2(101.323975, 1247.624)
+"nodes/BLTAnimationNodeSampler 1/position" = null
 nodes/BLTAnimationNodeSampler/node = SubResource("BLTAnimationNodeSampler_n4m28")
-nodes/BLTAnimationNodeSampler/position = Vector2(101.323975, 398.44608)
+nodes/BLTAnimationNodeSampler/position = null
 node_connections = ["BLTAnimationNodeBlend2", 0, "BLTAnimationNodeSampler", "BLTAnimationNodeBlend2", 1, "BLTAnimationNodeSampler 1", "Output", 0, "BLTAnimationNodeBlend2"]
