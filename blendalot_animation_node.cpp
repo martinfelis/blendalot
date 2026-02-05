@@ -166,7 +166,7 @@ bool BLTAnimationNodeBlendTree::_set(const StringName &p_name, const Variant &p_
 void AnimationData::sample_from_animation(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d, double p_time) {
 	GodotProfileZone("AnimationData::sample_from_animation");
 
-	const LocalVector<Animation::Track *> tracks = animation->get_tracks();
+	const LocalVector<Animation::Track *> &tracks = animation->get_tracks();
 	Animation::Track *const *tracks_ptr = tracks.ptr();
 
 	int count = tracks.size();
@@ -250,7 +250,7 @@ void AnimationData::allocate_track_value(const Animation::Track *animation_track
 void AnimationData::allocate_track_values(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d) {
 	GodotProfileZone("AnimationData::allocate_track_values");
 
-	const LocalVector<Animation::Track *> tracks = animation->get_tracks();
+	const LocalVector<Animation::Track *> &tracks = animation->get_tracks();
 	Animation::Track *const *tracks_ptr = tracks.ptr();
 
 	int count = tracks.size();
@@ -597,7 +597,7 @@ void BLTAnimationNodeBlendTree::BLTBlendTreeGraph::sort_nodes_and_references() {
 	LocalVector<int> sorted_node_indices = get_sorted_node_indices();
 
 	LocalVector<Ref<BLTAnimationNode>> sorted_nodes;
-	LocalVector<NodeConnectionInfo> old_node_connection_info = node_connection_info;
+	LocalVector<NodeConnectionInfo> old_node_connection_info(node_connection_info);
 	for (unsigned int i = 0; i < sorted_node_indices.size(); i++) {
 		int node_index = sorted_node_indices[i];
 		sorted_nodes.push_back(nodes[node_index]);
