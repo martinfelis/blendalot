@@ -1,0 +1,83 @@
+[gd_scene format=3 uid="uid://bk5mssvanwjnh"]
+
+[ext_resource type="Script" uid="uid://bxxipuj2s5gxu" path="res://addons/blendalot/animation_graph_editor.gd" id="1_un1ur"]
+[ext_resource type="PackedScene" uid="uid://cptd46rpm0gl3" path="res://addons/blendalot/blend_tree_editor.tscn" id="2_utax0"]
+
+[node name="AnimationGraphEditor" type="VBoxContainer" unique_id=768619585]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1_un1ur")
+
+[node name="DebugContainer" type="HBoxContainer" parent="." unique_id=1984631897]
+visible = false
+layout_mode = 2
+
+[node name="ResetGraphButton" type="Button" parent="DebugContainer" unique_id=670074781]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Reset"
+
+[node name="FileNameLineEdit" type="LineEdit" parent="DebugContainer" unique_id=724929522]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+text = "editor_test_tree.tres"
+
+[node name="SaveButton" type="Button" parent="DebugContainer" unique_id=706843675]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Save
+"
+
+[node name="LoadButton" type="Button" parent="DebugContainer" unique_id=1467831200]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Load
+"
+
+[node name="ReinitializeButton" type="Button" parent="DebugContainer" unique_id=281924859]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Reinitialize"
+
+[node name="TreeOptionButton" type="OptionButton" parent="DebugContainer" unique_id=2103827540]
+unique_name_in_owner = true
+layout_mode = 2
+selected = 0
+item_count = 2
+popup/item_0/text = "AnimationSampler"
+popup/item_0/id = 1
+popup/item_1/text = "Blend2"
+popup/item_1/id = 2
+
+[node name="InstantiateTreeButton" type="Button" parent="DebugContainer" unique_id=735069321]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Instantiate"
+
+[node name="NavigationBar" type="MarginContainer" parent="." unique_id=815609909]
+layout_mode = 2
+
+[node name="Panel" type="Panel" parent="NavigationBar" unique_id=996737763]
+layout_mode = 2
+
+[node name="BreadcrumbButtons" type="HBoxContainer" parent="NavigationBar" unique_id=1375619232]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="PathLabel" type="Label" parent="NavigationBar/BreadcrumbButtons" unique_id=1544570774]
+layout_mode = 2
+text = "Path:"
+
+[node name="ActiveGraphControl" type="Control" parent="." unique_id=1769528277]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="BlendTreeEditor" parent="ActiveGraphControl" unique_id=1313738200 instance=ExtResource("2_utax0")]
+layout_mode = 1

@@ -1,9 +1,8 @@
 @tool
 extends EditorPlugin
 
-const MainPanel = preload("res://addons/blendalot/blendalot_main_panel.tscn")
-
-var main_panel_instance:BlendalotMainPanel
+var editor_dock:EditorDock = null
+var animation_graph_editor:AnimationGraphEditor = null
 
 func _enable_plugin() -> void:
 	# Add autoloads here.
@@ -16,25 +15,29 @@ func _disable_plugin() -> void:
 
 
 func _enter_tree() -> void:
-	main_panel_instance = MainPanel.instantiate()
-	# Add the main panel to the editor's main viewport.
-	EditorInterface.get_editor_main_screen().add_child(main_panel_instance)
-	# Hide the main panel. Very much required.
-	_make_visible(false)
+	editor_dock = EditorDock.new()
+	editor_dock.title = "Animation Graph"
+	editor_dock.default_slot = EditorDock.DOCK_SLOT_BOTTOM
+	animation_graph_editor = preload ("res://addons/blendalot/animation_graph_editor.tscn").instantiate()
+	editor_dock.add_child(animation_graph_editor)
+	add_dock(editor_dock)
 
 
 func _exit_tree() -> void:
-	if main_panel_instance:
-		main_panel_instance.queue_free()
+	remove_dock(editor_dock)
+	editor_dock.queue_free()
+	editor_dock = null
+	
+	animation_graph_editor.queue_free()
+	animation_graph_editor = null
 
 
-func _has_main_screen():
-	return true
+func _has_main_screen() -> bool:
+	return false
 
 
 func _make_visible(visible):
-	if main_panel_instance:
-		main_panel_instance.visible = visible
+	pass
 
 
 func _get_plugin_name():
@@ -48,9 +51,14 @@ func _get_plugin_icon():
 func _handles(obj: Object) -> bool:
 	return obj is BLTAnimationNodeBlendTree
 
+
 func _edit(object: Object):
+	if not is_instance_valid(animation_graph_editor):
+		push_error("Cannot edit object as AnimationGraphEditor is not initialized")
+		return 
+	
 	if object is BLTAnimationNodeBlendTree:
-		main_panel_instance.edit_blend_tree(object)
+		animation_graph_editor.edit_animation_root_node(object)
 		return
 	
 	print("Cannot (yet) edit object " + str(object))

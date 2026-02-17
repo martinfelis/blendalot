@@ -257,13 +257,14 @@ public:
 		double sync_position = 0.0;
 		bool is_synced = false;
 
-		Animation::LoopMode loop_mode = Animation::LOOP_NONE;
+		// TODO: 2026-02-17: how to initialize loop_mode e.g. for a BlendTree or a StateMachine?
+		Animation::LoopMode loop_mode = Animation::LOOP_LINEAR;
 		SyncTrack sync_track;
 	};
 	NodeTimeInfo node_time_info;
 	bool active = false;
 
-	Vector2 graph_offset;
+	Vector2 position;
 
 	virtual ~BLTAnimationNode() override = default;
 	virtual bool initialize(GraphEvaluationContext &context) {
@@ -307,12 +308,12 @@ public:
 		}
 	}
 
-	void set_graph_offset(const Vector2 &p_position) {
-		graph_offset = p_position;
+	void set_position(const Vector2 &p_position) {
+		position = p_position;
 	}
 
-	Vector2 get_graph_offset() const {
-		return graph_offset;
+	Vector2 get_position() const {
+		return position;
 	}
 
 	virtual Vector<StringName> get_input_names() const { return {}; }
@@ -597,12 +598,22 @@ protected:
 	bool _set(const StringName &p_name, const Variant &p_value);
 
 public:
+	Vector2 graph_offset;
+
 	struct NodeRuntimeData {
 		Vector<Ref<BLTAnimationNode>> input_nodes;
 		LocalVector<AnimationData *> input_data;
 		AnimationData *output_data = nullptr;
 	};
 	LocalVector<NodeRuntimeData> _node_runtime_data;
+
+	void set_graph_offset(const Vector2 &p_graph_offset) {
+		graph_offset = p_graph_offset;
+	}
+
+	Vector2 get_graph_offset() const {
+		return graph_offset;
+	}
 
 	int find_node_index(const Ref<BLTAnimationNode> &node) const {
 		return tree_graph.find_node_index(node);
@@ -701,6 +712,8 @@ public:
 
 	// overrides from BLTAnimationNode
 	bool initialize(GraphEvaluationContext &context) override {
+		tree_initialized = false;
+
 		if (!BLTAnimationNode::initialize(context)) {
 			return false;
 		}
@@ -713,6 +726,15 @@ public:
 		for (const Ref<BLTAnimationNode> &node : tree_graph.nodes) {
 			if (!node->initialize(context)) {
 				return false;
+			}
+		}
+
+		// All inputs must have a connected node.
+		for (const NodeRuntimeData &node_runtime_data : _node_runtime_data) {
+			for (const Ref<BLTAnimationNode> &input_node : node_runtime_data.input_nodes) {
+				if (!input_node.is_valid()) {
+					return false;
+				}
 			}
 		}
 

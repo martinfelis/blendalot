@@ -5,9 +5,9 @@
 #include "blendalot_animation_node.h"
 
 void BLTAnimationNode::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("set_graph_offset", "offset"), &BLTAnimationNode::set_graph_offset);
-	ClassDB::bind_method(D_METHOD("get_graph_offset"), &BLTAnimationNode::get_graph_offset);
-	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "graph_offset", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_graph_offset", "get_graph_offset");
+	ClassDB::bind_method(D_METHOD("set_position", "position"), &BLTAnimationNode::set_position);
+	ClassDB::bind_method(D_METHOD("get_position"), &BLTAnimationNode::get_position);
+	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "position", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_position", "get_position");
 
 	ADD_SIGNAL(MethodInfo("animation_node_renamed", PropertyInfo(Variant::INT, "object_id"), PropertyInfo(Variant::STRING, "old_name"), PropertyInfo(Variant::STRING, "new_name")));
 	ADD_SIGNAL(MethodInfo("animation_node_removed", PropertyInfo(Variant::INT, "object_id"), PropertyInfo(Variant::STRING, "name")));
@@ -60,6 +60,11 @@ void BLTAnimationNodeBlendTree::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("add_connection", "source_node", "target_node", "target_port_name"), &BLTAnimationNodeBlendTree::add_connection);
 	ClassDB::bind_method(D_METHOD("remove_connection", "source_node", "target_node", "target_port_name"), &BLTAnimationNodeBlendTree::remove_connection);
 	ClassDB::bind_method(D_METHOD("get_connections"), &BLTAnimationNodeBlendTree::get_connections_as_array);
+
+	ClassDB::bind_method(D_METHOD("set_graph_offset", "graph_offset"), &BLTAnimationNodeBlendTree::set_graph_offset);
+	ClassDB::bind_method(D_METHOD("get_graph_offset"), &BLTAnimationNodeBlendTree::get_graph_offset);
+	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "graph_offset", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_graph_offset", "get_graph_offset");
+
 	BIND_CONSTANT(CONNECTION_OK);
 	BIND_CONSTANT(CONNECTION_ERROR_GRAPH_ALREADY_INITIALIZED);
 	BIND_CONSTANT(CONNECTION_ERROR_NO_SOURCE_NODE);
@@ -98,7 +103,7 @@ bool BLTAnimationNodeBlendTree::_get(const StringName &p_name, Variant &r_value)
 
 		if (what == "graph_offset") {
 			if (node_index != -1) {
-				r_value = tree_graph.nodes[node_index]->graph_offset;
+				r_value = tree_graph.nodes[node_index]->position;
 				return true;
 			}
 		}
@@ -139,7 +144,7 @@ bool BLTAnimationNodeBlendTree::_set(const StringName &p_name, const Variant &p_
 		if (what == "graph_offset") {
 			int node_index = find_node_index_by_name(node_name);
 			if (node_index > -1) {
-				tree_graph.nodes[node_index]->graph_offset = p_value;
+				tree_graph.nodes[node_index]->position = p_value;
 			}
 			return true;
 		}
