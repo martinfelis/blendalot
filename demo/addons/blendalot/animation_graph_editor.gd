@@ -29,6 +29,7 @@ func edit_animation_root_node(blt_node:BLTAnimationNode):
 		animation_graph_root_node = blt_node
 		push_graph_stack(blt_node)
 		edit_graph(blt_node)
+		return
 	
 	push_warning("Cannot edit node %s. Graph type %s not yet supported." % [blt_node.resource_name, blt_node.get_class()])
 

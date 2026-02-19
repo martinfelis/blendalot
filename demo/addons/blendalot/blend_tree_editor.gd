@@ -198,7 +198,8 @@ func _on_blend_tree_graph_edit_node_selected(graph_node: Node) -> void:
 
 
 func _on_blend_tree_graph_edit_scroll_offset_changed(offset: Vector2) -> void:
-	blend_tree.graph_offset = offset
+	if is_instance_valid(blend_tree):
+		blend_tree.graph_offset = offset
 
 
 #
