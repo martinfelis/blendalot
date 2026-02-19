@@ -8,7 +8,28 @@ animation = &"Walk-InPlace"
 
 [sub_resource type="AnimationNodeBlend2" id="AnimationNodeBlend2_lquwl"]
 
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_vyt75"]
+
+[sub_resource type="AnimationNodeBlend2" id="AnimationNodeBlend2_hom0r"]
+
+[sub_resource type="AnimationNodeBlendTree" id="AnimationNodeBlendTree_vyt75"]
+
+[sub_resource type="AnimationNodeBlendTree" id="AnimationNodeBlendTree_1rfsi"]
+nodes/BlendTree/node = SubResource("AnimationNodeBlendTree_vyt75")
+nodes/BlendTree/position = Vector2(694.9995, 215.55058)
+
+[sub_resource type="AnimationNodeBlendTree" id="AnimationNodeBlendTree_8tpve"]
+graph_offset = Vector2(-782, 179.47485)
+nodes/Animation/node = SubResource("AnimationNodeAnimation_vyt75")
+nodes/Animation/position = Vector2(-320, 140)
+nodes/Blend2/node = SubResource("AnimationNodeBlend2_hom0r")
+nodes/Blend2/position = Vector2(-115.66393, 127.37674)
+nodes/BlendTree/node = SubResource("AnimationNodeBlendTree_1rfsi")
+nodes/BlendTree/position = Vector2(-480, 400)
+node_connections = [&"output", 0, &"Blend2", &"Blend2", 0, &"Animation", &"Blend2", 1, &"BlendTree"]
+
 [resource]
+graph_offset = Vector2(-217.4643, 82.84979)
 nodes/output/position = Vector2(540, 140)
 nodes/Animation/node = SubResource("AnimationNodeAnimation_1bvp3")
 nodes/Animation/position = Vector2(120, 80)
@@ -16,4 +37,6 @@ nodes/Animation/position = Vector2(120, 80)
 "nodes/Animation 2/position" = Vector2(80, 320)
 nodes/Blend2/node = SubResource("AnimationNodeBlend2_lquwl")
 nodes/Blend2/position = Vector2(360, 180)
+nodes/BlendTree/node = SubResource("AnimationNodeBlendTree_8tpve")
+nodes/BlendTree/position = Vector2(778.0867, 295.33868)
 node_connections = [&"output", 0, &"Blend2", &"Blend2", 0, &"Animation", &"Blend2", 1, &"Animation 2"]

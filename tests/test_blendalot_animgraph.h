@@ -607,7 +607,6 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Embe
 	// TestAnimationB
 	Ref<BLTAnimationNodeSampler> animation_sampler_node_b;
 	animation_sampler_node_b.instantiate();
-	animation_sampler_node_b->animation_name = "animation_library/TestAnimationB";
 
 	embedded_blend_tree->add_node(animation_sampler_node_b);
 	embedded_blend_tree->add_connection(animation_sampler_node_b, embedded_blend_tree->get_output_node(), "Output");
@@ -619,15 +618,11 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Embe
 	Ref<BLTAnimationNodeBlend2> blend2;
 	blend2.instantiate();
 	blend2->set_name("Blend2");
-	blend2->blend_weight = 0.5;
-	blend2->sync = true;
-
 	blend_tree->add_node(blend2);
 
 	// TestAnimationA
 	Ref<BLTAnimationNodeSampler> animation_sampler_node_a;
 	animation_sampler_node_a.instantiate();
-	animation_sampler_node_a->animation_name = "animation_library/TestAnimationA";
 
 	blend_tree->add_node(animation_sampler_node_a);
 
@@ -637,23 +632,54 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Embe
 	blend_tree->add_connection(embedded_blend_tree, blend2, "Input1");
 	blend_tree->add_connection(blend2, blend_tree->get_output_node(), "Output");
 
-	// Trigger initialization
-	animation_graph->set_root_animation_node(blend_tree);
-	GraphEvaluationContext &graph_context = animation_graph->get_context();
-	REQUIRE(blend_tree->initialize(graph_context));
+	SUBCASE("Perform regular blend") {
+		animation_sampler_node_b->animation_name = "animation_library/TestAnimationB";
+		animation_sampler_node_a->animation_name = "animation_library/TestAnimationA";
+		blend2->blend_weight = 0.5;
+		blend2->sync = false;
 
-	// Perform evaluation
-	AnimationData *graph_output = graph_context.animation_data_allocator.allocate();
-	blend_tree->activate_inputs(Vector<Ref<BLTAnimationNode>>());
-	blend_tree->calculate_sync_track(Vector<Ref<BLTAnimationNode>>());
-	blend_tree->update_time(0.1);
-	blend_tree->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
+		// Trigger initialization
+		animation_graph->set_root_animation_node(blend_tree);
+		GraphEvaluationContext &graph_context = animation_graph->get_context();
+		REQUIRE(blend_tree->initialize(graph_context));
 
-	// Check values
-	AnimationData::TransformTrackValue *hip_transform_value = graph_output->get_value<AnimationData::TransformTrackValue>(test_animation_a->get_tracks()[0]->thash);
-	CHECK(hip_transform_value->loc[0] == doctest::Approx(0.15));
-	CHECK(hip_transform_value->loc[1] == doctest::Approx(0.3));
-	CHECK(hip_transform_value->loc[2] == doctest::Approx(0.45));
+		// Perform evaluation
+		AnimationData *graph_output = graph_context.animation_data_allocator.allocate();
+		blend_tree->activate_inputs(Vector<Ref<BLTAnimationNode>>());
+		blend_tree->calculate_sync_track(Vector<Ref<BLTAnimationNode>>());
+		blend_tree->update_time(0.1);
+		blend_tree->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
+
+		// Check values
+		AnimationData::TransformTrackValue *hip_transform_value = graph_output->get_value<AnimationData::TransformTrackValue>(test_animation_a->get_tracks()[0]->thash);
+		CHECK(hip_transform_value->loc[0] == doctest::Approx(0.15));
+		CHECK(hip_transform_value->loc[1] == doctest::Approx(0.3));
+		CHECK(hip_transform_value->loc[2] == doctest::Approx(0.45));
+	}
+	SUBCASE("Perform synced blend") {
+		animation_sampler_node_b->animation_name = "animation_library/TestAnimationSyncA";
+		animation_sampler_node_a->animation_name = "animation_library/TestAnimationSyncB";
+		blend2->blend_weight = 0.5;
+		blend2->sync = true;
+
+		// Trigger initialization
+		animation_graph->set_root_animation_node(blend_tree);
+		GraphEvaluationContext &graph_context = animation_graph->get_context();
+		REQUIRE(blend_tree->initialize(graph_context));
+
+		// Perform evaluation
+		AnimationData *graph_output = graph_context.animation_data_allocator.allocate();
+		blend_tree->activate_inputs(Vector<Ref<BLTAnimationNode>>());
+		blend_tree->calculate_sync_track(Vector<Ref<BLTAnimationNode>>());
+		blend_tree->update_time(0.825);
+		blend_tree->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
+
+		// Check values
+		AnimationData::TransformTrackValue *hip_transform_value = graph_output->get_value<AnimationData::TransformTrackValue>(test_animation_a->get_tracks()[0]->thash);
+		CHECK(hip_transform_value->loc[0] == doctest::Approx(1.5));
+		CHECK(hip_transform_value->loc[1] == doctest::Approx(3.0));
+		CHECK(hip_transform_value->loc[2] == doctest::Approx(4.5));
+	}
 }
 
 } //namespace TestBlendalotAnimationGraph

@@ -257,8 +257,7 @@ public:
 		double sync_position = 0.0;
 		bool is_synced = false;
 
-		// TODO: 2026-02-17: how to initialize loop_mode e.g. for a BlendTree or a StateMachine?
-		Animation::LoopMode loop_mode = Animation::LOOP_LINEAR;
+		Animation::LoopMode loop_mode = Animation::LOOP_NONE;
 		SyncTrack sync_track;
 	};
 	NodeTimeInfo node_time_info;
@@ -753,6 +752,8 @@ public:
 		}
 
 		tree_graph.nodes[0]->active = true;
+		tree_graph.nodes[0]->node_time_info.is_synced = node_time_info.is_synced;
+
 		for (uint32_t i = 0; i < tree_graph.nodes.size(); i++) {
 			const Ref<BLTAnimationNode> &node = tree_graph.nodes[i];
 
@@ -777,14 +778,21 @@ public:
 			const NodeRuntimeData &node_runtime_data = _node_runtime_data[i];
 
 			node->calculate_sync_track(node_runtime_data.input_nodes);
+
+			if (i == 1) {
+				node_time_info = node->node_time_info;
+			}
 		}
 	}
 
 	void update_time(double p_delta) override {
 		GodotProfileZone("SyncedBlendTree::update_time");
 
-		tree_graph.nodes[0]->node_time_info.delta = p_delta;
-		tree_graph.nodes[0]->node_time_info.position += p_delta;
+		BLTAnimationNode::update_time(p_delta);
+
+		tree_graph.nodes[0]->node_time_info.delta = node_time_info.delta;
+		tree_graph.nodes[0]->node_time_info.position = node_time_info.position;
+		tree_graph.nodes[0]->node_time_info.sync_position = node_time_info.sync_position;
 
 		for (uint32_t i = 1; i < tree_graph.nodes.size(); i++) {
 			const Ref<BLTAnimationNode> &node = tree_graph.nodes[i];

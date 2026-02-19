@@ -34,6 +34,7 @@ glow_enabled = true
 [sub_resource type="BLTAnimationNodeBlend2" id="BLTAnimationNodeBlend2_7mycd"]
 resource_name = "BLTAnimationNodeBlend2"
 position = Vector2(-320, -40)
+blend_amount = 0.81
 
 [sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_272bh"]
 resource_name = "BLTAnimationNodeSampler"
@@ -43,7 +44,7 @@ animation = &"animation_library/Walk-InPlace"
 [sub_resource type="BLTAnimationNodeBlendTree" id="BLTAnimationNodeBlendTree_5vw27"]
 resource_name = "BLTAnimationNodeBlendTree"
 position = Vector2(-640, -20)
-graph_offset = Vector2(-766.67163, -102.823944)
+graph_offset = Vector2(-760.67163, -24.823944)
 nodes/BLTAnimationNodeSampler/node = SubResource("BLTAnimationNodeSampler_272bh")
 nodes/BLTAnimationNodeSampler/graph_offset = Vector2(-490, 7)
 node_connections = ["Output", 0, "BLTAnimationNodeSampler"]
@@ -51,11 +52,11 @@ node_connections = ["Output", 0, "BLTAnimationNodeSampler"]
 [sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_kek77"]
 resource_name = "BLTAnimationNodeSampler"
 position = Vector2(-620, 140)
-animation = &"animation_library/Walk-InPlace"
+animation = &"animation_library/Run-InPlace"
 
 [sub_resource type="BLTAnimationNodeBlendTree" id="BLTAnimationNodeBlendTree_7mycd"]
 resource_name = "Root"
-graph_offset = Vector2(-1054.4585, -50.771484)
+graph_offset = Vector2(-869, -71)
 nodes/BLTAnimationNodeBlend2/node = SubResource("BLTAnimationNodeBlend2_7mycd")
 nodes/BLTAnimationNodeBlend2/graph_offset = Vector2(-320, -40)
 nodes/BLTAnimationNodeSampler/node = SubResource("BLTAnimationNodeSampler_kek77")
@@ -318,7 +319,7 @@ libraries/animation_library = ExtResource("3_1bvp3")
 animation_player = NodePath("../AnimationPlayer2")
 tree_root = SubResource("BLTAnimationNodeBlendTree_7mycd")
 skeleton = NodePath("../Armature/Skeleton3D")
-parameters/BLTAnimationNodeBlend2/blend_amount = 0.0
+parameters/BLTAnimationNodeBlend2/blend_amount = 0.81
 
 [connection signal="value_changed" from="UI/MarginContainer/HBoxContainer/BlendWeightSlider" to="." method="_on_blend_weight_slider_value_changed"]
 
