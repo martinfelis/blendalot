@@ -350,6 +350,7 @@ public:
 	void set_animation_player(AnimationPlayer *p_player);
 	bool set_animation(const StringName &p_name);
 	StringName get_animation() const;
+	AnimationPlayer *get_animation_player() const;
 
 	TypedArray<StringName> get_animations_as_typed_array() const;
 

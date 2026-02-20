@@ -6,11 +6,12 @@ class_name AnimationGraphEditor
 @onready var breadcrumb_button_container: HBoxContainer = %BreadcrumbButtons
 @onready var active_graph_control: Control = %ActiveGraphControl
 
-var active_animation_graph_node:BLTAnimationGraph = null
+var animation_graph:BLTAnimationGraph = null
 var animation_graph_root_node:BLTAnimationNode = null
 var graph_node_stack:Array[BLTAnimationNode] = []
 var active_graph_edit:Control = null
 var active_graph_edit_index = -1
+
 
 func reset_graph_control():
 	for child in active_graph_control.get_children():
@@ -19,6 +20,7 @@ func reset_graph_control():
 
 
 func edit_animation_root_node(blt_node:BLTAnimationNode):
+	print("Setting root node")
 	graph_node_stack = []
 	active_graph_edit_index = -1
 	truncate_graph_stack(0)
@@ -30,6 +32,8 @@ func edit_animation_root_node(blt_node:BLTAnimationNode):
 		push_graph_stack(blt_node)
 		edit_graph(blt_node)
 		return
+	
+	assert(is_instance_valid(animation_graph))
 	
 	push_warning("Cannot edit node %s. Graph type %s not yet supported." % [blt_node.resource_name, blt_node.get_class()])
 

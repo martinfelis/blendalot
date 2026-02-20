@@ -105,12 +105,25 @@ func create_graph_node_for_blt_node(blt_node: BLTAnimationNode) -> GraphNode:
 		result_graph_node.add_child(slot_label)
 		result_graph_node.set_slot(i + result_slot_offset, true, 1, Color.WHITE, false, 1, Color.BLACK)
 	
+	if blt_node.get_class() == "BLTAnimationNodeSampler":
+		var animation_sampler_node:BLTAnimationNodeSampler = blt_node as BLTAnimationNodeSampler
+		var animation_selector_button = OptionButton.new()
+		var animation_player:AnimationPlayer = animation_sampler_node.get_animation_player()
+		for animation_name in animation_player.get_animation_list():
+			animation_selector_button.add_item(animation_name)
+			if animation_name == animation_sampler_node.animation:
+				animation_selector_button.select(animation_selector_button.item_count - 1)
+		
+		animation_selector_button.item_selected.connect(_on_animation_select.bind(animation_sampler_node, animation_selector_button))
+		
+		result_graph_node.add_child(animation_selector_button)
+	
 	blt_node.node_changed.connect(_trigger_graph_changed)
 	
 	return result_graph_node
 
 
-func _trigger_graph_changed():
+func _trigger_graph_changed(_node_name):
 	graph_changed.emit()
 
 
@@ -253,3 +266,10 @@ func _on_node_double_click(graph_node:GraphNode):
 	
 	if blend_tree_node is BLTAnimationNodeBlendTree:
 		edit_subgraph.emit(blend_tree_node)
+
+#
+# Animation selection for BltAnimationNodeSampler
+#
+func _on_animation_select(index:int, blt_node_sampler:BLTAnimationNodeSampler, option_button:OptionButton):
+	blt_node_sampler.animation = option_button.get_item_text(index)
+	blt_node_sampler.node_changed.emit(blt_node_sampler.resource_name)
