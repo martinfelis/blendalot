@@ -6,7 +6,7 @@
 
 namespace TestBlendalotAnimationGraph {
 
-TEST_CASE("[SyncedAnimationGraph][SyncTrack] Basic") {
+TEST_CASE("[Blendalot][SyncTrack] Basic") {
 	SyncTrack track_a;
 	track_a.num_intervals = 2;
 	track_a.duration = 2.0;
@@ -84,7 +84,7 @@ TEST_CASE("[SyncedAnimationGraph][SyncTrack] Basic") {
 	}
 }
 
-TEST_CASE("[SyncedAnimationGraph][SyncTrack] Create Sync Track from markers") {
+TEST_CASE("[Blendalot][SyncTrack] Create Sync Track from markers") {
 	SyncTrack track = SyncTrack::create_from_markers(2.0f, { 0.9f, 0.2f });
 
 	WHEN("Querying Ratios") {
@@ -138,7 +138,7 @@ TEST_CASE("[SyncedAnimationGraph][SyncTrack] Create Sync Track from markers") {
 	}
 }
 
-TEST_CASE("[SyncedAnimationGraph][SyncTrack] Sync Track blending") {
+TEST_CASE("[Blendalot][SyncTrack] Sync Track blending") {
 	SyncTrack track_a = SyncTrack::create_from_markers(2.0, { 0., 0.6, 1.8 });
 	SyncTrack track_b = SyncTrack::create_from_markers(1.5f, { 1.05, 1.35, 0.3 });
 

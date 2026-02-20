@@ -146,7 +146,7 @@ void BLTAnimationGraph::_graph_changed(const StringName &node_name) {
 }
 
 void BLTAnimationGraph::_notification(int p_what) {
-	GodotProfileZone("SyncedAnimationGraph::_notification");
+	GodotProfileZone("BLTAnimationGraph::_notification");
 
 	switch (p_what) {
 		case NOTIFICATION_ENTER_TREE: {
@@ -295,7 +295,7 @@ void BLTAnimationGraph::_process_graph(double p_delta, bool p_update_only) {
 		return;
 	}
 
-	GodotProfileZone("SyncedAnimationGraph::_process_graph");
+	GodotProfileZone("BLTAnimationGraph::_process_graph");
 
 	_update_properties();
 
@@ -311,7 +311,7 @@ void BLTAnimationGraph::_process_graph(double p_delta, bool p_update_only) {
 }
 
 void BLTAnimationGraph::_apply_animation_data(const AnimationData &output_data) const {
-	GodotProfileZone("SyncedAnimationGraph::_apply_animation_data");
+	GodotProfileZone("BLTAnimationGraph::_apply_animation_data");
 
 	for (const KeyValue<Animation::TypeHash, size_t> &K : output_data.value_buffer_offset) {
 		const AnimationData::TrackValue *track_value = output_data.get_value<AnimationData::TrackValue>(K.key);
