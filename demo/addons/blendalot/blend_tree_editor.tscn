@@ -44,6 +44,7 @@ right_disconnects = true
 [connection signal="index_pressed" from="Panel/AddNodePopupMenu" to="." method="_on_add_node_popup_menu_index_pressed"]
 [connection signal="connection_request" from="Panel/BlendTreeGraphEdit" to="." method="_on_blend_tree_graph_edit_connection_request"]
 [connection signal="delete_nodes_request" from="Panel/BlendTreeGraphEdit" to="." method="_on_blend_tree_graph_edit_delete_nodes_request"]
+[connection signal="disconnection_request" from="Panel/BlendTreeGraphEdit" to="." method="_on_blend_tree_graph_edit_disconnection_request"]
 [connection signal="end_node_move" from="Panel/BlendTreeGraphEdit" to="." method="_on_blend_tree_graph_edit_end_node_move"]
 [connection signal="node_deselected" from="Panel/BlendTreeGraphEdit" to="." method="_on_blend_tree_graph_edit_node_deselected"]
 [connection signal="node_selected" from="Panel/BlendTreeGraphEdit" to="." method="_on_blend_tree_graph_edit_node_selected"]
