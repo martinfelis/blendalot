@@ -203,4 +203,47 @@ TEST_CASE("[Blendalot][SyncTrack] Sync Track blending") {
 	}
 }
 
-} //namespace TestSyncedAnimationGraph
+TEST_CASE("[Blendalot][SyncTrack] Sync Track blending non-matching interval count") {
+	SyncTrack track_a = SyncTrack::create_from_markers(2.0, { 0., 0.6, 1.8 });
+	SyncTrack track_b = SyncTrack::create_from_markers(1.5f, { 1.05 });
+
+	WHEN("Blending two synctracks with weight 0.") {
+		SyncTrack blended = SyncTrack::blend(0.f, track_a, track_b);
+
+		blended.duration = track_a.duration;
+		blended.interval_start_ratio[0] = 0.0;
+		for (int i = 0; i < track_a.num_intervals; i++) {
+			CHECK(blended.interval_duration_ratio[i] == track_a.interval_duration_ratio[i]);
+		}
+	}
+	WHEN("Blending two synctracks with weight 1.") {
+		SyncTrack blended = SyncTrack::blend(1.f, track_a, track_b);
+
+		blended.duration = track_b.duration;
+		blended.interval_start_ratio[0] = 0.0;
+		for (int i = 0; i < track_b.num_intervals; i++) {
+			CHECK(blended.interval_duration_ratio[i] == track_b.interval_duration_ratio[i]);
+		}
+	}
+
+	WHEN("Blending with weight 0.2") {
+		float weight = 0.2f;
+		SyncTrack blended = SyncTrack::blend(weight, track_a, track_b);
+
+		float track_a_repeats = static_cast<float>(blended.num_intervals / track_a.num_intervals);
+		float track_b_repeats = static_cast<float>(blended.num_intervals / track_b.num_intervals);
+
+		CHECK(
+				blended.duration == doctest::Approx(2.5));
+		CHECK(
+				blended.interval_start_ratio[0] == 0.0);
+		CHECK(
+				blended.interval_duration_ratio[0] == doctest::Approx((1.0 - weight) * track_a.interval_duration_ratio[0] / track_a_repeats + weight * track_b.interval_duration_ratio[0] / track_b_repeats));
+		CHECK(
+				blended.interval_duration_ratio[1] == doctest::Approx((1.0 - weight) * track_a.interval_duration_ratio[1] / track_a_repeats + weight * track_b.interval_duration_ratio[0] / track_b_repeats));
+		CHECK(
+				blended.interval_duration_ratio[2] == doctest::Approx((1.0 - weight) * track_a.interval_duration_ratio[2] / track_a_repeats + weight * track_b.interval_duration_ratio[0] / track_b_repeats));
+	}
+}
+
+} //namespace TestBlendalotAnimationGraph

@@ -385,6 +385,10 @@ StringName BLTAnimationNodeSampler::get_animation() const {
 	return animation_name;
 }
 
+AnimationPlayer *BLTAnimationNodeSampler::get_animation_player() const {
+	return animation_player;
+}
+
 TypedArray<StringName> BLTAnimationNodeSampler::get_animations_as_typed_array() const {
 	TypedArray<StringName> typed_arr;
 
@@ -417,6 +421,7 @@ TypedArray<StringName> BLTAnimationNodeSampler::get_animations_as_typed_array() 
 void BLTAnimationNodeSampler::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_animation", "name"), &BLTAnimationNodeSampler::set_animation);
 	ClassDB::bind_method(D_METHOD("get_animation"), &BLTAnimationNodeSampler::get_animation);
+	ClassDB::bind_method(D_METHOD("get_animation_player"), &BLTAnimationNodeSampler::get_animation_player);
 
 	ADD_PROPERTY(PropertyInfo(Variant::STRING_NAME, "animation"), "set_animation", "get_animation");
 
