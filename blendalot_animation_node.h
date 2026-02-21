@@ -105,7 +105,8 @@ struct AnimationData {
 		buffer = other.buffer;
 	}
 	AnimationData(AnimationData &&other) noexcept :
-			value_buffer_offset(std::exchange(other.value_buffer_offset, AHashMap<Animation::TypeHash, size_t, HashHasher>())),
+			// We skip copying the offset as that should be identical for all nodes within a BLTAnimationGraph.
+			// value_buffer_offset(std::exchange(other.value_buffer_offset, AHashMap<Animation::TypeHash, size_t, HashHasher>())),
 			buffer(std::exchange(other.buffer, LocalVector<uint8_t>())) {
 	}
 	AnimationData &operator=(const AnimationData &other) {
@@ -301,9 +302,10 @@ public:
 	}
 
 	virtual void evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &input_datas, AnimationData &output_data) {
+		GodotProfileZone("AnimationNode::evaluate");
 		// By default, use the AnimationData of the first input.
 		if (input_datas.size() > 0) {
-			output_data = *input_datas[0];
+			output_data = std::move(*input_datas[0]);
 		}
 	}
 
@@ -365,6 +367,47 @@ protected:
 	static void _bind_methods();
 };
 
+class BLTAnimationNodeTimeScale : public BLTAnimationNode {
+	GDCLASS(BLTAnimationNodeTimeScale, BLTAnimationNode);
+
+public:
+	float scale = 1.0f;
+
+private:
+	Ref<Animation> animation;
+
+	Vector<StringName> get_input_names() const override {
+		return { "Input" };
+	}
+
+	bool initialize(GraphEvaluationContext &context) override {
+		node_time_info = {};
+		// TODO: it should not be necessary to force looping here.		node_time_info.loop_mode = Animation::LOOP_LINEAR;
+		return true;
+	}
+	void calculate_sync_track(const Vector<Ref<BLTAnimationNode>> &input_nodes) override {
+		if (node_time_info.is_synced) {
+			node_time_info.sync_track = input_nodes[0]->node_time_info.sync_track;
+			node_time_info.sync_track.duration *= scale;
+		}
+	}
+	void update_time(double p_time) override {
+		if (node_time_info.is_synced) {
+			return;
+		}
+
+		BLTAnimationNode::update_time(p_time * scale);
+	}
+
+protected:
+	void _get_property_list(List<PropertyInfo> *p_list) const;
+	bool _get(const StringName &p_name, Variant &r_value) const;
+	bool _set(const StringName &p_name, const Variant &p_value);
+
+private:
+	StringName scale_name = PNAME("scale");
+};
+
 class BLTAnimationNodeOutput : public BLTAnimationNode {
 	GDCLASS(BLTAnimationNodeOutput, BLTAnimationNode);
 
@@ -413,7 +456,8 @@ public:
 
 	void calculate_sync_track(const Vector<Ref<BLTAnimationNode>> &input_nodes) override {
 		if (node_time_info.is_synced || sync) {
-			assert(input_nodes[0]->node_time_info.loop_mode == input_nodes[1]->node_time_info.loop_mode);
+			// TODO: figure out whether we need to enforce looping mode when syncing is enabled.
+			// assert(input_nodes[0]->node_time_info.loop_mode == input_nodes[1]->node_time_info.loop_mode);
 			node_time_info.sync_track = SyncTrack::blend(blend_weight, input_nodes[0]->node_time_info.sync_track, input_nodes[1]->node_time_info.sync_track);
 		}
 	}

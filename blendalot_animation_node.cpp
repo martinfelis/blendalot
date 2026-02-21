@@ -49,125 +49,6 @@ void BLTAnimationNode::_animation_node_removed(const ObjectID &p_oid, const Stri
 	emit_signal(SNAME("animation_node_removed"), p_oid, p_node);
 }
 
-void BLTAnimationNodeBlendTree::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("add_node", "animation_node"), &BLTAnimationNodeBlendTree::add_node);
-	ClassDB::bind_method(D_METHOD("remove_node", "animation_node"), &BLTAnimationNodeBlendTree::remove_node);
-	ClassDB::bind_method(D_METHOD("get_node", "node_name"), &BLTAnimationNodeBlendTree::get_node);
-	ClassDB::bind_method(D_METHOD("get_output_node"), &BLTAnimationNodeBlendTree::get_output_node);
-	ClassDB::bind_method(D_METHOD("get_node_names"), &BLTAnimationNodeBlendTree::get_node_names_as_typed_array);
-
-	ClassDB::bind_method(D_METHOD("is_connection_valid", "source_node", "target_node", "target_port_name"), &BLTAnimationNodeBlendTree::is_connection_valid);
-	ClassDB::bind_method(D_METHOD("add_connection", "source_node", "target_node", "target_port_name"), &BLTAnimationNodeBlendTree::add_connection);
-	ClassDB::bind_method(D_METHOD("remove_connection", "source_node", "target_node", "target_port_name"), &BLTAnimationNodeBlendTree::remove_connection);
-	ClassDB::bind_method(D_METHOD("get_connections"), &BLTAnimationNodeBlendTree::get_connections_as_array);
-
-	ClassDB::bind_method(D_METHOD("set_graph_offset", "graph_offset"), &BLTAnimationNodeBlendTree::set_graph_offset);
-	ClassDB::bind_method(D_METHOD("get_graph_offset"), &BLTAnimationNodeBlendTree::get_graph_offset);
-	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "graph_offset", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_graph_offset", "get_graph_offset");
-
-	BIND_CONSTANT(CONNECTION_OK);
-	BIND_CONSTANT(CONNECTION_ERROR_GRAPH_ALREADY_INITIALIZED);
-	BIND_CONSTANT(CONNECTION_ERROR_NO_SOURCE_NODE);
-	BIND_CONSTANT(CONNECTION_ERROR_NO_TARGET_NODE);
-	BIND_CONSTANT(CONNECTION_ERROR_PARENT_EXISTS);
-	BIND_CONSTANT(CONNECTION_ERROR_TARGET_PORT_NOT_FOUND);
-	BIND_CONSTANT(CONNECTION_ERROR_TARGET_PORT_ALREADY_CONNECTED);
-	BIND_CONSTANT(CONNECTION_ERROR_CONNECTION_CREATES_LOOP);
-}
-
-void BLTAnimationNodeBlendTree::_get_property_list(List<PropertyInfo> *p_list) const {
-	for (const Ref<BLTAnimationNode> &node : tree_graph.nodes) {
-		String prop_name = node->get_name();
-		if (prop_name != "Output") {
-			p_list->push_back(PropertyInfo(Variant::OBJECT, "nodes/" + prop_name + "/node", PROPERTY_HINT_RESOURCE_TYPE, "AnimationNode", PROPERTY_USAGE_NO_EDITOR));
-		}
-		p_list->push_back(PropertyInfo(Variant::VECTOR2, "nodes/" + prop_name + "/graph_offset", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR));
-	}
-
-	p_list->push_back(PropertyInfo(Variant::ARRAY, "node_connections", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR));
-}
-
-bool BLTAnimationNodeBlendTree::_get(const StringName &p_name, Variant &r_value) const {
-	String prop_name = p_name;
-	if (prop_name.begins_with("nodes/")) {
-		String node_name = prop_name.get_slicec('/', 1);
-		String what = prop_name.get_slicec('/', 2);
-		int node_index = find_node_index_by_name(node_name);
-
-		if (what == "node") {
-			if (node_index != -1) {
-				r_value = tree_graph.nodes[node_index];
-				return true;
-			}
-		}
-
-		if (what == "graph_offset") {
-			if (node_index != -1) {
-				r_value = tree_graph.nodes[node_index]->position;
-				return true;
-			}
-		}
-	} else if (prop_name == "node_connections") {
-		Array conns;
-		conns.resize(tree_graph.connections.size() * 3);
-
-		int idx = 0;
-		for (const BLTBlendTreeConnection &connection : tree_graph.connections) {
-			conns[idx * 3 + 0] = connection.target_node->get_name();
-			conns[idx * 3 + 1] = connection.target_node->get_input_index(connection.target_port_name);
-			conns[idx * 3 + 2] = connection.source_node->get_name();
-			idx++;
-		}
-
-		r_value = conns;
-		return true;
-	}
-
-	return false;
-}
-
-bool BLTAnimationNodeBlendTree::_set(const StringName &p_name, const Variant &p_value) {
-	String prop_name = p_name;
-	if (prop_name.begins_with("nodes/")) {
-		String node_name = prop_name.get_slicec('/', 1);
-		String what = prop_name.get_slicec('/', 2);
-
-		if (what == "node") {
-			Ref<BLTAnimationNode> anode = p_value;
-			if (anode.is_valid()) {
-				anode->set_name(node_name);
-				add_node(anode);
-			}
-			return true;
-		}
-
-		if (what == "graph_offset") {
-			int node_index = find_node_index_by_name(node_name);
-			if (node_index > -1) {
-				tree_graph.nodes[node_index]->position = p_value;
-			}
-			return true;
-		}
-	} else if (prop_name == "node_connections") {
-		Array conns = p_value;
-		ERR_FAIL_COND_V(conns.size() % 3 != 0, false);
-
-		for (int i = 0; i < conns.size(); i += 3) {
-			int target_node_index = find_node_index_by_name(conns[i]);
-			int target_node_port_index = conns[i + 1];
-			int source_node_index = find_node_index_by_name(conns[i + 2]);
-
-			Ref<BLTAnimationNode> target_node = tree_graph.nodes[target_node_index];
-			Vector<StringName> target_input_names = target_node->get_input_names();
-
-			add_connection(tree_graph.nodes[source_node_index], target_node, target_input_names[target_node_port_index]);
-		}
-		return true;
-	}
-
-	return false;
-}
-
 void AnimationData::sample_from_animation(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d, double p_time) {
 	GodotProfileZone("AnimationData::sample_from_animation");
 
@@ -273,6 +154,9 @@ void AnimationDataAllocator::register_track_values(const Ref<Animation> &animati
 	default_data.allocate_track_values(animation, skeleton_3d);
 }
 
+//
+// BLTAnimationNodeSampler
+//
 bool BLTAnimationNodeSampler::initialize(GraphEvaluationContext &context) {
 	if (!BLTAnimationNode::initialize(context)) {
 		return false;
@@ -428,6 +312,34 @@ void BLTAnimationNodeSampler::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_animations"), &BLTAnimationNodeSampler::get_animations_as_typed_array);
 }
 
+//
+// BLTAnimationNodeTimeScale
+//
+void BLTAnimationNodeTimeScale::_get_property_list(List<PropertyInfo> *p_list) const {
+	p_list->push_back(PropertyInfo(Variant::FLOAT, scale_name, PROPERTY_HINT_RANGE, "-10,10,0.01,or_less,or_greater"));
+}
+
+bool BLTAnimationNodeTimeScale::_get(const StringName &p_name, Variant &r_value) const {
+	if (p_name == scale_name) {
+		r_value = scale;
+		return true;
+	}
+
+	return false;
+}
+
+bool BLTAnimationNodeTimeScale::_set(const StringName &p_name, const Variant &p_value) {
+	if (p_name == scale_name) {
+		scale = p_value;
+		return true;
+	}
+
+	return false;
+}
+
+//
+// BLTAnimationNodeBlend2
+//
 void BLTAnimationNodeBlend2::evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) {
 	GodotProfileZone("AnimationBlend2Node::evaluate");
 
@@ -494,6 +406,9 @@ bool BLTAnimationNodeBlend2::_set(const StringName &p_name, const Variant &p_val
 	return false;
 }
 
+//
+// BLTAnimationNodeBlendTree
+//
 BLTAnimationNodeBlendTree::BLTBlendTreeGraph::BLTBlendTreeGraph() {
 	Ref<BLTAnimationNodeOutput> output_node;
 	output_node.instantiate();
@@ -760,4 +675,123 @@ BLTAnimationNodeBlendTree::ConnectionError BLTAnimationNodeBlendTree::BLTBlendTr
 	}
 
 	return CONNECTION_OK;
+}
+
+void BLTAnimationNodeBlendTree::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("add_node", "animation_node"), &BLTAnimationNodeBlendTree::add_node);
+	ClassDB::bind_method(D_METHOD("remove_node", "animation_node"), &BLTAnimationNodeBlendTree::remove_node);
+	ClassDB::bind_method(D_METHOD("get_node", "node_name"), &BLTAnimationNodeBlendTree::get_node);
+	ClassDB::bind_method(D_METHOD("get_output_node"), &BLTAnimationNodeBlendTree::get_output_node);
+	ClassDB::bind_method(D_METHOD("get_node_names"), &BLTAnimationNodeBlendTree::get_node_names_as_typed_array);
+
+	ClassDB::bind_method(D_METHOD("is_connection_valid", "source_node", "target_node", "target_port_name"), &BLTAnimationNodeBlendTree::is_connection_valid);
+	ClassDB::bind_method(D_METHOD("add_connection", "source_node", "target_node", "target_port_name"), &BLTAnimationNodeBlendTree::add_connection);
+	ClassDB::bind_method(D_METHOD("remove_connection", "source_node", "target_node", "target_port_name"), &BLTAnimationNodeBlendTree::remove_connection);
+	ClassDB::bind_method(D_METHOD("get_connections"), &BLTAnimationNodeBlendTree::get_connections_as_array);
+
+	ClassDB::bind_method(D_METHOD("set_graph_offset", "graph_offset"), &BLTAnimationNodeBlendTree::set_graph_offset);
+	ClassDB::bind_method(D_METHOD("get_graph_offset"), &BLTAnimationNodeBlendTree::get_graph_offset);
+	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "graph_offset", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_graph_offset", "get_graph_offset");
+
+	BIND_CONSTANT(CONNECTION_OK);
+	BIND_CONSTANT(CONNECTION_ERROR_GRAPH_ALREADY_INITIALIZED);
+	BIND_CONSTANT(CONNECTION_ERROR_NO_SOURCE_NODE);
+	BIND_CONSTANT(CONNECTION_ERROR_NO_TARGET_NODE);
+	BIND_CONSTANT(CONNECTION_ERROR_PARENT_EXISTS);
+	BIND_CONSTANT(CONNECTION_ERROR_TARGET_PORT_NOT_FOUND);
+	BIND_CONSTANT(CONNECTION_ERROR_TARGET_PORT_ALREADY_CONNECTED);
+	BIND_CONSTANT(CONNECTION_ERROR_CONNECTION_CREATES_LOOP);
+}
+
+void BLTAnimationNodeBlendTree::_get_property_list(List<PropertyInfo> *p_list) const {
+	for (const Ref<BLTAnimationNode> &node : tree_graph.nodes) {
+		String prop_name = node->get_name();
+		if (prop_name != "Output") {
+			p_list->push_back(PropertyInfo(Variant::OBJECT, "nodes/" + prop_name + "/node", PROPERTY_HINT_RESOURCE_TYPE, "AnimationNode", PROPERTY_USAGE_NO_EDITOR));
+		}
+		p_list->push_back(PropertyInfo(Variant::VECTOR2, "nodes/" + prop_name + "/graph_offset", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR));
+	}
+
+	p_list->push_back(PropertyInfo(Variant::ARRAY, "node_connections", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR));
+}
+
+bool BLTAnimationNodeBlendTree::_get(const StringName &p_name, Variant &r_value) const {
+	String prop_name = p_name;
+	if (prop_name.begins_with("nodes/")) {
+		String node_name = prop_name.get_slicec('/', 1);
+		String what = prop_name.get_slicec('/', 2);
+		int node_index = find_node_index_by_name(node_name);
+
+		if (what == "node") {
+			if (node_index != -1) {
+				r_value = tree_graph.nodes[node_index];
+				return true;
+			}
+		}
+
+		if (what == "graph_offset") {
+			if (node_index != -1) {
+				r_value = tree_graph.nodes[node_index]->position;
+				return true;
+			}
+		}
+	} else if (prop_name == "node_connections") {
+		Array conns;
+		conns.resize(tree_graph.connections.size() * 3);
+
+		int idx = 0;
+		for (const BLTBlendTreeConnection &connection : tree_graph.connections) {
+			conns[idx * 3 + 0] = connection.target_node->get_name();
+			conns[idx * 3 + 1] = connection.target_node->get_input_index(connection.target_port_name);
+			conns[idx * 3 + 2] = connection.source_node->get_name();
+			idx++;
+		}
+
+		r_value = conns;
+		return true;
+	}
+
+	return false;
+}
+
+bool BLTAnimationNodeBlendTree::_set(const StringName &p_name, const Variant &p_value) {
+	String prop_name = p_name;
+	if (prop_name.begins_with("nodes/")) {
+		String node_name = prop_name.get_slicec('/', 1);
+		String what = prop_name.get_slicec('/', 2);
+
+		if (what == "node") {
+			Ref<BLTAnimationNode> anode = p_value;
+			if (anode.is_valid()) {
+				anode->set_name(node_name);
+				add_node(anode);
+			}
+			return true;
+		}
+
+		if (what == "graph_offset") {
+			int node_index = find_node_index_by_name(node_name);
+			if (node_index > -1) {
+				tree_graph.nodes[node_index]->position = p_value;
+			}
+			return true;
+		}
+	} else if (prop_name == "node_connections") {
+		Array conns = p_value;
+		ERR_FAIL_COND_V(conns.size() % 3 != 0, false);
+
+		for (int i = 0; i < conns.size(); i += 3) {
+			int target_node_index = find_node_index_by_name(conns[i]);
+			int target_node_port_index = conns[i + 1];
+			int source_node_index = find_node_index_by_name(conns[i + 2]);
+
+			Ref<BLTAnimationNode> target_node = tree_graph.nodes[target_node_index];
+			Vector<StringName> target_input_names = target_node->get_input_names();
+
+			add_connection(tree_graph.nodes[source_node_index], target_node, target_input_names[target_node_port_index]);
+		}
+		return true;
+	}
+
+	return false;
 }

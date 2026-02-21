@@ -12,6 +12,7 @@ void initialize_blendalot_animgraph_module(ModuleInitializationLevel p_level) {
 	ClassDB::register_class<BLTAnimationNodeOutput>();
 	ClassDB::register_class<BLTAnimationNodeBlendTree>();
 	ClassDB::register_class<BLTAnimationNodeSampler>();
+	ClassDB::register_class<BLTAnimationNodeTimeScale>();
 	ClassDB::register_class<BLTAnimationNodeBlend2>();
 }
 
