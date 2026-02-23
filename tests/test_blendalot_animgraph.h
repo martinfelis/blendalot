@@ -520,7 +520,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 		CHECK(subgraph_blend2a_initial == blend_tree_graph.node_connection_info[blend_tree_graph.find_node_index(blend2_node_a)].input_subtree_node_indices);
 		CHECK(subgraph_blend2b_initial == blend_tree_graph.node_connection_info[blend_tree_graph.find_node_index(blend2_node_b)].input_subtree_node_indices);
 
-		// Check that we also do not
+		// Check that the connection is not present anymore.
 		for (const BLTBlendTreeConnection &connection : blend_tree_graph.connections) {
 			bool connection_equals_removed_connection = connection.source_node == blend2_node_b && connection.target_node == blend2_node_a && connection.target_port_name == "Input1";
 			CHECK(connection_equals_removed_connection == false);
