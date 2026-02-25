@@ -767,14 +767,23 @@ public:
 		sort_nodes();
 		setup_runtime_data();
 
-		for (const Ref<BLTAnimationNode> &node : tree_graph.nodes) {
+		const HashSet<int> &output_subtree = tree_graph.node_connection_info[0].input_subtree_node_indices;
+
+		for (int i = 0; i < tree_graph.nodes.size(); i++) {
+			const Ref<BLTAnimationNode> &node = tree_graph.nodes[i];
+
+			// Initialize, but skip validation of nodes that are not part of the active tree.
+			if (!output_subtree.has(i)) {
+				node->initialize(context);
+				continue;
+			}
+
 			if (!node->initialize(context)) {
 				return false;
 			}
-		}
 
-		// All inputs must have a connected node.
-		for (const NodeRuntimeData &node_runtime_data : _node_runtime_data) {
+			const NodeRuntimeData &node_runtime_data = _node_runtime_data[i];
+
 			for (const Ref<BLTAnimationNode> &input_node : node_runtime_data.input_nodes) {
 				if (!input_node.is_valid()) {
 					return false;
@@ -887,6 +896,9 @@ public:
 			for (const int child_index : tree_graph.node_connection_info[i].connected_child_node_index_at_port) {
 				context.animation_data_allocator.free(_node_runtime_data[child_index].output_data);
 			}
+
+			// Node must be deactivated. It'll be activated when actually used next time.
+			node->active = false;
 		}
 	}
 

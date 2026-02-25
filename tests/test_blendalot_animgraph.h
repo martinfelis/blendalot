@@ -15,6 +15,7 @@ struct BlendTreeFixture {
 
 	Ref<Animation> test_animation_a;
 	Ref<Animation> test_animation_b;
+	Ref<Animation> test_animation_c;
 	Ref<Animation> test_animation_sync_a;
 	Ref<Animation> test_animation_sync_b;
 
@@ -79,6 +80,16 @@ struct BlendTreeFixture {
 		test_animation_b->set_loop_mode(Animation::LOOP_LINEAR);
 
 		animation_library->add_animation("TestAnimationB", test_animation_b);
+
+		test_animation_c = memnew(Animation);
+		track_index = test_animation_c->add_track(Animation::TYPE_POSITION_3D);
+		CHECK(track_index == 0);
+		test_animation_c->track_insert_key(track_index, 0.0, Vector3(0., 0., 0.));
+		test_animation_c->track_insert_key(track_index, 3.0, Vector3(2., 4., 6.));
+		test_animation_c->track_set_path(track_index, NodePath(vformat("%s:%s", skeleton_node->get_path().get_concatenated_names(), "Hips")));
+		test_animation_c->set_loop_mode(Animation::LOOP_LINEAR);
+
+		animation_library->add_animation("TestAnimationC", test_animation_c);
 
 		test_animation_sync_a = memnew(Animation);
 		track_index = test_animation_sync_a->add_track(Animation::TYPE_POSITION_3D);
@@ -596,6 +607,41 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 			CHECK(blend_tree_graph.node_connection_info[blend2_node_b_index_post_remove].input_subtree_node_indices.has(animation_sampler_node_b_index_post_remove));
 			CHECK(blend_tree_graph.node_connection_info[blend2_node_b_index_post_remove].input_subtree_node_indices.has(animation_sampler_node_c_index_post_remove));
 		}
+	}
+
+	SUBCASE("Check evaluation of graph with modified connections") {
+		Ref<BLTAnimationNodeBlendTree> blend_tree_node;
+		blend_tree_node.instantiate();
+		blend_tree_node->add_node(animation_sampler_node_a);
+		blend_tree_node->add_node(animation_sampler_node_b);
+		blend_tree_node->add_node(animation_sampler_node_c);
+		blend_tree_node->add_node(blend2_node_a);
+
+		animation_graph->set_root_animation_node(blend_tree_node);
+		GraphEvaluationContext &graph_context = animation_graph->get_context();
+		CHECK(blend_tree_node->initialize(graph_context) == false);
+
+		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_a, blend_tree_node->get_output_node(), "Output"));
+		CHECK(blend_tree_node->initialize(graph_context) == true);
+
+		AnimationData *graph_output = graph_context.animation_data_allocator.allocate();
+		blend_tree_node->activate_inputs(Vector<Ref<BLTAnimationNode>>());
+		blend_tree_node->calculate_sync_track(Vector<Ref<BLTAnimationNode>>());
+		blend_tree_node->update_time(0.825);
+		blend_tree_node->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
+
+		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_b, blend2_node_a, "Input0"));
+		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_c, blend2_node_a, "Input1"));
+
+		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_node->remove_connection(animation_sampler_node_a, blend_tree_node->get_output_node(), "Output"));
+
+		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_node->add_connection(blend2_node_a, blend_tree_node->get_output_node(), "Output"));
+		CHECK(blend_tree_node->initialize(graph_context) == true);
+
+		blend_tree_node->activate_inputs(Vector<Ref<BLTAnimationNode>>());
+		blend_tree_node->calculate_sync_track(Vector<Ref<BLTAnimationNode>>());
+		blend_tree_node->update_time(0.825);
+		blend_tree_node->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
 	}
 }
 
