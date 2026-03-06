@@ -643,6 +643,33 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 		blend_tree_node->update_time(0.825);
 		blend_tree_node->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
 	}
+
+	SUBCASE("Check node removal when evaluation order of nodes changes.") {
+		Ref<BLTAnimationNodeBlendTree> blend_tree_node;
+		blend_tree_node.instantiate();
+
+		// Add nodes such that blend2 node has index 1
+		blend_tree_node->add_node(blend2_node_a);
+		blend_tree_node->add_node(animation_sampler_node_a);
+		blend_tree_node->add_node(animation_sampler_node_b);
+		blend_tree_node->add_node(animation_sampler_node_c);
+
+		// Connect samplers b and c to blend2_node_a
+		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_b, blend2_node_a, "Input0"));
+		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_c, blend2_node_a, "Input1"));
+
+		// But then connect sampler a to the output => Reordering with sampler a now at index 1
+		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_a, blend_tree_node->get_output_node(), "Output"));
+
+		// Remove the sampler a from output => Invalid graph
+		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_node->remove_connection(animation_sampler_node_a, blend_tree_node->get_output_node(), "Output"));
+
+		// Connect blend2_node_a to output => Reordering with blend2_node at index 1
+		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_node->add_connection(blend2_node_a, blend_tree_node->get_output_node(), "Output"));
+
+		// Remove sampler c => should not cause issues but used to crash due to invalid parent index
+		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_node->remove_connection(animation_sampler_node_c, blend2_node_a, "Input1"));
+	}
 }
 
 TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][EmbeddedBlendTree] BlendTree with an embedded BlendTree subgraph") {

@@ -509,6 +509,7 @@ bool BLTAnimationNodeBlendTree::BLTBlendTreeGraph::remove_node(const Ref<BLTAnim
 
 void BLTAnimationNodeBlendTree::BLTBlendTreeGraph::sort_nodes_and_references() {
 	LocalVector<int> sorted_node_indices = get_sorted_node_indices();
+	LocalVector<int> old_to_new_mapping;
 
 	LocalVector<Ref<BLTAnimationNode>> sorted_nodes;
 	LocalVector<NodeConnectionInfo> old_node_connection_info(node_connection_info);
@@ -516,15 +517,23 @@ void BLTAnimationNodeBlendTree::BLTBlendTreeGraph::sort_nodes_and_references() {
 		int node_index = sorted_node_indices[i];
 		sorted_nodes.push_back(nodes[node_index]);
 		node_connection_info[i] = old_node_connection_info[node_index];
+		old_to_new_mapping.push_back(sorted_node_indices.find(i));
 	}
 
 	nodes = sorted_nodes;
 
 	for (NodeConnectionInfo &connection_info : node_connection_info) {
 		if (connection_info.parent_node_index != -1) {
-			connection_info.parent_node_index = sorted_node_indices[connection_info.parent_node_index];
+			connection_info.parent_node_index = old_to_new_mapping[connection_info.parent_node_index];
 		}
-		connection_info.apply_node_mapping(sorted_node_indices);
+		connection_info.apply_node_mapping(old_to_new_mapping);
+	}
+}
+
+void BLTAnimationNodeBlendTree::BLTBlendTreeGraph::_print_graph() const {
+	for (unsigned int i = 0; i < nodes.size(); i++) {
+		print_line(vformat("Subtree of node %s (id %d, parent %d):", nodes[i]->get_name(), i, node_connection_info[i].parent_node_index));
+		node_connection_info[i]._print_subtree();
 	}
 }
 
@@ -658,7 +667,8 @@ BLTAnimationNodeBlendTree::ConnectionError BLTAnimationNodeBlendTree::BLTBlendTr
 	int source_node_index = find_node_index(source_node);
 	NodeConnectionInfo &connection_info = node_connection_info[source_node_index];
 
-	if (connection_info.parent_node_index != -1) {
+	int connection_index = find_connection_index(source_node, target_node, target_port_name);
+	if (connection_index < 0 || connection_info.parent_node_index != -1) {
 		NodeConnectionInfo &parent_connection_info = node_connection_info[connection_info.parent_node_index];
 		parent_connection_info.input_subtree_node_indices.erase(source_node_index);
 		parent_connection_info.connected_child_node_index_at_port[target_node->get_input_index(target_port_name)] = -1;
@@ -667,9 +677,7 @@ BLTAnimationNodeBlendTree::ConnectionError BLTAnimationNodeBlendTree::BLTBlendTr
 
 		connection_info.parent_node_index = -1;
 
-		uint32_t connection_index = find_connection_index(source_node, target_node, target_port_name);
-		assert(connection_index >= 0);
-		connections.remove_at(connection_index);
+		connections.remove_at(static_cast<uint32_t>(connection_index));
 	} else {
 		return CONNECTION_ERROR_CONNECTION_NOT_FOUND;
 	}

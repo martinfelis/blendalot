@@ -541,23 +541,23 @@ public:
 				}
 			}
 
-			void apply_node_mapping(const LocalVector<int> &node_index_mapping) {
+			void apply_node_mapping(const LocalVector<int> &old_to_new_mapping) {
 				// Map connected node indices
 				for (unsigned int j = 0; j < connected_child_node_index_at_port.size(); j++) {
 					int connected_node_index = connected_child_node_index_at_port[j];
-					connected_child_node_index_at_port[j] = node_index_mapping.find(connected_node_index);
+					connected_child_node_index_at_port[j] = connected_node_index == -1 ? -1 : old_to_new_mapping[connected_node_index];
 				}
 
 				// Map connected subtrees
 				HashSet<int> old_indices = input_subtree_node_indices;
 				input_subtree_node_indices.clear();
 				for (int old_index : old_indices) {
-					input_subtree_node_indices.insert(node_index_mapping.find(old_index));
+					input_subtree_node_indices.insert(old_index == -1 ? -1 : old_to_new_mapping[old_index]);
 				}
 			}
 
 			void _print_subtree() const {
-				String result = vformat("subtree node indices (%d): ", input_subtree_node_indices.size());
+				String result = vformat("subtree node indices #%d: ", input_subtree_node_indices.size());
 				bool is_first = true;
 				for (int index : input_subtree_node_indices) {
 					if (is_first) {
@@ -580,6 +580,8 @@ public:
 		Ref<BLTAnimationNode> get_output_node();
 		int find_node_index(const Ref<BLTAnimationNode> &node) const;
 		int find_node_index_by_name(const StringName &name) const;
+		void _print_graph() const;
+
 		void sort_nodes_and_references();
 		LocalVector<int> get_sorted_node_indices();
 		void sort_nodes_recursive(int node_index, LocalVector<int> &result);
@@ -598,6 +600,7 @@ public:
 private:
 	BLTBlendTreeGraph tree_graph;
 	bool tree_initialized = false;
+	bool is_evaluation_order_dirty = true;
 	GraphEvaluationContext *_graph_evaluation_context = nullptr;
 
 	void sort_nodes() {
@@ -633,6 +636,13 @@ private:
 				}
 			}
 		}
+	}
+
+	void update_node_evaluation_order() {
+		sort_nodes();
+		setup_runtime_data();
+
+		is_evaluation_order_dirty = false;
 	}
 
 protected:
@@ -724,6 +734,7 @@ public:
 	ConnectionError add_connection(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name) {
 		ConnectionError result = tree_graph.add_connection(source_node, target_node, target_port_name);
 		if (result == CONNECTION_OK) {
+			is_evaluation_order_dirty = true;
 			_node_changed();
 		}
 
@@ -733,6 +744,7 @@ public:
 	ConnectionError remove_connection(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name) {
 		ConnectionError result = tree_graph.remove_connection(source_node, target_node, target_port_name);
 		if (result == CONNECTION_OK) {
+			is_evaluation_order_dirty = true;
 			_node_changed();
 		}
 
@@ -764,12 +776,13 @@ public:
 
 		_graph_evaluation_context = &context;
 
-		sort_nodes();
-		setup_runtime_data();
+		if (is_evaluation_order_dirty) {
+			update_node_evaluation_order();
+		}
 
 		const HashSet<int> &output_subtree = tree_graph.node_connection_info[0].input_subtree_node_indices;
 
-		for (int i = 0; i < tree_graph.nodes.size(); i++) {
+		for (unsigned int i = 0; i < tree_graph.nodes.size(); i++) {
 			const Ref<BLTAnimationNode> &node = tree_graph.nodes[i];
 
 			// Initialize, but skip validation of nodes that are not part of the active tree.
