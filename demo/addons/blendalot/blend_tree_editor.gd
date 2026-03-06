@@ -108,15 +108,17 @@ func create_graph_node_for_blt_node(blt_node: BLTAnimationNode) -> GraphNode:
 	if blt_node.get_class() == "BLTAnimationNodeSampler":
 		var animation_sampler_node:BLTAnimationNodeSampler = blt_node as BLTAnimationNodeSampler
 		var animation_selector_button = OptionButton.new()
-		var animation_player:AnimationPlayer = animation_sampler_node.get_animation_player()
-		for animation_name in animation_player.get_animation_list():
-			animation_selector_button.add_item(animation_name)
-			if animation_name == animation_sampler_node.animation:
-				animation_selector_button.select(animation_selector_button.item_count - 1)
-		
-		animation_selector_button.item_selected.connect(_on_animation_select.bind(animation_sampler_node, animation_selector_button))
-		
 		result_graph_node.add_child(animation_selector_button)
+
+		var animation_player:AnimationPlayer = animation_sampler_node.get_animation_player()
+		
+		if is_instance_valid(animation_player):
+			for animation_name in animation_player.get_animation_list():
+				animation_selector_button.add_item(animation_name)
+				if animation_name == animation_sampler_node.animation:
+					animation_selector_button.select(animation_selector_button.item_count - 1)
+					
+			animation_selector_button.item_selected.connect(_on_animation_select.bind(animation_sampler_node, animation_selector_button))
 	
 	blt_node.node_changed.connect(_trigger_graph_changed)
 	
@@ -143,8 +145,6 @@ func _remove_node_connections(graph_node:GraphNode):
 # GraphEdit signal handling
 #
 func _on_blend_tree_graph_edit_connection_request(from_node: StringName, from_port: int, to_node: StringName, to_port: int) -> void:
-	print("Trying to connect '%s' port %d to node '%s' port %d" % [from_node, from_port, to_node, to_port])
-	
 	var source_node:BLTAnimationNode = blend_tree.get_node(from_node)
 	var target_node:BLTAnimationNode = blend_tree.get_node(to_node)
 	
@@ -162,9 +162,6 @@ func _on_blend_tree_graph_edit_connection_request(from_node: StringName, from_po
 	blend_tree.add_connection(source_node, target_node, target_node_port_name)
 	
 	var connect_result = blend_tree_graph_edit.connect_node(from_node, from_port, to_node, to_port, true)
-	print("graph connect result: " + str(connect_result))
-	
-	print("Success!")
 
 
 func _on_blend_tree_graph_edit_disconnection_request(from_node: StringName, from_port: int, to_node: StringName, to_port: int) -> void:
@@ -231,7 +228,7 @@ func _on_blend_tree_graph_edit_popup_request(at_position: Vector2) -> void:
 	add_node_popup_menu.position = get_screen_position() + get_local_mouse_position()
 	add_node_popup_menu.reset_size()
 	add_node_popup_menu.popup()
-	new_node_position = blend_tree_graph_edit.scroll_offset + at_position
+	new_node_position = (get_local_mouse_position() + blend_tree_graph_edit.scroll_offset) / blend_tree_graph_edit.zoom
 
 
 func _on_add_node_popup_menu_index_pressed(index: int) -> void:
@@ -246,7 +243,7 @@ func _on_add_node_popup_menu_index_pressed(index: int) -> void:
 	
 	if new_node_position != Vector2.INF:
 		graph_node.position_offset = new_node_position
-		new_blend_tree_node.position = new_node_position
+		new_blend_tree_node.position = graph_node.position_offset
 	
 	new_node_position = Vector2.INF
 
