@@ -343,6 +343,16 @@ bool BLTAnimationNodeTimeScale::_set(const StringName &p_name, const Variant &p_
 void BLTAnimationNodeBlend2::evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) {
 	GodotProfileZone("AnimationBlend2Node::evaluate");
 
+	if (Math::is_zero_approx(blend_weight)) {
+		output = std::move(*inputs[0]);
+		return;
+	}
+
+	if (Math::is_zero_approx(1. - blend_weight)) {
+		output = std::move(*inputs[1]);
+		return;
+	}
+
 	output = std::move(*inputs[0]);
 	output.blend(*inputs[1], blend_weight);
 }
@@ -399,7 +409,7 @@ bool BLTAnimationNodeBlend2::_get(const StringName &p_name, Variant &r_value) co
 
 bool BLTAnimationNodeBlend2::_set(const StringName &p_name, const Variant &p_value) {
 	if (p_name == blend_weight_pname) {
-		blend_weight = p_value;
+		blend_weight = CLAMP<float>(p_value, 0.0f, 1.0f);
 		return true;
 	}
 
@@ -534,6 +544,15 @@ void BLTAnimationNodeBlendTree::BLTBlendTreeGraph::_print_graph() const {
 	for (unsigned int i = 0; i < nodes.size(); i++) {
 		print_line(vformat("Subtree of node %s (id %d, parent %d):", nodes[i]->get_name(), i, node_connection_info[i].parent_node_index));
 		node_connection_info[i]._print_subtree();
+	}
+}
+
+void BLTAnimationNodeBlendTree::BLTBlendTreeGraph::_print_graph_timeinfo() const {
+	for (unsigned int i = 0; i < nodes.size(); i++) {
+		print_line(vformat("Node %s (id %d, parent %d):", nodes[i]->get_name(), i, node_connection_info[i].parent_node_index));
+		print_line("  position:      %f", nodes[i]->node_time_info.position);
+		print_line("  sync_position: %f", nodes[i]->node_time_info.sync_position);
+		print_line("  duration:      %f", nodes[i]->node_time_info.sync_track.duration);
 	}
 }
 

@@ -446,8 +446,8 @@ public:
 		return true;
 	}
 	void activate_inputs(const Vector<Ref<BLTAnimationNode>> &input_nodes) override {
-		input_nodes[0]->active = true;
-		input_nodes[1]->active = true;
+		input_nodes[0]->active = !Math::is_zero_approx(1. - blend_weight);
+		input_nodes[1]->active = !Math::is_zero_approx(blend_weight);
 
 		// If this Blend2 node is already synced then inputs are also synced. Otherwise, inputs are only set to synced if synced blending is active in this node.
 		input_nodes[0]->node_time_info.is_synced = node_time_info.is_synced || sync;
@@ -457,8 +457,18 @@ public:
 	void calculate_sync_track(const Vector<Ref<BLTAnimationNode>> &input_nodes) override {
 		if (node_time_info.is_synced || sync) {
 			// TODO: figure out whether we need to enforce looping mode when syncing is enabled.
-			// assert(input_nodes[0]->node_time_info.loop_mode == input_nodes[1]->node_time_info.loop_mode);
-			node_time_info.sync_track = SyncTrack::blend(blend_weight, input_nodes[0]->node_time_info.sync_track, input_nodes[1]->node_time_info.sync_track);
+
+			if (Math::is_zero_approx(blend_weight)) {
+				node_time_info.sync_track = input_nodes[0]->node_time_info.sync_track;
+			} else if (Math::is_zero_approx(blend_weight)) {
+				node_time_info.sync_track = input_nodes[1]->node_time_info.sync_track;
+			} else {
+				node_time_info.sync_track = SyncTrack::blend(blend_weight, input_nodes[0]->node_time_info.sync_track, input_nodes[1]->node_time_info.sync_track);
+			}
+
+			// We have to recalculate the current time position from the previous sync position as the blended SyncTrack
+			// may not match to the previous time position (e.g. when the current time position is > blended SyncTrack duration).
+			node_time_info.position = node_time_info.sync_track.calc_ratio_from_sync_time(node_time_info.sync_position) * node_time_info.sync_track.duration;
 		}
 	}
 
@@ -581,6 +591,7 @@ public:
 		int find_node_index(const Ref<BLTAnimationNode> &node) const;
 		int find_node_index_by_name(const StringName &name) const;
 		void _print_graph() const;
+		void _print_graph_timeinfo() const;
 
 		void sort_nodes_and_references();
 		LocalVector<int> get_sorted_node_indices();
@@ -868,7 +879,8 @@ public:
 				continue;
 			}
 
-			const Ref<BLTAnimationNode> &node_parent = tree_graph.nodes[tree_graph.node_connection_info[i].parent_node_index];
+			const BLTBlendTreeGraph::NodeConnectionInfo &node_connection_info = tree_graph.node_connection_info[i];
+			const Ref<BLTAnimationNode> &node_parent = tree_graph.nodes[node_connection_info.parent_node_index];
 
 			if (node->node_time_info.is_synced) {
 				node->update_time(node_parent->node_time_info.sync_position);
@@ -892,26 +904,35 @@ public:
 
 			// Populate the inputs
 			for (unsigned int j = 0; j < node_runtime_data.input_data.size(); j++) {
-				int child_index = tree_graph.node_connection_info[i].connected_child_node_index_at_port[j];
-				node_runtime_data.input_data[j] = _node_runtime_data[child_index].output_data;
+				int child_node_index = tree_graph.node_connection_info[i].connected_child_node_index_at_port[j];
+				if (tree_graph.nodes[child_node_index]->active) {
+					node_runtime_data.input_data[j] = _node_runtime_data[child_node_index].output_data;
+				} else {
+					node_runtime_data.input_data[j] = nullptr;
+				}
 			}
 
 			// Set output pointer
 			if (i == 1) {
+				// We're emitting to the Output node, therefore we can just copy the data to the output AnimationData.
 				node_runtime_data.output_data = &output_data;
+				node->active = false;
 			} else {
 				node_runtime_data.output_data = context.animation_data_allocator.allocate();
 			}
 
 			node->evaluate(context, node_runtime_data.input_data, *node_runtime_data.output_data);
 
-			// All inputs have been consumed and can now be freed.
-			for (const int child_index : tree_graph.node_connection_info[i].connected_child_node_index_at_port) {
-				context.animation_data_allocator.free(_node_runtime_data[child_index].output_data);
+			// All inputs have been consumed and can now be freed and nodes deactivated.
+			for (unsigned int j = 0; j < node_runtime_data.input_data.size(); j++) {
+				int child_node_index = tree_graph.node_connection_info[i].connected_child_node_index_at_port[j];
+				if (tree_graph.nodes[child_node_index]->active) {
+					context.animation_data_allocator.free(_node_runtime_data[child_node_index].output_data);
+					tree_graph.nodes[j]->active = false;
+				} else {
+					node_runtime_data.input_data[j] = nullptr;
+				}
 			}
-
-			// Node must be deactivated. It'll be activated when actually used next time.
-			node->active = false;
 		}
 	}
 
