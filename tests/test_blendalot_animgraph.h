@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../blendalot_animation_graph.h"
+#include "../blendalot_blend_tree.h"
 #include "scene/animation/animation_tree.h"
 #include "scene/main/window.h"
 
@@ -153,7 +154,7 @@ struct BlendTreeFixture {
 namespace TestBlendalotAnimationGraph {
 
 TEST_CASE("[Blendalot][BlendTree] Test BlendTree construction") {
-	BLTAnimationNodeBlendTree::BLTBlendTreeGraph tree_constructor;
+	BLTBlendTree::BLTBlendTreeGraph tree_constructor;
 
 	Ref<BLTAnimationNodeSampler> animation_sampler_node0;
 	animation_sampler_node0.instantiate();
@@ -185,7 +186,7 @@ TEST_CASE("[Blendalot][BlendTree] Test BlendTree construction") {
 	// Sampler1 -+ Blend0 -\
 	// Sampler2 -----------+ Blend1 - Output
 
-	CHECK(BLTAnimationNodeBlendTree::CONNECTION_OK == tree_constructor.add_connection(animation_sampler_node0, node_blend0, "Input0"));
+	CHECK(BLTBlendTree::CONNECTION_OK == tree_constructor.add_connection(animation_sampler_node0, node_blend0, "Input0"));
 
 	// Ensure that subtree is properly updated
 	int sampler0_index = tree_constructor.find_node_index(animation_sampler_node0);
@@ -193,16 +194,16 @@ TEST_CASE("[Blendalot][BlendTree] Test BlendTree construction") {
 	CHECK(tree_constructor.node_connection_info[blend0_index].input_subtree_node_indices.has(sampler0_index));
 
 	// Connect blend0 to blend1
-	CHECK(BLTAnimationNodeBlendTree::CONNECTION_OK == tree_constructor.add_connection(node_blend0, node_blend1, "Input0"));
+	CHECK(BLTBlendTree::CONNECTION_OK == tree_constructor.add_connection(node_blend0, node_blend1, "Input0"));
 
 	// Creating a loop must fail
-	CHECK(BLTAnimationNodeBlendTree::CONNECTION_ERROR_CONNECTION_CREATES_LOOP == tree_constructor.add_connection(node_blend1, node_blend0, "Input1"));
+	CHECK(BLTBlendTree::CONNECTION_ERROR_CONNECTION_CREATES_LOOP == tree_constructor.add_connection(node_blend1, node_blend0, "Input1"));
 
 	// Correct connection of Sampler1 to Blend0
-	CHECK(BLTAnimationNodeBlendTree::CONNECTION_OK == tree_constructor.add_connection(animation_sampler_node1, node_blend0, "Input1"));
+	CHECK(BLTBlendTree::CONNECTION_OK == tree_constructor.add_connection(animation_sampler_node1, node_blend0, "Input1"));
 
 	// Connecting to an already connected port must fail
-	CHECK(BLTAnimationNodeBlendTree::CONNECTION_ERROR_TARGET_PORT_ALREADY_CONNECTED == tree_constructor.add_connection(animation_sampler_node2, node_blend0, "Input0"));
+	CHECK(BLTBlendTree::CONNECTION_ERROR_TARGET_PORT_ALREADY_CONNECTED == tree_constructor.add_connection(animation_sampler_node2, node_blend0, "Input0"));
 
 	// Ensure that subtree is properly updated
 	int sampler1_index = tree_constructor.find_node_index(animation_sampler_node0);
@@ -212,8 +213,8 @@ TEST_CASE("[Blendalot][BlendTree] Test BlendTree construction") {
 	CHECK(tree_constructor.node_connection_info[blend1_index].input_subtree_node_indices.has(blend0_index));
 
 	// Perform remaining connections
-	CHECK(BLTAnimationNodeBlendTree::CONNECTION_OK == tree_constructor.add_connection(node_blend1, tree_constructor.get_output_node(), "Output"));
-	CHECK(BLTAnimationNodeBlendTree::CONNECTION_OK == tree_constructor.add_connection(animation_sampler_node2, node_blend1, "Input1"));
+	CHECK(BLTBlendTree::CONNECTION_OK == tree_constructor.add_connection(node_blend1, tree_constructor.get_output_node(), "Output"));
+	CHECK(BLTBlendTree::CONNECTION_OK == tree_constructor.add_connection(animation_sampler_node2, node_blend1, "Input1"));
 
 	// Output node must have all nodes in its subtree:
 	CHECK(tree_constructor.node_connection_info[0].input_subtree_node_indices.has(1));
@@ -290,7 +291,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot] SyncedAnimationGraph
 }
 
 TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree] BlendTree evaluation with a AnimationSamplerNode connected to the output") {
-	Ref<BLTAnimationNodeBlendTree> synced_blend_tree_node;
+	Ref<BLTBlendTree> synced_blend_tree_node;
 	synced_blend_tree_node.instantiate();
 
 	Ref<BLTAnimationNodeSampler> animation_sampler_node;
@@ -298,7 +299,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree] BlendTree
 	animation_sampler_node->animation_name = "animation_library/TestAnimationA";
 
 	synced_blend_tree_node->add_node(animation_sampler_node);
-	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == synced_blend_tree_node->add_connection(animation_sampler_node, synced_blend_tree_node->get_output_node(), "Output"));
+	REQUIRE(BLTBlendTree::CONNECTION_OK == synced_blend_tree_node->add_connection(animation_sampler_node, synced_blend_tree_node->get_output_node(), "Output"));
 
 	synced_blend_tree_node->initialize(animation_graph->get_context());
 
@@ -320,7 +321,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree] BlendTree
 }
 
 TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree][Blend2Node] BlendTree evaluation with a Blend2Node connected to the output") {
-	Ref<BLTAnimationNodeBlendTree> synced_blend_tree_node;
+	Ref<BLTBlendTree> synced_blend_tree_node;
 	synced_blend_tree_node.instantiate();
 
 	// TestAnimationA
@@ -348,14 +349,14 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree][Blend2Nod
 
 	// Connect nodes
 	Vector<StringName> blend2_inputs = blend2_node->get_input_names();
-	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == synced_blend_tree_node->add_connection(animation_sampler_node_a, blend2_node, blend2_inputs[0]));
-	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == synced_blend_tree_node->add_connection(animation_sampler_node_b, blend2_node, blend2_inputs[1]));
-	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == synced_blend_tree_node->add_connection(blend2_node, synced_blend_tree_node->get_output_node(), "Output"));
+	REQUIRE(BLTBlendTree::CONNECTION_OK == synced_blend_tree_node->add_connection(animation_sampler_node_a, blend2_node, blend2_inputs[0]));
+	REQUIRE(BLTBlendTree::CONNECTION_OK == synced_blend_tree_node->add_connection(animation_sampler_node_b, blend2_node, blend2_inputs[1]));
+	REQUIRE(BLTBlendTree::CONNECTION_OK == synced_blend_tree_node->add_connection(blend2_node, synced_blend_tree_node->get_output_node(), "Output"));
 
 	synced_blend_tree_node->initialize(animation_graph->get_context());
 
 	int blend2_node_index = synced_blend_tree_node->find_node_index(blend2_node);
-	const BLTAnimationNodeBlendTree::NodeRuntimeData &blend2_runtime_data = synced_blend_tree_node->_node_runtime_data[blend2_node_index];
+	const BLTBlendTree::NodeRuntimeData &blend2_runtime_data = synced_blend_tree_node->_node_runtime_data[blend2_node_index];
 
 	CHECK(blend2_runtime_data.input_nodes[0] == animation_sampler_node_a);
 	CHECK(blend2_runtime_data.input_nodes[1] == animation_sampler_node_b);
@@ -444,7 +445,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree][Blend2Nod
 		REQUIRE(ClassDB::class_exists("BLTAnimationNodeSampler"));
 
 		// Load blend tree
-		Ref<BLTAnimationNodeBlendTree> loaded_synced_blend_tree = ResourceLoader::load("synced_blend_tree_node.tres");
+		Ref<BLTBlendTree> loaded_synced_blend_tree = ResourceLoader::load("synced_blend_tree_node.tres");
 		REQUIRE(loaded_synced_blend_tree.is_valid());
 
 		Ref<BLTAnimationNodeBlend2> loaded_blend2_node = loaded_synced_blend_tree->get_node_by_index(loaded_synced_blend_tree->find_node_index_by_name("Blend2"));
@@ -467,7 +468,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree][Blend2Nod
 }
 
 TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][ChangeConnectivity] BlendTreeGraph with various nodes and connections that are removed") {
-	BLTAnimationNodeBlendTree::BLTBlendTreeGraph blend_tree_graph;
+	BLTBlendTree::BLTBlendTreeGraph blend_tree_graph;
 
 	// TestAnimationA
 	Ref<BLTAnimationNodeSampler> animation_sampler_node_a;
@@ -509,12 +510,12 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 	blend_tree_graph.add_node(blend2_node_b);
 
 	// Connect nodes: Subgraph Output, Blend2A, SamplerA
-	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(blend2_node_a, blend_tree_graph.get_output_node(), "Output"));
-	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(animation_sampler_node_a, blend2_node_a, "Input0"));
+	REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(blend2_node_a, blend_tree_graph.get_output_node(), "Output"));
+	REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(animation_sampler_node_a, blend2_node_a, "Input0"));
 
 	// Connect nodes: Subgraph Blend2A, SamplerB, SamplerC
-	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(animation_sampler_node_b, blend2_node_b, "Input0"));
-	REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(animation_sampler_node_c, blend2_node_b, "Input1"));
+	REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(animation_sampler_node_b, blend2_node_b, "Input0"));
+	REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(animation_sampler_node_c, blend2_node_b, "Input1"));
 
 	SUBCASE("Add and remove a connection") {
 		HashSet<int> subgraph_output_initial = blend_tree_graph.node_connection_info[0].input_subtree_node_indices;
@@ -522,9 +523,9 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 		HashSet<int> subgraph_blend2b_initial = blend_tree_graph.node_connection_info[blend_tree_graph.find_node_index(blend2_node_b)].input_subtree_node_indices;
 
 		// Add and remove connection
-		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(blend2_node_b, blend2_node_a, "Input1"));
+		REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(blend2_node_b, blend2_node_a, "Input1"));
 		blend_tree_graph.remove_connection(blend2_node_b, blend2_node_a, "Input1");
-		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.is_connection_valid(blend2_node_b, blend2_node_a, "Input1"));
+		REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_graph.is_connection_valid(blend2_node_b, blend2_node_a, "Input1"));
 
 		// Check that we have the same subgraphs as before the connection
 		CHECK(subgraph_output_initial == blend_tree_graph.node_connection_info[0].input_subtree_node_indices);
@@ -539,7 +540,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 	}
 
 	SUBCASE("Remove a node") {
-		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(blend2_node_b, blend2_node_a, "Input1"));
+		REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(blend2_node_b, blend2_node_a, "Input1"));
 
 		int animation_sampler_node_b_index_pre_remove = blend_tree_graph.find_node_index(animation_sampler_node_b);
 		int blend2_node_a_index_pre_remove = blend_tree_graph.find_node_index(blend2_node_a);
@@ -610,7 +611,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 	}
 
 	SUBCASE("Check evaluation of graph with modified connections") {
-		Ref<BLTAnimationNodeBlendTree> blend_tree_node;
+		Ref<BLTBlendTree> blend_tree_node;
 		blend_tree_node.instantiate();
 		blend_tree_node->add_node(animation_sampler_node_a);
 		blend_tree_node->add_node(animation_sampler_node_b);
@@ -621,7 +622,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 		GraphEvaluationContext &graph_context = animation_graph->get_context();
 		CHECK(blend_tree_node->initialize(graph_context) == false);
 
-		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_a, blend_tree_node->get_output_node(), "Output"));
+		REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_a, blend_tree_node->get_output_node(), "Output"));
 		CHECK(blend_tree_node->initialize(graph_context) == true);
 
 		AnimationData *graph_output = graph_context.animation_data_allocator.allocate();
@@ -630,12 +631,12 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 		blend_tree_node->update_time(0.825);
 		blend_tree_node->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
 
-		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_b, blend2_node_a, "Input0"));
-		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_c, blend2_node_a, "Input1"));
+		REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_b, blend2_node_a, "Input0"));
+		REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_c, blend2_node_a, "Input1"));
 
-		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_node->remove_connection(animation_sampler_node_a, blend_tree_node->get_output_node(), "Output"));
+		REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_node->remove_connection(animation_sampler_node_a, blend_tree_node->get_output_node(), "Output"));
 
-		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_node->add_connection(blend2_node_a, blend_tree_node->get_output_node(), "Output"));
+		REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_node->add_connection(blend2_node_a, blend_tree_node->get_output_node(), "Output"));
 		CHECK(blend_tree_node->initialize(graph_context) == true);
 
 		blend_tree_node->activate_inputs(Vector<Ref<BLTAnimationNode>>());
@@ -645,7 +646,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 	}
 
 	SUBCASE("Check node removal when evaluation order of nodes changes.") {
-		Ref<BLTAnimationNodeBlendTree> blend_tree_node;
+		Ref<BLTBlendTree> blend_tree_node;
 		blend_tree_node.instantiate();
 
 		// Add nodes such that blend2 node has index 1
@@ -655,26 +656,26 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 		blend_tree_node->add_node(animation_sampler_node_c);
 
 		// Connect samplers b and c to blend2_node_a
-		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_b, blend2_node_a, "Input0"));
-		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_c, blend2_node_a, "Input1"));
+		REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_b, blend2_node_a, "Input0"));
+		REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_c, blend2_node_a, "Input1"));
 
 		// But then connect sampler a to the output => Reordering with sampler a now at index 1
-		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_a, blend_tree_node->get_output_node(), "Output"));
+		REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_a, blend_tree_node->get_output_node(), "Output"));
 
 		// Remove the sampler a from output => Invalid graph
-		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_node->remove_connection(animation_sampler_node_a, blend_tree_node->get_output_node(), "Output"));
+		REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_node->remove_connection(animation_sampler_node_a, blend_tree_node->get_output_node(), "Output"));
 
 		// Connect blend2_node_a to output => Reordering with blend2_node at index 1
-		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_node->add_connection(blend2_node_a, blend_tree_node->get_output_node(), "Output"));
+		REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_node->add_connection(blend2_node_a, blend_tree_node->get_output_node(), "Output"));
 
 		// Remove sampler c => should not cause issues but used to crash due to invalid parent index
-		REQUIRE(BLTAnimationNodeBlendTree::CONNECTION_OK == blend_tree_node->remove_connection(animation_sampler_node_c, blend2_node_a, "Input1"));
+		REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_node->remove_connection(animation_sampler_node_c, blend2_node_a, "Input1"));
 	}
 }
 
 TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][EmbeddedBlendTree] BlendTree with an embedded BlendTree subgraph") {
 	// Embedded BlendTree
-	Ref<BLTAnimationNodeBlendTree> embedded_blend_tree;
+	Ref<BLTBlendTree> embedded_blend_tree;
 	embedded_blend_tree.instantiate();
 
 	// TestAnimationB
@@ -684,7 +685,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Embe
 	embedded_blend_tree->add_node(animation_sampler_node_b);
 	embedded_blend_tree->add_connection(animation_sampler_node_b, embedded_blend_tree->get_output_node(), "Output");
 
-	Ref<BLTAnimationNodeBlendTree> blend_tree;
+	Ref<BLTBlendTree> blend_tree;
 	blend_tree.instantiate();
 
 	// Blend2

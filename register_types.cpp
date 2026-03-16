@@ -1,6 +1,7 @@
 #include "register_types.h"
 
 #include "blendalot_animation_graph.h"
+#include "blendalot_blend_tree.h"
 #include "core/object/class_db.h"
 
 void initialize_blendalot_animgraph_module(ModuleInitializationLevel p_level) {
@@ -10,7 +11,7 @@ void initialize_blendalot_animgraph_module(ModuleInitializationLevel p_level) {
 	ClassDB::register_class<BLTAnimationGraph>();
 	ClassDB::register_class<BLTAnimationNode>();
 	ClassDB::register_class<BLTAnimationNodeOutput>();
-	ClassDB::register_class<BLTAnimationNodeBlendTree>();
+	ClassDB::register_class<BLTBlendTree>();
 	ClassDB::register_class<BLTAnimationNodeSampler>();
 	ClassDB::register_class<BLTAnimationNodeTimeScale>();
 	ClassDB::register_class<BLTAnimationNodeBlend2>();
