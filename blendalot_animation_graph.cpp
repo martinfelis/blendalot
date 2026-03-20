@@ -298,6 +298,8 @@ void BLTAnimationGraph::_process_graph(double p_delta, bool p_update_only) {
 
 	GodotProfileZone("BLTAnimationGraph::_process_graph");
 
+	graph_context.graph_process_delta_time = p_delta;
+
 	_update_properties();
 
 	AnimationData *graph_output = graph_context.animation_data_allocator.allocate();

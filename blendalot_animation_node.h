@@ -226,6 +226,7 @@ struct GraphEvaluationContext {
 	AnimationPlayer *animation_player = nullptr;
 	Skeleton3D *skeleton_3d = nullptr;
 	AnimationDataAllocator animation_data_allocator;
+	double graph_process_delta_time = 0.f;
 };
 
 /**
