@@ -152,7 +152,7 @@ public:
 	Vector2 graph_offset;
 
 	struct NodeRuntimeData {
-		Vector<Ref<BLTAnimationNode>> input_nodes;
+		LocalVector<Ref<BLTAnimationNode>> input_nodes;
 		LocalVector<AnimationData *> input_data;
 		AnimationData *output_data = nullptr;
 	};
@@ -309,7 +309,7 @@ public:
 	}
 
 	void
-	activate_inputs(const Vector<Ref<BLTAnimationNode>> &input_nodes) override {
+	activate_inputs(const LocalVector<Ref<BLTAnimationNode>> &input_nodes) override {
 		GodotProfileZone("BLTBlendTree::activate_inputs");
 
 		if (tree_graph.nodes.size() == 1) {
@@ -331,7 +331,7 @@ public:
 		}
 	}
 
-	void calculate_sync_track(const Vector<Ref<BLTAnimationNode>> &input_nodes) override {
+	void calculate_sync_track(const LocalVector<Ref<BLTAnimationNode>> &input_nodes) override {
 		GodotProfileZone("BLTBlendTree::calculate_sync_track");
 
 		for (uint32_t i = tree_graph.nodes.size() - 1; i > 0; i--) {

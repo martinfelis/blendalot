@@ -403,24 +403,24 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree][Blend2Nod
 		// Blend weight 0
 		blend2_node->blend_weight = 0.;
 		synced_blend_tree_node->initialize(graph_context);
-		synced_blend_tree_node->activate_inputs(Vector<Ref<BLTAnimationNode>>());
+		synced_blend_tree_node->activate_inputs(LocalVector<Ref<BLTAnimationNode>>());
 
 		CHECK(animation_sampler_node_a->active == true);
 		CHECK(animation_sampler_node_b->active == false);
 
-		synced_blend_tree_node->calculate_sync_track(Vector<Ref<BLTAnimationNode>>());
+		synced_blend_tree_node->calculate_sync_track(LocalVector<Ref<BLTAnimationNode>>());
 		synced_blend_tree_node->update_time(0.1);
 		synced_blend_tree_node->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
 
 		// Blend weight 1
 		blend2_node->blend_weight = 1.;
 		synced_blend_tree_node->initialize(graph_context);
-		synced_blend_tree_node->activate_inputs(Vector<Ref<BLTAnimationNode>>());
+		synced_blend_tree_node->activate_inputs(LocalVector<Ref<BLTAnimationNode>>());
 
 		CHECK(animation_sampler_node_a->active == false);
 		CHECK(animation_sampler_node_b->active == true);
 
-		synced_blend_tree_node->calculate_sync_track(Vector<Ref<BLTAnimationNode>>());
+		synced_blend_tree_node->calculate_sync_track(LocalVector<Ref<BLTAnimationNode>>());
 		synced_blend_tree_node->update_time(0.1);
 		synced_blend_tree_node->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
 	}
@@ -695,8 +695,8 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 		CHECK(blend_tree_node->initialize(graph_context) == true);
 
 		AnimationData *graph_output = graph_context.animation_data_allocator.allocate();
-		blend_tree_node->activate_inputs(Vector<Ref<BLTAnimationNode>>());
-		blend_tree_node->calculate_sync_track(Vector<Ref<BLTAnimationNode>>());
+		blend_tree_node->activate_inputs(LocalVector<Ref<BLTAnimationNode>>());
+		blend_tree_node->calculate_sync_track(LocalVector<Ref<BLTAnimationNode>>());
 		blend_tree_node->update_time(0.825);
 		blend_tree_node->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
 		CHECK(animation_sampler_node_a->active == false);
@@ -709,8 +709,8 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 		REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_node->add_connection(blend2_node_a, blend_tree_node->get_output_node(), "Output"));
 		CHECK(blend_tree_node->initialize(graph_context) == true);
 
-		blend_tree_node->activate_inputs(Vector<Ref<BLTAnimationNode>>());
-		blend_tree_node->calculate_sync_track(Vector<Ref<BLTAnimationNode>>());
+		blend_tree_node->activate_inputs(LocalVector<Ref<BLTAnimationNode>>());
+		blend_tree_node->calculate_sync_track(LocalVector<Ref<BLTAnimationNode>>());
 		blend_tree_node->update_time(0.825);
 		blend_tree_node->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
 	}
@@ -789,8 +789,8 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Embe
 
 		// Perform evaluation
 		AnimationData *graph_output = graph_context.animation_data_allocator.allocate();
-		blend_tree->activate_inputs(Vector<Ref<BLTAnimationNode>>());
-		blend_tree->calculate_sync_track(Vector<Ref<BLTAnimationNode>>());
+		blend_tree->activate_inputs(LocalVector<Ref<BLTAnimationNode>>());
+		blend_tree->calculate_sync_track(LocalVector<Ref<BLTAnimationNode>>());
 		blend_tree->update_time(0.1);
 		blend_tree->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
 
@@ -813,8 +813,8 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Embe
 
 		// Perform evaluation
 		AnimationData *graph_output = graph_context.animation_data_allocator.allocate();
-		blend_tree->activate_inputs(Vector<Ref<BLTAnimationNode>>());
-		blend_tree->calculate_sync_track(Vector<Ref<BLTAnimationNode>>());
+		blend_tree->activate_inputs(LocalVector<Ref<BLTAnimationNode>>());
+		blend_tree->calculate_sync_track(LocalVector<Ref<BLTAnimationNode>>());
 		blend_tree->update_time(0.825);
 		blend_tree->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
 

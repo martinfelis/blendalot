@@ -301,8 +301,8 @@ void BLTAnimationGraph::_process_graph(double p_delta, bool p_update_only) {
 	_update_properties();
 
 	AnimationData *graph_output = graph_context.animation_data_allocator.allocate();
-	root_animation_node->activate_inputs(Vector<Ref<BLTAnimationNode>>());
-	root_animation_node->calculate_sync_track(Vector<Ref<BLTAnimationNode>>());
+	root_animation_node->activate_inputs(LocalVector<Ref<BLTAnimationNode>>());
+	root_animation_node->calculate_sync_track(LocalVector<Ref<BLTAnimationNode>>());
 	root_animation_node->update_time(p_delta);
 	root_animation_node->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
 

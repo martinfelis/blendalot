@@ -272,7 +272,7 @@ public:
 		return true;
 	}
 
-	virtual void activate_inputs(const Vector<Ref<BLTAnimationNode>> &input_nodes) {
+	virtual void activate_inputs(const LocalVector<Ref<BLTAnimationNode>> &input_nodes) {
 		// By default, all inputs nodes are activated.
 		for (const Ref<BLTAnimationNode> &node : input_nodes) {
 			if (node.ptr() == nullptr) {
@@ -284,7 +284,7 @@ public:
 			node->node_time_info.is_synced = node_time_info.is_synced;
 		}
 	}
-	virtual void calculate_sync_track(const Vector<Ref<BLTAnimationNode>> &input_nodes) {
+	virtual void calculate_sync_track(const LocalVector<Ref<BLTAnimationNode>> &input_nodes) {
 		// By default, use the SyncTrack of the first input.
 		if (input_nodes.size() > 0) {
 			node_time_info.sync_track = input_nodes[0]->node_time_info.sync_track;
@@ -385,7 +385,7 @@ private:
 		// TODO: it should not be necessary to force looping here.		node_time_info.loop_mode = Animation::LOOP_LINEAR;
 		return true;
 	}
-	void calculate_sync_track(const Vector<Ref<BLTAnimationNode>> &input_nodes) override {
+	void calculate_sync_track(const LocalVector<Ref<BLTAnimationNode>> &input_nodes) override {
 		if (node_time_info.is_synced) {
 			node_time_info.sync_track = input_nodes[0]->node_time_info.sync_track;
 			node_time_info.sync_track.duration *= scale;
@@ -445,7 +445,7 @@ public:
 
 		return true;
 	}
-	void activate_inputs(const Vector<Ref<BLTAnimationNode>> &input_nodes) override {
+	void activate_inputs(const LocalVector<Ref<BLTAnimationNode>> &input_nodes) override {
 		input_nodes[0]->active = !Math::is_zero_approx(1. - blend_weight);
 		input_nodes[1]->active = !Math::is_zero_approx(blend_weight);
 
@@ -454,7 +454,7 @@ public:
 		input_nodes[1]->node_time_info.is_synced = node_time_info.is_synced || sync;
 	}
 
-	void calculate_sync_track(const Vector<Ref<BLTAnimationNode>> &input_nodes) override {
+	void calculate_sync_track(const LocalVector<Ref<BLTAnimationNode>> &input_nodes) override {
 		if (node_time_info.is_synced || sync) {
 			// TODO: figure out whether we need to enforce looping mode when syncing is enabled.
 
