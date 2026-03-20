@@ -446,8 +446,8 @@ public:
 		return true;
 	}
 	void activate_inputs(const Vector<Ref<BLTAnimationNode>> &input_nodes) override {
-		input_nodes[0]->active = true;
-		input_nodes[1]->active = true;
+		input_nodes[0]->active = !Math::is_zero_approx(1. - blend_weight);
+		input_nodes[1]->active = !Math::is_zero_approx(blend_weight);
 
 		// If this Blend2 node is already synced then inputs are also synced. Otherwise, inputs are only set to synced if synced blending is active in this node.
 		input_nodes[0]->node_time_info.is_synced = node_time_info.is_synced || sync;
@@ -457,8 +457,18 @@ public:
 	void calculate_sync_track(const Vector<Ref<BLTAnimationNode>> &input_nodes) override {
 		if (node_time_info.is_synced || sync) {
 			// TODO: figure out whether we need to enforce looping mode when syncing is enabled.
-			// assert(input_nodes[0]->node_time_info.loop_mode == input_nodes[1]->node_time_info.loop_mode);
-			node_time_info.sync_track = SyncTrack::blend(blend_weight, input_nodes[0]->node_time_info.sync_track, input_nodes[1]->node_time_info.sync_track);
+
+			if (Math::is_zero_approx(blend_weight)) {
+				node_time_info.sync_track = input_nodes[0]->node_time_info.sync_track;
+			} else if (Math::is_zero_approx(blend_weight)) {
+				node_time_info.sync_track = input_nodes[1]->node_time_info.sync_track;
+			} else {
+				node_time_info.sync_track = SyncTrack::blend(blend_weight, input_nodes[0]->node_time_info.sync_track, input_nodes[1]->node_time_info.sync_track);
+			}
+
+			// We have to recalculate the current time position from the previous sync position as the blended SyncTrack
+			// may not match to the previous time position (e.g. when the current time position is > blended SyncTrack duration).
+			node_time_info.position = node_time_info.sync_track.calc_ratio_from_sync_time(node_time_info.sync_position) * node_time_info.sync_track.duration;
 		}
 	}
 

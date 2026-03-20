@@ -77,6 +77,7 @@ public:
 		int find_node_index(const Ref<BLTAnimationNode> &node) const;
 		int find_node_index_by_name(const StringName &name) const;
 		void _print_graph() const;
+		void _print_graph_timeinfo() const;
 
 		void sort_nodes_and_references();
 		LocalVector<int> get_sorted_node_indices();
@@ -265,7 +266,7 @@ public:
 	// overrides from BLTAnimationNode
 	bool initialize(GraphEvaluationContext &context) override {
 		GodotProfileZone("BLTBlendTree::initialize");
-		
+
 		tree_initialized = false;
 
 		if (!BLTAnimationNode::initialize(context)) {
@@ -332,7 +333,7 @@ public:
 
 	void calculate_sync_track(const Vector<Ref<BLTAnimationNode>> &input_nodes) override {
 		GodotProfileZone("BLTBlendTree::calculate_sync_track");
-		
+
 		for (uint32_t i = tree_graph.nodes.size() - 1; i > 0; i--) {
 			const Ref<BLTAnimationNode> &node = tree_graph.nodes[i];
 
@@ -366,7 +367,8 @@ public:
 				continue;
 			}
 
-			const Ref<BLTAnimationNode> &node_parent = tree_graph.nodes[tree_graph.node_connection_info[i].parent_node_index];
+			const BLTBlendTreeGraph::NodeConnectionInfo &node_connection_info = tree_graph.node_connection_info[i];
+			const Ref<BLTAnimationNode> &node_parent = tree_graph.nodes[node_connection_info.parent_node_index];
 
 			if (node->node_time_info.is_synced) {
 				node->update_time(node_parent->node_time_info.sync_position);
@@ -390,26 +392,35 @@ public:
 
 			// Populate the inputs
 			for (unsigned int j = 0; j < node_runtime_data.input_data.size(); j++) {
-				int child_index = tree_graph.node_connection_info[i].connected_child_node_index_at_port[j];
-				node_runtime_data.input_data[j] = _node_runtime_data[child_index].output_data;
+				int child_node_index = tree_graph.node_connection_info[i].connected_child_node_index_at_port[j];
+				if (tree_graph.nodes[child_node_index]->active) {
+					node_runtime_data.input_data[j] = _node_runtime_data[child_node_index].output_data;
+				} else {
+					node_runtime_data.input_data[j] = nullptr;
+				}
 			}
 
 			// Set output pointer
 			if (i == 1) {
+				// We're emitting to the Output node, therefore we can just copy the data to the output AnimationData.
 				node_runtime_data.output_data = &output_data;
+				node->active = false;
 			} else {
 				node_runtime_data.output_data = context.animation_data_allocator.allocate();
 			}
 
 			node->evaluate(context, node_runtime_data.input_data, *node_runtime_data.output_data);
 
-			// All inputs have been consumed and can now be freed.
-			for (const int child_index : tree_graph.node_connection_info[i].connected_child_node_index_at_port) {
-				context.animation_data_allocator.free(_node_runtime_data[child_index].output_data);
+			// All inputs have been consumed and can now be freed and nodes deactivated.
+			for (unsigned int j = 0; j < node_runtime_data.input_data.size(); j++) {
+				int child_node_index = tree_graph.node_connection_info[i].connected_child_node_index_at_port[j];
+				if (tree_graph.nodes[child_node_index]->active) {
+					context.animation_data_allocator.free(_node_runtime_data[child_node_index].output_data);
+					tree_graph.nodes[j]->active = false;
+				} else {
+					node_runtime_data.input_data[j] = nullptr;
+				}
 			}
-
-			// Node must be deactivated. It'll be activated when actually used next time.
-			node->active = false;
 		}
 	}
 

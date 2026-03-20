@@ -128,6 +128,15 @@ void BLTBlendTree::BLTBlendTreeGraph::_print_graph() const {
 	}
 }
 
+void BLTBlendTree::BLTBlendTreeGraph::_print_graph_timeinfo() const {
+	for (unsigned int i = 0; i < nodes.size(); i++) {
+		print_line(vformat("Node %s (id %d, parent %d):", nodes[i]->get_name(), i, node_connection_info[i].parent_node_index));
+		print_line("  position:      %f", nodes[i]->node_time_info.position);
+		print_line("  sync_position: %f", nodes[i]->node_time_info.sync_position);
+		print_line("  duration:      %f", nodes[i]->node_time_info.sync_track.duration);
+	}
+}
+
 LocalVector<int> BLTBlendTree::BLTBlendTreeGraph::get_sorted_node_indices() {
 	LocalVector<int> result;
 

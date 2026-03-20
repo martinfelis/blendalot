@@ -395,6 +395,35 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree][Blend2Nod
 		CHECK(hip_bone_position.z == doctest::Approx(0.9));
 	}
 
+	SUBCASE("Inputs are deactivated when blend weight is near 0 or 1") {
+		GraphEvaluationContext &graph_context = animation_graph->get_context();
+		AnimationData *graph_output = graph_context.animation_data_allocator.allocate();
+
+		// Blend weight 0
+		blend2_node->blend_weight = 0.;
+		synced_blend_tree_node->initialize(graph_context);
+		synced_blend_tree_node->activate_inputs(Vector<Ref<BLTAnimationNode>>());
+
+		CHECK(animation_sampler_node_a->active == true);
+		CHECK(animation_sampler_node_b->active == false);
+
+		synced_blend_tree_node->calculate_sync_track(Vector<Ref<BLTAnimationNode>>());
+		synced_blend_tree_node->update_time(0.1);
+		synced_blend_tree_node->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
+
+		// Blend weight 1
+		blend2_node->blend_weight = 1.;
+		synced_blend_tree_node->initialize(graph_context);
+		synced_blend_tree_node->activate_inputs(Vector<Ref<BLTAnimationNode>>());
+
+		CHECK(animation_sampler_node_a->active == false);
+		CHECK(animation_sampler_node_b->active == true);
+
+		synced_blend_tree_node->calculate_sync_track(Vector<Ref<BLTAnimationNode>>());
+		synced_blend_tree_node->update_time(0.1);
+		synced_blend_tree_node->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
+	}
+
 	SUBCASE("Evaluate synced blend") {
 		animation_sampler_node_a->animation_name = "animation_library/TestAnimationSyncA";
 		animation_sampler_node_b->animation_name = "animation_library/TestAnimationSyncB";
@@ -438,6 +467,42 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree][Blend2Nod
 		CHECK(hip_bone_position.z == doctest::Approx(0.0));
 	}
 
+	SUBCASE("Evaluate synced blend followed by a node deactivation due to weight = 1.0f") {
+		animation_sampler_node_a->animation_name = "animation_library/TestAnimationSyncA";
+		animation_sampler_node_b->animation_name = "animation_library/TestAnimationSyncB";
+		blend2_node->sync = true;
+		synced_blend_tree_node->initialize(animation_graph->get_context());
+
+		REQUIRE(animation_graph->get_root_animation_node().ptr() == synced_blend_tree_node.ptr());
+
+		blend2_node->blend_weight = 0.1f;
+		// Interval durations:
+		//   0:  0.45
+		//   1: 1.45s
+
+		// Update to just after the switch to interval 1
+		SceneTree::get_singleton()->process(0.51301);
+		CHECK(animation_sampler_node_a->node_time_info.sync_position == doctest::Approx(1.0));
+		CHECK(animation_sampler_node_a->node_time_info.position == doctest::Approx(0.4));
+		CHECK(animation_sampler_node_b->node_time_info.sync_position == doctest::Approx(1.0));
+		CHECK(animation_sampler_node_b->node_time_info.position == doctest::Approx(0.1));
+
+		blend2_node->blend_weight = 1.0f;
+		// Interval durations:
+		//   0: 0.9
+		//   1: 0.1
+
+		// An infinitesimal update should not change much in the sampling position.
+		SceneTree::get_singleton()->process(0.0001);
+		CHECK(animation_sampler_node_b->node_time_info.sync_position == doctest::Approx(1.000).epsilon(0.01));
+		CHECK(animation_sampler_node_b->node_time_info.position == doctest::Approx(0.100).epsilon(0.01));
+
+		// Update to near the end of interval 1
+		SceneTree::get_singleton()->process(0.0998);
+		CHECK(animation_sampler_node_b->node_time_info.sync_position == doctest::Approx(1.999).epsilon(0.01));
+		CHECK(animation_sampler_node_b->node_time_info.position == doctest::Approx(0.2).epsilon(0.01));
+	}
+
 	SUBCASE("Save, load and evaluate the SyncedBlendTree") {
 		// Test saving and loading of the blend tree to a resource
 		ResourceSaver::save(synced_blend_tree_node, "synced_blend_tree_node.tres");
@@ -473,6 +538,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 	// TestAnimationA
 	Ref<BLTAnimationNodeSampler> animation_sampler_node_a;
 	animation_sampler_node_a.instantiate();
+	animation_sampler_node_a->set_name("SamplerNodeA");
 	animation_sampler_node_a->animation_name = "animation_library/TestAnimationA";
 
 	blend_tree_graph.add_node(animation_sampler_node_a);
@@ -480,6 +546,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 	// TestAnimationB
 	Ref<BLTAnimationNodeSampler> animation_sampler_node_b;
 	animation_sampler_node_b.instantiate();
+	animation_sampler_node_b->set_name("SamplerNodeB");
 	animation_sampler_node_b->animation_name = "animation_library/TestAnimationB";
 
 	blend_tree_graph.add_node(animation_sampler_node_b);
@@ -487,6 +554,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 	// TestAnimationB
 	Ref<BLTAnimationNodeSampler> animation_sampler_node_c;
 	animation_sampler_node_c.instantiate();
+	animation_sampler_node_c->set_name("SamplerNodeC");
 	animation_sampler_node_c->animation_name = "animation_library/TestAnimationC";
 
 	blend_tree_graph.add_node(animation_sampler_node_c);
@@ -630,6 +698,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 		blend_tree_node->calculate_sync_track(Vector<Ref<BLTAnimationNode>>());
 		blend_tree_node->update_time(0.825);
 		blend_tree_node->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
+		CHECK(animation_sampler_node_a->active == false);
 
 		REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_b, blend2_node_a, "Input0"));
 		REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_c, blend2_node_a, "Input1"));
