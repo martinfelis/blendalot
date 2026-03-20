@@ -53,7 +53,6 @@ class BLTStateMachine : public BLTAnimationNode {
 	GDCLASS(BLTStateMachine, BLTAnimationNode);
 
 	GraphEvaluationContext *_graph_evaluation_context = nullptr;
-	const LocalVector<Ref<BLTAnimationNode>> empty_node_vector;
 
 	LocalVector<Ref<BLTAnimationNode>> states;
 	LocalVector<Ref<BLTAnimationNode>> transitions;
@@ -87,12 +86,7 @@ class BLTStateMachine : public BLTAnimationNode {
 		activate_state(transition_states[active_transition_index][1]);
 	}
 
-	void find_active_transition() {
-		// Interruption is (not yet) allowed.
-		if (active_transition.is_valid()) {
-			return;
-		}
-
+	void find_and_activate_transition() {
 		for (Ref<BLTStateMachineTransition> &transition : state_leaving_transitions[active_state_index]) {
 			if (transition->evaluate_condition()) {
 				activate_transition(transition);
@@ -102,20 +96,24 @@ class BLTStateMachine : public BLTAnimationNode {
 	}
 
 public:
-	int64_t find_state_index(const Ref<BLTAnimationNode> &state) {
+	int64_t find_state_index(const Ref<BLTAnimationNode> &state) const {
 		return states.find(state);
 	}
 
-	int64_t find_transition_index(const Ref<BLTStateMachineTransition> &transition) {
+	int64_t find_transition_index(const Ref<BLTStateMachineTransition> &transition) const {
 		return transitions.find(transition);
 	}
 
-	Ref<BLTStateMachineTransition> get_transition_by_index(int64_t index) {
+	Ref<BLTStateMachineTransition> get_transition_by_index(int64_t index) const {
 		if (index < 0 || index >= transitions.size()) {
 			return nullptr;
 		}
 
 		return transitions[index];
+	}
+
+	Ref<BLTStateMachineTransition> get_active_transition() const {
+		return active_transition;
 	}
 
 	void add_state(const Ref<BLTAnimationNode> &state) {
@@ -178,21 +176,25 @@ public:
 			activate_state(entry_state);
 		}
 
-		find_active_transition();
+		// Interruption is (not yet) allowed.
+		if (!active_transition.is_valid()) {
+			find_and_activate_transition();
+		}
 
 		if (active_transition.is_valid()) {
 			active_transition->update_transition_time_and_weight(_graph_evaluation_context->graph_process_delta_time);
 			active_transition->activate_inputs(transition_states[active_transition_index]);
 
+			if (previous_state->active) {
+				transition_states[active_transition_index][1]->activate_inputs({});
+			}
 			if (active_state->active) {
-				transition_states[active_transition_index][0]->activate_inputs(empty_node_vector);
+				transition_states[active_transition_index][0]->activate_inputs({});
 			}
 
-			if (previous_state->active) {
-				transition_states[active_transition_index][1]->activate_inputs(empty_node_vector);
-			}
 		} else {
 			active_state->active = true;
+			active_state->activate_inputs({});
 		}
 	}
 
@@ -200,17 +202,17 @@ public:
 		GodotProfileZone("BLTStateMachine::calculate_sync_track");
 
 		if (active_transition.is_valid()) {
-			if (active_state->active) {
-				active_state->calculate_sync_track(empty_node_vector);
+			if (previous_state->active) {
+				previous_state->calculate_sync_track({});
 			}
 
-			if (previous_state->active) {
-				previous_state->calculate_sync_track(empty_node_vector);
+			if (active_state->active) {
+				active_state->calculate_sync_track({});
 			}
 
 			active_transition->calculate_sync_track(transition_states[active_transition_index]);
 		} else {
-			active_state->calculate_sync_track(empty_node_vector);
+			active_state->calculate_sync_track({});
 		}
 	}
 
@@ -218,12 +220,12 @@ public:
 		GodotProfileZone("BLTStateMachine::update_time");
 
 		if (active_transition.is_valid()) {
-			if (active_state->active) {
-				active_state->update_time(p_delta);
-			}
-
 			if (previous_state->active) {
 				previous_state->update_time(p_delta);
+			}
+
+			if (active_state->active) {
+				active_state->update_time(p_delta);
 			}
 
 			active_transition->update_time(p_delta);
@@ -239,32 +241,32 @@ public:
 			AnimationData *active_state_data = nullptr;
 			AnimationData *previous_state_data = nullptr;
 
-			if (active_state->active) {
-				active_state_data = context.animation_data_allocator.allocate();
-				active_state->evaluate(context, LocalVector<AnimationData *>(), *active_state_data);
-			}
-
 			if (previous_state->active) {
 				previous_state_data = context.animation_data_allocator.allocate();
 				previous_state->evaluate(context, LocalVector<AnimationData *>(), *previous_state_data);
 			}
 
-			active_transition->evaluate(context, { active_state_data, previous_state_data }, output_data);
-
 			if (active_state->active) {
-				context.animation_data_allocator.free(active_state_data);
-				active_state->active = false;
+				active_state_data = context.animation_data_allocator.allocate();
+				active_state->evaluate(context, LocalVector<AnimationData *>(), *active_state_data);
 			}
+
+			active_transition->evaluate(context, { previous_state_data, active_state_data }, output_data);
 
 			if (previous_state->active) {
 				context.animation_data_allocator.free(previous_state_data);
 				previous_state->active = false;
 			}
 
+			if (active_state->active) {
+				context.animation_data_allocator.free(active_state_data);
+				active_state->active = false;
+			}
+
 			// Deactivate any finished transitions
 			if (Math::is_zero_approx(1. - active_transition->blend_weight)) {
-				active_transition = nullptr;
 				previous_state = nullptr;
+				active_transition = nullptr;
 			}
 		} else {
 			active_state->evaluate(context, input_datas, output_data);

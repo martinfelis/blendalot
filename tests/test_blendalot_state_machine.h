@@ -193,6 +193,7 @@ TEST_CASE_FIXTURE(StateMachineFixture, "[SceneTree][Blendalot][StateMachine] Non
 	transition->set_condition_override(true);
 
 	// Perform evaluation
+	delta = 0.1;
 	graph_context.graph_process_delta_time = delta;
 	state_machine->activate_inputs(LocalVector<Ref<BLTAnimationNode>>());
 	state_machine->calculate_sync_track(LocalVector<Ref<BLTAnimationNode>>());
@@ -202,6 +203,34 @@ TEST_CASE_FIXTURE(StateMachineFixture, "[SceneTree][Blendalot][StateMachine] Non
 	CHECK(transition->get_transition_time() == 0.1);
 	CHECK(animation_sampler_node_a->node_time_info.position == doctest::Approx(0.2));
 	CHECK(animation_sampler_node_b->node_time_info.position == doctest::Approx(0.1));
+
+	// Perform evaluation to the end of the transition. This should already skip update of the previous state.
+	delta = 0.1;
+	graph_context.graph_process_delta_time = delta;
+	state_machine->activate_inputs(LocalVector<Ref<BLTAnimationNode>>());
+	state_machine->calculate_sync_track(LocalVector<Ref<BLTAnimationNode>>());
+	state_machine->update_time(delta);
+	state_machine->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
+
+	CHECK(transition->get_transition_time() == 0.2);
+	CHECK(state_machine->get_active_transition().is_null());
+
+	CHECK(animation_sampler_node_a->node_time_info.position == doctest::Approx(0.2));
+	CHECK(animation_sampler_node_b->node_time_info.position == doctest::Approx(0.2));
+
+	// Perform another evaluation that should only update the new active state.
+	delta = 0.1;
+	graph_context.graph_process_delta_time = delta;
+	state_machine->activate_inputs(LocalVector<Ref<BLTAnimationNode>>());
+	state_machine->calculate_sync_track(LocalVector<Ref<BLTAnimationNode>>());
+	state_machine->update_time(delta);
+	state_machine->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
+
+	CHECK(transition->get_transition_time() == 0.2);
+	CHECK(state_machine->get_active_transition().is_null());
+
+	CHECK(animation_sampler_node_a->node_time_info.position == doctest::Approx(0.2));
+	CHECK(animation_sampler_node_b->node_time_info.position == doctest::Approx(0.3));
 }
 
 } //namespace TestBlendalotStateMachine
