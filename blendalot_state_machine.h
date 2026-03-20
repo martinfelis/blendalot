@@ -8,10 +8,22 @@ class BLTStateMachineTransition : public BLTAnimationNodeBlend2 {
 	friend class BLTStateMachine;
 
 	bool condition_override = false;
-	float transition_time = 0.f;
-	float transition_duration = 0.1;
+	double transition_time = 0.f;
+	double transition_duration = 0.1;
 
 public:
+	void set_condition_override(bool value) {
+		condition_override = value;
+	}
+
+	void set_transition_duration(double value) {
+		transition_duration = value;
+	}
+
+	double get_transition_time() const {
+		return transition_time;
+	}
+
 	bool evaluate_condition() {
 		return condition_override;
 	}
@@ -98,6 +110,14 @@ public:
 		return transitions.find(transition);
 	}
 
+	Ref<BLTStateMachineTransition> get_transition_by_index(int64_t index) {
+		if (index < 0 || index >= transitions.size()) {
+			return nullptr;
+		}
+
+		return transitions[index];
+	}
+
 	void add_state(const Ref<BLTAnimationNode> &state) {
 		states.push_back(state);
 		state_leaving_transitions.push_back(LocalVector<Ref<BLTStateMachineTransition>>());
@@ -162,13 +182,13 @@ public:
 
 		if (active_transition.is_valid()) {
 			active_transition->update_transition_time_and_weight(_graph_evaluation_context->graph_process_delta_time);
-			active_transition->activate_inputs(transition_states[active_state_index]);
+			active_transition->activate_inputs(transition_states[active_transition_index]);
 
-			if (transition_states[active_transition_index][0]->active) {
+			if (active_state->active) {
 				transition_states[active_transition_index][0]->activate_inputs(empty_node_vector);
 			}
 
-			if (transition_states[active_transition_index][1]->active) {
+			if (previous_state->active) {
 				transition_states[active_transition_index][1]->activate_inputs(empty_node_vector);
 			}
 		} else {
@@ -180,7 +200,15 @@ public:
 		GodotProfileZone("BLTStateMachine::calculate_sync_track");
 
 		if (active_transition.is_valid()) {
-			active_transition->calculate_sync_track(empty_node_vector);
+			if (active_state->active) {
+				active_state->calculate_sync_track(empty_node_vector);
+			}
+
+			if (previous_state->active) {
+				previous_state->calculate_sync_track(empty_node_vector);
+			}
+
+			active_transition->calculate_sync_track(transition_states[active_transition_index]);
 		} else {
 			active_state->calculate_sync_track(empty_node_vector);
 		}
@@ -190,6 +218,14 @@ public:
 		GodotProfileZone("BLTStateMachine::update_time");
 
 		if (active_transition.is_valid()) {
+			if (active_state->active) {
+				active_state->update_time(p_delta);
+			}
+
+			if (previous_state->active) {
+				previous_state->update_time(p_delta);
+			}
+
 			active_transition->update_time(p_delta);
 		} else {
 			active_state->update_time(p_delta);
@@ -200,13 +236,33 @@ public:
 		GodotProfileZone("BLTStateMachine::evaluate");
 
 		if (active_transition.is_valid()) {
-			active_transition->evaluate(context, input_datas, output_data);
+			AnimationData *active_state_data = nullptr;
+			AnimationData *previous_state_data = nullptr;
 
-			transition_states[active_transition_index][0]->active = false;
-			transition_states[active_transition_index][1]->active = false;
+			if (active_state->active) {
+				active_state_data = context.animation_data_allocator.allocate();
+				active_state->evaluate(context, LocalVector<AnimationData *>(), *active_state_data);
+			}
+
+			if (previous_state->active) {
+				previous_state_data = context.animation_data_allocator.allocate();
+				previous_state->evaluate(context, LocalVector<AnimationData *>(), *previous_state_data);
+			}
+
+			active_transition->evaluate(context, { active_state_data, previous_state_data }, output_data);
+
+			if (active_state->active) {
+				context.animation_data_allocator.free(active_state_data);
+				active_state->active = false;
+			}
+
+			if (previous_state->active) {
+				context.animation_data_allocator.free(previous_state_data);
+				previous_state->active = false;
+			}
 
 			// Deactivate any finished transitions
-			if (!Math::is_zero_approx(1. - active_transition->blend_weight)) {
+			if (Math::is_zero_approx(1. - active_transition->blend_weight)) {
 				active_transition = nullptr;
 				previous_state = nullptr;
 			}
