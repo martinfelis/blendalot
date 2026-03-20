@@ -2,9 +2,10 @@
 
 #include "../blendalot_animation_graph.h"
 #include "../blendalot_blend_tree.h"
+
+#include "core/object/class_db.h"
 #include "scene/animation/animation_tree.h"
 #include "scene/main/window.h"
-
 #include "tests/test_macros.h"
 
 struct BlendTreeFixture {
@@ -250,7 +251,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot] Test AnimationData b
 	data_blended.blend(data_t1, 0.5);
 
 	REQUIRE(data_blended.has_same_tracks(data_t0_5));
-	for (const KeyValue<Animation::TypeHash, size_t> &K : data_blended.value_buffer_offset) {
+	for (const KeyValue<Animation::TrackCacheID, size_t> &K : data_blended.value_buffer_offset) {
 		AnimationData::TrackValue *blended_value = data_blended.get_value<AnimationData::TrackValue>(K.key);
 		AnimationData::TrackValue *data_t0_5_value = data_t0_5.get_value<AnimationData::TrackValue>(K.key);
 		CHECK(*blended_value == *data_t0_5_value);
@@ -261,7 +262,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot] Test AnimationData b
 	data_blended.blend(data_t1, 0.3);
 
 	REQUIRE(data_blended.has_same_tracks(data_t0_5));
-	for (const KeyValue<Animation::TypeHash, size_t> &K : data_blended.value_buffer_offset) {
+	for (const KeyValue<Animation::TrackCacheID, size_t> &K : data_blended.value_buffer_offset) {
 		AnimationData::TrackValue *blended_value = data_blended.get_value<AnimationData::TrackValue>(K.key);
 		AnimationData::TrackValue *data_t0_5_value = data_t0_5.get_value<AnimationData::TrackValue>(K.key);
 		CHECK(*blended_value != *data_t0_5_value);
@@ -586,9 +587,9 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 	REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(animation_sampler_node_c, blend2_node_b, "Input1"));
 
 	SUBCASE("Add and remove a connection") {
-		HashSet<int> subgraph_output_initial = blend_tree_graph.node_connection_info[0].input_subtree_node_indices;
-		HashSet<int> subgraph_blend2a_initial = blend_tree_graph.node_connection_info[blend_tree_graph.find_node_index(blend2_node_a)].input_subtree_node_indices;
-		HashSet<int> subgraph_blend2b_initial = blend_tree_graph.node_connection_info[blend_tree_graph.find_node_index(blend2_node_b)].input_subtree_node_indices;
+		HashSet<int> subgraph_output_initial(blend_tree_graph.node_connection_info[0].input_subtree_node_indices);
+		HashSet<int> subgraph_blend2a_initial(blend_tree_graph.node_connection_info[blend_tree_graph.find_node_index(blend2_node_a)].input_subtree_node_indices);
+		HashSet<int> subgraph_blend2b_initial(blend_tree_graph.node_connection_info[blend_tree_graph.find_node_index(blend2_node_b)].input_subtree_node_indices);
 
 		// Add and remove connection
 		REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_graph.add_connection(blend2_node_b, blend2_node_a, "Input1"));
@@ -794,7 +795,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Embe
 		blend_tree->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
 
 		// Check values
-		AnimationData::TransformTrackValue *hip_transform_value = graph_output->get_value<AnimationData::TransformTrackValue>(test_animation_a->get_tracks()[0]->thash);
+		AnimationData::TransformTrackValue *hip_transform_value = graph_output->get_value<AnimationData::TransformTrackValue>(test_animation_a->get_tracks()[0]->get_unique_id());
 		CHECK(hip_transform_value->loc[0] == doctest::Approx(0.15));
 		CHECK(hip_transform_value->loc[1] == doctest::Approx(0.3));
 		CHECK(hip_transform_value->loc[2] == doctest::Approx(0.45));
@@ -818,7 +819,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Embe
 		blend_tree->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
 
 		// Check values
-		AnimationData::TransformTrackValue *hip_transform_value = graph_output->get_value<AnimationData::TransformTrackValue>(test_animation_a->get_tracks()[0]->thash);
+		AnimationData::TransformTrackValue *hip_transform_value = graph_output->get_value<AnimationData::TransformTrackValue>(test_animation_a->get_tracks()[0]->get_unique_id());
 		CHECK(hip_transform_value->loc[0] == doctest::Approx(1.5));
 		CHECK(hip_transform_value->loc[1] == doctest::Approx(3.0));
 		CHECK(hip_transform_value->loc[2] == doctest::Approx(4.5));

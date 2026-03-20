@@ -1,6 +1,7 @@
 #include "blendalot_animation_graph.h"
 
-#include "core/os/time.h"
+#include "core/object/callable_mp.h"
+#include "core/object/class_db.h"
 #include "core/profiling/profiling.h"
 #include "scene/3d/skeleton_3d.h"
 #include "scene/animation/animation_player.h"
@@ -313,7 +314,7 @@ void BLTAnimationGraph::_process_graph(double p_delta, bool p_update_only) {
 void BLTAnimationGraph::_apply_animation_data(const AnimationData &output_data) const {
 	GodotProfileZone("BLTAnimationGraph::_apply_animation_data");
 
-	for (const KeyValue<Animation::TypeHash, size_t> &K : output_data.value_buffer_offset) {
+	for (const KeyValue<Animation::TrackCacheID, size_t> &K : output_data.value_buffer_offset) {
 		const AnimationData::TrackValue *track_value = output_data.get_value<AnimationData::TrackValue>(K.key);
 		switch (track_value->type) {
 			case AnimationData::TrackType::TYPE_POSITION_3D:

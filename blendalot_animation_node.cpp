@@ -4,6 +4,8 @@
 
 #include "blendalot_animation_node.h"
 
+#include "core/object/class_db.h"
+
 void BLTAnimationNode::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_position", "position"), &BLTAnimationNode::set_position);
 	ClassDB::bind_method(D_METHOD("get_position"), &BLTAnimationNode::get_position);
@@ -66,7 +68,7 @@ void AnimationData::sample_from_animation(const Ref<Animation> &animation, const
 		switch (ttype) {
 			case Animation::TYPE_POSITION_3D:
 			case Animation::TYPE_ROTATION_3D: {
-				TransformTrackValue *transform_track_value = get_value<TransformTrackValue>(animation_track->thash);
+				TransformTrackValue *transform_track_value = get_value<TransformTrackValue>(animation_track->get_unique_id());
 
 				if (transform_track_value->bone_idx != -1) {
 					switch (ttype) {
@@ -106,12 +108,12 @@ void AnimationData::allocate_track_value(const Animation::Track *animation_track
 		case Animation::TrackType::TYPE_POSITION_3D: {
 			size_t value_offset = 0;
 			AnimationData::TransformTrackValue *transform_track_value = nullptr;
-			if (value_buffer_offset.has(animation_track->thash)) {
-				value_offset = value_buffer_offset[animation_track->thash];
+			if (value_buffer_offset.has(animation_track->get_unique_id())) {
+				value_offset = value_buffer_offset[animation_track->get_unique_id()];
 				transform_track_value = reinterpret_cast<AnimationData::TransformTrackValue *>(&buffer[value_offset]);
 			} else {
 				value_offset = buffer.size();
-				value_buffer_offset.insert(animation_track->thash, buffer.size());
+				value_buffer_offset.insert(animation_track->get_unique_id(), buffer.size());
 				buffer.resize(buffer.size() + sizeof(AnimationData::TransformTrackValue));
 				transform_track_value = new (reinterpret_cast<AnimationData::TransformTrackValue *>(&buffer[value_offset])) AnimationData::TransformTrackValue();
 			}
@@ -283,14 +285,14 @@ TypedArray<StringName> BLTAnimationNodeSampler::get_animations_as_typed_array() 
 
 	Vector<StringName> vec;
 
-	List<StringName> animation_libraries;
+	LocalVector<StringName> animation_libraries;
 	animation_player->get_animation_library_list(&animation_libraries);
 
 	for (const StringName &library_name : animation_libraries) {
 		Ref<AnimationLibrary> library = animation_player->get_animation_library(library_name);
-		List<StringName> animation_list;
-		library->get_animation_list(&animation_list);
-		for (const StringName &library_animation : animation_list) {
+		LocalVector<StringName> library_animations;
+		library->get_animation_list(&library_animations);
+		for (const StringName &library_animation : library_animations) {
 			vec.push_back(library_animation);
 		}
 	}

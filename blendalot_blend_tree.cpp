@@ -1,5 +1,7 @@
 #include "blendalot_blend_tree.h"
 
+#include "core/object/class_db.h"
+
 BLTBlendTree::BLTBlendTreeGraph::BLTBlendTreeGraph() {
 	Ref<BLTAnimationNodeOutput> output_node;
 	output_node.instantiate();
@@ -84,7 +86,7 @@ bool BLTBlendTree::BLTBlendTreeGraph::remove_node(const Ref<BLTAnimationNode> &n
 		}
 
 		// Map connected subtrees
-		HashSet<int> old_indices = connection_info.input_subtree_node_indices;
+		HashSet<int> old_indices(connection_info.input_subtree_node_indices);
 		connection_info.input_subtree_node_indices.clear();
 		for (int old_index : old_indices) {
 			if (old_index > removed_node_index) {

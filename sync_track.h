@@ -1,8 +1,10 @@
 #pragma once
 
+#include "blendalot_math_helper.h"
+
+#include "core/math/math_funcs.h"
 #include "core/templates/local_vector.h"
 
-#include "blendalot_math_helper.h"
 #include <cassert>
 #include <cmath>
 

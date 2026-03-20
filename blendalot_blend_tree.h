@@ -45,7 +45,7 @@ public:
 				}
 
 				// Map connected subtrees
-				HashSet<int> old_indices = input_subtree_node_indices;
+				HashSet<int> old_indices(input_subtree_node_indices);
 				input_subtree_node_indices.clear();
 				for (int old_index : old_indices) {
 					input_subtree_node_indices.insert(old_index == -1 ? -1 : old_to_new_mapping[old_index]);

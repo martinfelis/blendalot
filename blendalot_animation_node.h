@@ -1,12 +1,12 @@
 #pragma once
 
+#include "sync_track.h"
+
 #include "core/io/resource.h"
 #include "core/profiling/profiling.h"
-
 #include "scene/3d/skeleton_3d.h"
 #include "scene/animation/animation_player.h"
 #include "scene/resources/animation_library.h"
-#include "sync_track.h"
 
 #include <cassert>
 
@@ -17,7 +17,7 @@
  * In general AnimationData objects should be obtained using the AnimationDataAllocator.
  *
  * The class consists of a buffer containing the data and a hashmap that resolves the
- * Animation::TypeHash of an Animation::Track to the corresponding AnimationData::TrackValue
+ * Animation::TrackCacheID of an Animation::Track to the corresponding AnimationData::TrackValue
  * block within the buffer.
  */
 struct AnimationData {
@@ -106,7 +106,7 @@ struct AnimationData {
 	}
 	AnimationData(AnimationData &&other) noexcept :
 			// We skip copying the offset as that should be identical for all nodes within a BLTAnimationGraph.
-			// value_buffer_offset(std::exchange(other.value_buffer_offset, AHashMap<Animation::TypeHash, size_t, HashHasher>())),
+			// value_buffer_offset(std::exchange(other.value_buffer_offset, AHashMap<Animation::TrackCacheID, size_t, HashHasher>())),
 			buffer(std::exchange(other.buffer, LocalVector<uint8_t>())) {
 	}
 	AnimationData &operator=(const AnimationData &other) {
@@ -125,23 +125,23 @@ struct AnimationData {
 	void allocate_track_values(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d);
 
 	template <typename TrackValueType>
-	TrackValueType *get_value(const Animation::TypeHash &thash) {
-		return reinterpret_cast<TrackValueType *>(&buffer[value_buffer_offset[thash]]);
+	TrackValueType *get_value(const Animation::TrackCacheID &track_cache_id) {
+		return reinterpret_cast<TrackValueType *>(&buffer[value_buffer_offset[track_cache_id]]);
 	}
 
 	template <typename TrackValueType>
-	const TrackValueType *get_value(const Animation::TypeHash &thash) const {
-		return reinterpret_cast<const TrackValueType *>(&buffer[value_buffer_offset[thash]]);
+	const TrackValueType *get_value(const Animation::TrackCacheID &track_cache_id) const {
+		return reinterpret_cast<const TrackValueType *>(&buffer[value_buffer_offset[track_cache_id]]);
 	}
 
 	bool has_same_tracks(const AnimationData &other) const {
-		HashSet<Animation::TypeHash> valid_track_hashes;
-		for (const KeyValue<Animation::TypeHash, size_t> &K : value_buffer_offset) {
+		HashSet<Animation::TrackCacheID> valid_track_hashes;
+		for (const KeyValue<Animation::TrackCacheID, size_t> &K : value_buffer_offset) {
 			valid_track_hashes.insert(K.key);
 		}
 
-		for (const KeyValue<Animation::TypeHash, size_t> &K : other.value_buffer_offset) {
-			if (HashSet<Animation::TypeHash>::Iterator entry = valid_track_hashes.find(K.key)) {
+		for (const KeyValue<Animation::TrackCacheID, size_t> &K : other.value_buffer_offset) {
+			if (HashSet<Animation::TrackCacheID>::Iterator entry = valid_track_hashes.find(K.key)) {
 				valid_track_hashes.remove(entry);
 			} else {
 				return false;
@@ -159,7 +159,7 @@ struct AnimationData {
 			return;
 		}
 
-		for (const KeyValue<Animation::TypeHash, size_t> &K : value_buffer_offset) {
+		for (const KeyValue<Animation::TrackCacheID, size_t> &K : value_buffer_offset) {
 			TrackValue *track_value = get_value<TrackValue>(K.key);
 			const TrackValue *other_track_value = to_data.get_value<TrackValue>(K.key);
 
@@ -169,7 +169,7 @@ struct AnimationData {
 
 	void sample_from_animation(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d, double p_time);
 
-	AHashMap<Animation::TypeHash, size_t, HashHasher> value_buffer_offset;
+	AHashMap<Animation::TrackCacheID, size_t, HashHasher> value_buffer_offset;
 	LocalVector<uint8_t> buffer;
 };
 
