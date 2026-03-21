@@ -1,18 +1,15 @@
-[gd_resource type="BLTAnimationNodeBlendTree" format=3 uid="uid://2qfwr1xkiw0s"]
+[gd_resource type="BLTBlendTree" format=3 uid="uid://2qfwr1xkiw0s"]
 
 [sub_resource type="BLTAnimationNodeBlend2" id="BLTAnimationNodeBlend2_bvt3d"]
 resource_name = "BLTAnimationNodeBlend2"
-graph_offset = Vector2(-600, 180)
 blend_amount = 1.0
 
 [sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_sntl5"]
 resource_name = "BLTAnimationNodeSampler 1"
-graph_offset = Vector2(-1200, 560)
 animation = &"animation_library/Limping-InPlace"
 
 [sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_n4m28"]
 resource_name = "BLTAnimationNodeSampler"
-graph_offset = Vector2(-1300, -40)
 animation = &"animation_library/Walk-InPlace"
 
 [resource]

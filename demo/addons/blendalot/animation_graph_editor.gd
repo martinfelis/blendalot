@@ -27,7 +27,7 @@ func edit_animation_root_node(blt_node:BLTAnimationNode):
 	
 	blt_node.resource_name = "Root"
 	
-	if blt_node is BLTAnimationNodeBlendTree:
+	if blt_node is BLTBlendTree:
 		animation_graph_root_node = blt_node
 		push_graph_stack(blt_node)
 		edit_graph(blt_node)
@@ -92,7 +92,7 @@ func update_breadcrumb_button_container():
 
 
 func edit_graph(blt_node:BLTAnimationNode):
-	if blt_node is BLTAnimationNodeBlendTree:
+	if blt_node is BLTBlendTree:
 		reset_graph_control()
 		var blend_tree_graph_edit:BltBlendTreeEditor = preload ("res://addons/blendalot/blend_tree_editor.tscn").instantiate()
 		active_graph_control.add_child(blend_tree_graph_edit)

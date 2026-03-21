@@ -1,4 +1,4 @@
-[gd_resource type="BLTAnimationNodeBlendTree" format=3 uid="uid://qsk64ax2o47f"]
+[gd_resource type="BLTBlendTree" format=3 uid="uid://qsk64ax2o47f"]
 
 [sub_resource type="BLTAnimationNodeBlend2" id="BLTAnimationNodeBlend2_bvt3d"]
 resource_name = "BLTAnimationNodeBlend2"

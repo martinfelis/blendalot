@@ -28,7 +28,7 @@ item_0/text = "BLTAnimationNodeSampler"
 item_0/id = 0
 item_1/text = "BLTAnimationNodeBlend2"
 item_1/id = 1
-item_2/text = "BLTAnimationNodeBlendTree"
+item_2/text = "BLTBlendTree"
 item_2/id = 2
 
 [node name="BlendTreeGraphEdit" type="GraphEdit" parent="Panel" unique_id=391120290]

@@ -49,7 +49,7 @@ func _get_plugin_icon():
 
 
 func _handles(obj: Object) -> bool:
-	return obj is BLTAnimationNodeBlendTree
+	return obj is BLTBlendTree
 
 
 func _edit(object: Object):
@@ -57,7 +57,7 @@ func _edit(object: Object):
 		push_error("Cannot edit object as AnimationGraphEditor is not initialized")
 		return 
 	
-	if object is BLTAnimationNodeBlendTree:
+	if object is BLTBlendTree:
 		animation_graph_editor.edit_animation_root_node(object)
 		return
 	

@@ -5,7 +5,7 @@
 [ext_resource type="AnimationLibrary" uid="uid://dwubn740aqx51" path="res://animation_library.res" id="3_1bvp3"]
 [ext_resource type="AnimationNodeBlendTree" uid="uid://dqy0dgwsm8t46" path="res://animation_tree_walk_limp.tres" id="3_272bh"]
 [ext_resource type="AnimationNodeBlendTree" uid="uid://vsf71o82lkld" path="res://animation_tree_walk_run.tres" id="6_5vw27"]
-[ext_resource type="BLTAnimationNodeBlendTree" uid="uid://2qfwr1xkiw0s" path="res://synced_blend_tree_walk_limp.tres" id="6_272bh"]
+[ext_resource type="BLTBlendTree" uid="uid://2qfwr1xkiw0s" path="res://synced_blend_tree_walk_limp.tres" id="6_272bh"]
 
 [sub_resource type="Theme" id="Theme_272bh"]
 default_font_size = 30
@@ -41,8 +41,8 @@ resource_name = "BLTAnimationNodeSampler"
 position = Vector2(-490, 7)
 animation = &"animation_library/Walk-InPlace"
 
-[sub_resource type="BLTAnimationNodeBlendTree" id="BLTAnimationNodeBlendTree_5vw27"]
-resource_name = "BLTAnimationNodeBlendTree"
+[sub_resource type="BLTBlendTree" id="BLTBlendTree_5vw27"]
+resource_name = "BLTBlendTree"
 position = Vector2(-640, -20)
 graph_offset = Vector2(-760.67163, -24.823944)
 nodes/BLTAnimationNodeSampler/node = SubResource("BLTAnimationNodeSampler_272bh")
@@ -54,16 +54,16 @@ resource_name = "BLTAnimationNodeSampler"
 position = Vector2(-620, 140)
 animation = &"animation_library/Run-InPlace"
 
-[sub_resource type="BLTAnimationNodeBlendTree" id="BLTAnimationNodeBlendTree_7mycd"]
+[sub_resource type="BLTBlendTree" id="BLTBlendTree_7mycd"]
 resource_name = "Root"
 graph_offset = Vector2(-869, -71)
 nodes/BLTAnimationNodeBlend2/node = SubResource("BLTAnimationNodeBlend2_7mycd")
 nodes/BLTAnimationNodeBlend2/graph_offset = Vector2(-320, -40)
 nodes/BLTAnimationNodeSampler/node = SubResource("BLTAnimationNodeSampler_kek77")
 nodes/BLTAnimationNodeSampler/graph_offset = Vector2(-620, 140)
-nodes/BLTAnimationNodeBlendTree/node = SubResource("BLTAnimationNodeBlendTree_5vw27")
-nodes/BLTAnimationNodeBlendTree/graph_offset = Vector2(-640, -20)
-node_connections = ["Output", 0, "BLTAnimationNodeBlend2", "BLTAnimationNodeBlend2", 0, "BLTAnimationNodeBlendTree", "BLTAnimationNodeBlend2", 1, "BLTAnimationNodeSampler"]
+nodes/BLTBlendTree/node = SubResource("BLTBlendTree_5vw27")
+nodes/BLTBlendTree/graph_offset = Vector2(-640, -20)
+node_connections = ["Output", 0, "BLTAnimationNodeBlend2", "BLTAnimationNodeBlend2", 0, "BLTBlendTree", "BLTAnimationNodeBlend2", 1, "BLTAnimationNodeSampler"]
 
 [node name="Main" type="Node3D" unique_id=933302313]
 script = ExtResource("1_1bvp3")
@@ -317,7 +317,7 @@ libraries/animation_library = ExtResource("3_1bvp3")
 
 [node name="SyncedAnimationGraph" type="BLTAnimationGraph" parent="Characters/MixamoAmyWalkRunSynced" unique_id=1602406394]
 animation_player = NodePath("../AnimationPlayer2")
-tree_root = SubResource("BLTAnimationNodeBlendTree_7mycd")
+tree_root = SubResource("BLTBlendTree_7mycd")
 skeleton = NodePath("../Armature/Skeleton3D")
 parameters/BLTAnimationNodeBlend2/blend_amount = 0.81
 

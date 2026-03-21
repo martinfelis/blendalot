@@ -9,7 +9,7 @@ class_name BltBlendTreeEditor
 signal edit_subgraph(blt_node:BLTAnimationNode)
 signal graph_changed()
 
-var blend_tree:BLTAnimationNodeBlendTree
+var blend_tree:BLTBlendTree
 
 var blend_tree_node_to_graph_node = {}
 var graph_node_to_blend_tree_node = {}
@@ -21,7 +21,9 @@ var new_node_position:Vector2 = Vector2.ZERO
 var registered_nodes = [ 
 	"BLTAnimationNodeSampler",
 	"BLTAnimationNodeBlend2",
-	"BLTAnimationNodeBlendTree",
+	"BLTAnimationNodeTimeScale",
+	"BLTBlendTree",
+	"BLTStateMachine"
 	]
 
 
@@ -48,7 +50,7 @@ func _reset_editor():
 	selected_nodes = {}
 	
 
-func edit_blend_tree(blt_blend_tree:BLTAnimationNodeBlendTree):
+func edit_blend_tree(blt_blend_tree:BLTBlendTree):
 	_reset_editor()
 	blend_tree = blt_blend_tree
 	blend_tree_graph_edit.scroll_offset = blend_tree.graph_offset
@@ -95,7 +97,7 @@ func create_graph_node_for_blt_node(blt_node: BLTAnimationNode) -> GraphNode:
 		result_graph_node.add_child(output_slot_label)
 		result_graph_node.set_slot(0, false, 1, Color.WHITE, true, 1, Color.WHITE)	
 	
-	if blt_node.get_class() == "BLTAnimationNodeBlendTree":
+	if blt_node.get_class() == "BLTBlendTree" or blt_node.get_class() == "BLTStateMachine":
 		result_graph_node.gui_input.connect(_on_node_gui_input.bind(result_graph_node))
 	
 	var inputs = blt_node.get_input_names()
@@ -261,7 +263,9 @@ func _on_node_gui_input(input_event:InputEvent, graph_node:GraphNode):
 func _on_node_double_click(graph_node:GraphNode):
 	var blend_tree_node:BLTAnimationNode = graph_node_to_blend_tree_node[graph_node]
 	
-	if blend_tree_node is BLTAnimationNodeBlendTree:
+	if blend_tree_node is BLTBlendTree:
+		edit_subgraph.emit(blend_tree_node)
+	elif blend_tree_node is BLTStateMachine:
 		edit_subgraph.emit(blend_tree_node)
 
 #
