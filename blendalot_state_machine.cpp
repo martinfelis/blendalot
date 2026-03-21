@@ -59,7 +59,7 @@ bool BLTStateMachine::_get(const StringName &p_name, Variant &r_value) const {
 		Array conns;
 		conns.resize(transitions.size() * 3);
 
-		for (int i = 0; i < transitions.size(); i++) {
+		for (uint32_t i = 0; i < transitions.size(); i++) {
 			conns[i * 3 + 0] = transition_states[i][0];
 			conns[i * 3 + 1] = transition_states[i][1];
 			conns[i * 3 + 2] = transitions[i];

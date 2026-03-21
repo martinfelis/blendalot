@@ -120,7 +120,7 @@ public:
 	}
 
 	int64_t find_state_index_by_name(const StringName &name) const {
-		for (int i = 0; i < states.size(); i++) {
+		for (uint32_t i = 0; i < states.size(); i++) {
 			if (states[i]->get_name() == name) {
 				return i;
 			}
