@@ -5,15 +5,22 @@
 class BLTStateMachineTransition : public BLTAnimationNodeBlend2 {
 	GDCLASS(BLTStateMachineTransition, BLTAnimationNodeBlend2);
 
+	StringName transition_duration_name = PNAME("transition_duration");
+
 	friend class BLTStateMachine;
 
-	bool condition_override = false;
+	bool is_transition_forced = false;
 	double transition_time = 0.f;
 	double transition_duration = 0.1;
 
+protected:
+	bool _set(const StringName &p_name, const Variant &p_value);
+	bool _get(const StringName &p_name, Variant &r_ret) const;
+	void _get_property_list(List<PropertyInfo> *p_list) const;
+
 public:
-	void set_condition_override(bool value) {
-		condition_override = value;
+	void force_transition(bool value) {
+		is_transition_forced = value;
 	}
 
 	void set_transition_duration(double value) {
@@ -25,12 +32,17 @@ public:
 	}
 
 	bool evaluate_condition() {
-		return condition_override;
+		if (is_transition_forced) {
+			is_transition_forced = false;
+			return true;
+		}
+
+		return false;
 	}
 
 	void reset() {
 		transition_time = 0.f;
-		condition_override = false;
+		is_transition_forced = false;
 	}
 
 	void update_transition_time_and_weight(double p_delta) {
@@ -95,9 +107,25 @@ class BLTStateMachine : public BLTAnimationNode {
 		}
 	}
 
+protected:
+	bool _set(const StringName &p_name, const Variant &p_value);
+	bool _get(const StringName &p_name, Variant &r_ret) const;
+	void _get_property_list(List<PropertyInfo> *p_list) const;
+
 public:
+	Vector2 graph_offset;
+
 	int64_t find_state_index(const Ref<BLTAnimationNode> &state) const {
 		return states.find(state);
+	}
+
+	int64_t find_state_index_by_name(const StringName &name) const {
+		for (int i = 0; i < states.size(); i++) {
+			if (states[i]->get_name() == name) {
+				return i;
+			}
+		}
+		return -1;
 	}
 
 	int64_t find_transition_index(const Ref<BLTStateMachineTransition> &transition) const {
@@ -125,7 +153,7 @@ public:
 		}
 	}
 
-	bool add_transition(const Ref<BLTAnimationNode> &from_state, const Ref<BLTAnimationNode> &to_state) {
+	bool add_transition(const Ref<BLTAnimationNode> &from_state, const Ref<BLTAnimationNode> &to_state, const Ref<BLTStateMachineTransition> &transition) {
 		int64_t from_state_index = find_state_index(from_state);
 		if (from_state_index == -1) {
 			print_error(vformat("Cannot add transition from %s to %s: from state not found in StateMachine.", from_state->get_name(), to_state->get_name()));
@@ -137,8 +165,10 @@ public:
 			return false;
 		}
 
-		Ref<BLTStateMachineTransition> transition;
-		transition.instantiate();
+		if (find_transition_index(transition) != -1) {
+			print_error(vformat("Cannot add transition: transition already added."));
+			return false;
+		}
 
 		transitions.push_back(transition);
 		transition_states.push_back({ from_state, to_state });

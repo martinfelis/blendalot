@@ -167,9 +167,10 @@ TEST_CASE_FIXTURE(StateMachineFixture, "[SceneTree][Blendalot][StateMachine] Non
 	animation_sampler_node_b->animation_name = "animation_library/TestAnimationB";
 	state_machine->add_state(animation_sampler_node_a);
 	state_machine->add_state(animation_sampler_node_b);
-	state_machine->add_transition(animation_sampler_node_a, animation_sampler_node_b);
 
-	Ref<BLTStateMachineTransition> transition = state_machine->get_transition_by_index(0);
+	Ref<BLTStateMachineTransition> transition;
+	transition.instantiate();
+	state_machine->add_transition(animation_sampler_node_a, animation_sampler_node_b, transition);
 	transition->set_use_sync(false);
 
 	state_machine->initialize(animation_graph->get_context());
@@ -190,7 +191,7 @@ TEST_CASE_FIXTURE(StateMachineFixture, "[SceneTree][Blendalot][StateMachine] Non
 
 	// activate transition
 	transition->set_transition_duration(0.2);
-	transition->set_condition_override(true);
+	transition->force_transition(true);
 
 	// Perform evaluation
 	delta = 0.1;
