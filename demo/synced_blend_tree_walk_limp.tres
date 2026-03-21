@@ -2,14 +2,17 @@
 
 [sub_resource type="BLTAnimationNodeBlend2" id="BLTAnimationNodeBlend2_bvt3d"]
 resource_name = "BLTAnimationNodeBlend2"
+position = Vector2(-600, 180)
 blend_amount = 1.0
 
 [sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_sntl5"]
 resource_name = "BLTAnimationNodeSampler 1"
+position = Vector2(-1200, 560)
 animation = &"animation_library/Limping-InPlace"
 
 [sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_n4m28"]
 resource_name = "BLTAnimationNodeSampler"
+position = Vector2(-1300, -40)
 animation = &"animation_library/Walk-InPlace"
 
 [resource]

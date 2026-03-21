@@ -1,5 +1,6 @@
 @tool
 extends EditorPlugin
+class_name BlendalotPlugin
 
 var editor_dock:EditorDock = null
 var animation_graph_editor:AnimationGraphEditor = null
@@ -58,6 +59,10 @@ func _edit(object: Object):
 		return 
 	
 	if object is BLTBlendTree:
+		animation_graph_editor.edit_animation_root_node(object)
+		return
+	
+	if object is BLTStateMachine:
 		animation_graph_editor.edit_animation_root_node(object)
 		return
 	

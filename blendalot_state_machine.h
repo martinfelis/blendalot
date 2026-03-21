@@ -14,9 +14,10 @@ class BLTStateMachineTransition : public BLTAnimationNodeBlend2 {
 	double transition_duration = 0.1;
 
 protected:
-	bool _set(const StringName &p_name, const Variant &p_value);
-	bool _get(const StringName &p_name, Variant &r_ret) const;
+	static void _bind_methods();
 	void _get_property_list(List<PropertyInfo> *p_list) const;
+	bool _get(const StringName &p_name, Variant &r_ret) const;
+	bool _set(const StringName &p_name, const Variant &p_value);
 
 public:
 	void force_transition(bool value) {
@@ -25,6 +26,10 @@ public:
 
 	void set_transition_duration(double value) {
 		transition_duration = value;
+	}
+
+	double get_transition_duration() const {
+		return transition_duration;
 	}
 
 	double get_transition_time() const {
@@ -108,12 +113,21 @@ class BLTStateMachine : public BLTAnimationNode {
 	}
 
 protected:
+	static void _bind_methods();
+	void _get_property_list(List<PropertyInfo> *p_list) const;
 	bool _set(const StringName &p_name, const Variant &p_value);
 	bool _get(const StringName &p_name, Variant &r_ret) const;
-	void _get_property_list(List<PropertyInfo> *p_list) const;
 
 public:
 	Vector2 graph_offset;
+
+	Vector2 get_graph_offset() const {
+		return graph_offset;
+	}
+
+	void set_graph_offset(const Vector2 &p_graph_offset) {
+		graph_offset = p_graph_offset;
+	}
 
 	int64_t find_state_index(const Ref<BLTAnimationNode> &state) const {
 		return states.find(state);
@@ -145,12 +159,48 @@ public:
 	}
 
 	void add_state(const Ref<BLTAnimationNode> &state) {
+		StringName node_base_name = state->get_name();
+		if (node_base_name.is_empty()) {
+			node_base_name = state->get_class_name();
+		}
+		state->set_name(node_base_name);
+
+		int number_suffix = 1;
+		while (find_state_index_by_name(state->get_name()) != -1) {
+			state->set_name(vformat("%s %d", node_base_name, number_suffix));
+			number_suffix++;
+		}
+
 		states.push_back(state);
 		state_leaving_transitions.push_back(LocalVector<Ref<BLTStateMachineTransition>>());
 
 		if (entry_state.is_null()) {
 			entry_state = state;
 		}
+	}
+
+	TypedArray<StringName> get_state_names_as_typed_array() const {
+		Vector<StringName> vec;
+		for (const Ref<BLTAnimationNode> &state : states) {
+			vec.push_back(state->get_name());
+		}
+
+		TypedArray<StringName> typed_arr;
+		typed_arr.resize(vec.size());
+		for (uint32_t i = 0; i < vec.size(); i++) {
+			typed_arr[i] = vec[i];
+		}
+		return typed_arr;
+	}
+
+	Ref<BLTAnimationNode> get_state(const StringName &state_name) const {
+		int state_index = find_state_index_by_name(state_name);
+
+		if (state_index >= 0) {
+			return states[state_index];
+		}
+
+		return nullptr;
 	}
 
 	bool add_transition(const Ref<BLTAnimationNode> &from_state, const Ref<BLTAnimationNode> &to_state, const Ref<BLTStateMachineTransition> &transition) {
@@ -176,6 +226,18 @@ public:
 		state_leaving_transitions[from_state_index].push_back(transition);
 
 		return true;
+	}
+
+	Array get_transitions_as_array() const {
+		Array result;
+
+		for (uint32_t i = 0; i < transitions.size(); i++) {
+			result.push_back(transition_states[i][0]);
+			result.push_back(transition_states[i][1]);
+			result.push_back(transitions[i]);
+		}
+
+		return result;
 	}
 
 	// overrides from BLTAnimationNode

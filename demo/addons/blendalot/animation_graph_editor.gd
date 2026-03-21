@@ -99,6 +99,13 @@ func edit_graph(blt_node:BLTAnimationNode):
 		blend_tree_graph_edit.edit_blend_tree(blt_node)
 		blend_tree_graph_edit.edit_subgraph.connect(handle_subgraph_edit)
 		active_graph_edit = blend_tree_graph_edit
+	elif blt_node is BLTStateMachine:
+		reset_graph_control()
+		var state_machine_graph_edit:BltStateMachineEditor = preload ("res://addons/blendalot/state_machine_editor.tscn").instantiate()
+		active_graph_control.add_child(state_machine_graph_edit)
+		state_machine_graph_edit.edit_state_machine(blt_node)
+		state_machine_graph_edit.edit_subgraph.connect(handle_subgraph_edit)
+		active_graph_edit = state_machine_graph_edit
 	else:
 		push_error("Cannot edit graph of node type %s" % blt_node.get_class())
 

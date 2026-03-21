@@ -1,5 +1,14 @@
 #include "blendalot_state_machine.h"
 
+#include "core/object/class_db.h"
+
+//
+// BLTStateMachineTransition
+//
+void BLTStateMachineTransition::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("force_transition", "flag"), &BLTStateMachineTransition::force_transition);
+}
+
 void BLTStateMachineTransition::_get_property_list(List<PropertyInfo> *p_list) const {
 	p_list->push_back(PropertyInfo(Variant::FLOAT, transition_duration_name, PROPERTY_HINT_RANGE, "0,1,0.01,or_less,or_greater"));
 }
@@ -22,6 +31,22 @@ bool BLTStateMachineTransition::_set(const StringName &p_name, const Variant &p_
 	}
 
 	return false;
+}
+
+//
+// BLTStateMachine
+//
+void BLTStateMachine::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("add_state", "state"), &BLTStateMachine::add_state);
+	ClassDB::bind_method(D_METHOD("get_state", "state_name"), &BLTStateMachine::get_state);
+	ClassDB::bind_method(D_METHOD("get_state_names"), &BLTStateMachine::get_state_names_as_typed_array);
+
+	ClassDB::bind_method(D_METHOD("add_transition", "from_state", "to_state", "transition"), &BLTStateMachine::add_transition);
+	ClassDB::bind_method(D_METHOD("get_transitions"), &BLTStateMachine::get_transitions_as_array);
+
+	ClassDB::bind_method(D_METHOD("set_graph_offset", "graph_offset"), &BLTStateMachine::set_graph_offset);
+	ClassDB::bind_method(D_METHOD("get_graph_offset"), &BLTStateMachine::get_graph_offset);
+	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "graph_offset", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_graph_offset", "get_graph_offset");
 }
 
 void BLTStateMachine::_get_property_list(List<PropertyInfo> *p_list) const {
