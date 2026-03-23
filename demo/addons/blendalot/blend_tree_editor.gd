@@ -3,6 +3,8 @@
 extends Control
 class_name BltBlendTreeEditor
 
+@onready var registered_nodes = load ("res://addons/blendalot/blendalot_node_registry.gd").new().registered_nodes
+
 @onready var blend_tree_graph_edit: GraphEdit = %BlendTreeGraphEdit
 @onready var add_node_popup_menu: PopupMenu = %AddNodePopupMenu
 
@@ -18,16 +20,9 @@ var selected_nodes = {}
 var last_selected_graph_node:GraphNode = null
 var new_node_position:Vector2 = Vector2.ZERO
 
-var registered_nodes = [ 
-	"BLTAnimationNodeSampler",
-	"BLTAnimationNodeBlend2",
-	"BLTAnimationNodeTimeScale",
-	"BLTBlendTree",
-	"BLTStateMachine"
-	]
-
 
 func _ready() -> void:
+	
 	add_node_popup_menu.clear(true)
 	
 	for node_name in registered_nodes:

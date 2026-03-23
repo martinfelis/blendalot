@@ -2,16 +2,16 @@
 extends EditorPlugin
 class_name BlendalotPlugin
 
+const BLENDALOT_AUTOLOAD_NAME = "Blendalot"
+
 var editor_dock:EditorDock = null
 var animation_graph_editor:AnimationGraphEditor = null
 
+
 func _enable_plugin() -> void:
-	# Add autoloads here.
 	pass
 
-
 func _disable_plugin() -> void:
-	# Remove autoloads here.
 	pass
 
 

@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://c3f71jppdfd4w"]
 
 [ext_resource type="Script" uid="uid://1n38bsxkst2i" path="res://addons/blendalot/state_machine_editor.gd" id="1_0b2te"]
+[ext_resource type="Script" uid="uid://bsy6drpth2ong" path="res://addons/blendalot/state_machine_graph_edit.gd" id="2_vdaym"]
 
 [node name="StateMachineEditor" type="Control" unique_id=1313738200]
 layout_mode = 3
@@ -11,7 +12,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_0b2te")
 
-[node name="Panel" type="Panel" parent="." unique_id=758924321]
+[node name="Panel" type="VBoxContainer" parent="." unique_id=977653135]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -19,6 +20,18 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_vertical = 3
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Panel" unique_id=234094971]
+layout_mode = 2
+
+[node name="SimpleStateMachineTestButton" type="Button" parent="Panel/HBoxContainer" unique_id=788941036]
+layout_mode = 2
+text = "SimpleStateMachineTest
+"
+
+[node name="AddTransitionsButton" type="Button" parent="Panel/HBoxContainer" unique_id=574268377]
+layout_mode = 2
+text = "Add Transitions"
 
 [node name="AddStatePopupMenu" type="PopupMenu" parent="Panel" unique_id=108570539]
 unique_name_in_owner = true
@@ -37,14 +50,15 @@ item_4/id = 4
 
 [node name="StateMachineGraphEdit" type="GraphEdit" parent="Panel" unique_id=391120290]
 unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+custom_minimum_size = Vector2(300, 300)
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 1
 right_disconnects = true
+script = ExtResource("2_vdaym")
 
+[connection signal="pressed" from="Panel/HBoxContainer/SimpleStateMachineTestButton" to="." method="_create_simple_state_machine"]
+[connection signal="pressed" from="Panel/HBoxContainer/AddTransitionsButton" to="." method="_add_simple_state_machine_transitions"]
 [connection signal="index_pressed" from="Panel/AddStatePopupMenu" to="." method="_on_add_state_popup_menu_index_pressed"]
 [connection signal="connection_request" from="Panel/StateMachineGraphEdit" to="." method="_on_state_machine_graph_edit_connection_request"]
 [connection signal="delete_nodes_request" from="Panel/StateMachineGraphEdit" to="." method="_on_state_machine_graph_edit_delete_nodes_request"]
