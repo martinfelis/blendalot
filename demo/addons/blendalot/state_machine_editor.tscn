@@ -57,6 +57,7 @@ mouse_filter = 1
 right_disconnects = true
 script = ExtResource("2_vdaym")
 
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="pressed" from="Panel/HBoxContainer/SimpleStateMachineTestButton" to="." method="_create_simple_state_machine"]
 [connection signal="pressed" from="Panel/HBoxContainer/AddTransitionsButton" to="." method="_add_simple_state_machine_transitions"]
 [connection signal="index_pressed" from="Panel/AddStatePopupMenu" to="." method="_on_add_state_popup_menu_index_pressed"]

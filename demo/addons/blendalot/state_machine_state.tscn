@@ -1,0 +1,74 @@
+[gd_scene format=3 uid="uid://cs7w3ra05kqad"]
+
+[ext_resource type="Script" uid="uid://cm2mnilwe23bi" path="res://addons/blendalot/state_machine_state.gd" id="1_4ua7p"]
+[ext_resource type="Material" uid="uid://c7m1phrl11xp" path="res://addons/blendalot/panel_shader_material.tres" id="1_g2tc1"]
+
+[sub_resource type="Shader" id="Shader_l0cfh"]
+code = "shader_type canvas_item;
+render_mode blend_mix;
+
+uniform vec4 color :source_color = vec4(1.0, 0.0, 0.0, 1.0);
+
+void fragment() {
+	COLOR = color;
+}"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_4ua7p"]
+shader = SubResource("Shader_l0cfh")
+shader_parameter/color = Color(0.9333248, 1.992613e-05, 0.640465, 1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_g2tc1"]
+shader = SubResource("Shader_l0cfh")
+shader_parameter/color = Color(1, 1, 1, 1)
+
+[node name="StateMachineState" type="GraphElement" unique_id=658492101]
+offset_right = 37.0
+offset_bottom = 35.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 0
+selected = true
+script = ExtResource("1_4ua7p")
+title = "Kloea"
+
+[node name="TransitionDragPanel" type="Panel" parent="." unique_id=111051950]
+material = SubResource("ShaderMaterial_4ua7p")
+layout_mode = 2
+
+[node name="TransitionDragContainer" type="MarginContainer" parent="." unique_id=563774159]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
+
+[node name="SelectionOutlinePanel" type="Panel" parent="TransitionDragContainer" unique_id=646543732]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_g2tc1")
+layout_mode = 2
+
+[node name="CenterContainer" type="CenterContainer" parent="TransitionDragContainer" unique_id=1389466732]
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="TransitionDragContainer/CenterContainer" unique_id=1058334107]
+layout_mode = 2
+theme_override_constants/margin_left = 1
+theme_override_constants/margin_top = 1
+theme_override_constants/margin_right = 1
+theme_override_constants/margin_bottom = 1
+
+[node name="StateContentPanel" type="Panel" parent="TransitionDragContainer/CenterContainer/MarginContainer" unique_id=392187921]
+unique_name_in_owner = true
+material = ExtResource("1_g2tc1")
+layout_mode = 2
+
+[node name="StateContentContainer" type="VBoxContainer" parent="TransitionDragContainer/CenterContainer/MarginContainer" unique_id=386468802]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="TransitionDragContainer/CenterContainer/MarginContainer/StateContentContainer" unique_id=49180685]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Kloea"
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]

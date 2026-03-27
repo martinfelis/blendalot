@@ -1,0 +1,40 @@
+[gd_scene format=3 uid="uid://cirls0t0j32bq"]
+
+[ext_resource type="Script" uid="uid://cumbeawff4c61" path="res://addons/blendalot/utils/state_machine_editor_test.gd" id="1_knjhx"]
+[ext_resource type="Script" uid="uid://bsy6drpth2ong" path="res://addons/blendalot/state_machine_graph_edit.gd" id="2_knjhx"]
+
+[node name="StateMachineEditorTest" type="Control" unique_id=1015869251]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 1
+script = ExtResource("1_knjhx")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=43866466]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=1932714782]
+layout_mode = 2
+
+[node name="AddStateButton" type="Button" parent="VBoxContainer/HBoxContainer" unique_id=1745899359]
+layout_mode = 2
+text = "Add State"
+
+[node name="StateMachineGraphEdit" type="GraphEdit" parent="VBoxContainer" unique_id=1258741157]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("2_knjhx")
+metadata/_custom_type_script = "uid://bsy6drpth2ong"
+
+[connection signal="pressed" from="VBoxContainer/HBoxContainer/AddStateButton" to="." method="_on_add_state_button_pressed"]

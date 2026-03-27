@@ -18,7 +18,7 @@ var graph_node_to_state_node = {}
 var transition_lines = []
 
 var selected_nodes = {}
-var last_selected_graph_node:GraphNode = null
+var last_selected_graph_node:GraphElement = null
 var new_state_position:Vector2 = Vector2.ZERO
 var transition_trag_start_position:Vector2 = Vector2.INF
 
@@ -58,17 +58,20 @@ func edit_state_machine(blt_state_machine:BLTStateMachine):
 func _update_editor_nodes_from_state_machine():
 	for state_name in state_machine.get_state_names():
 		var state_node:BLTAnimationNode = state_machine.get_node(state_name)
-		var graph_node:GraphNode = create_graph_node_for_blt_node(state_node)
+		var graph_node:GraphElement = create_graph_node_for_blt_node(state_node)
 		state_machine_graph_edit.add_child(graph_node)
 		
 		state_node_to_graph_node[state_node] = graph_node
 		graph_node_to_state_node[graph_node] = state_node
 
 
-func create_graph_node_for_blt_node(blt_node: BLTAnimationNode) -> GraphNode:
-	var result_graph_node:GraphNode = GraphNode.new()
+func create_graph_node_for_blt_node(blt_node: BLTAnimationNode) -> GraphElement:
+	var result_graph_node:GraphElement = GraphElement.new()
 	result_graph_node.name = blt_node.resource_name
-	result_graph_node.title = blt_node.resource_name
+	var state_graph_element:StateMachineState = preload("res://addons/blendalot/state_machine_state.tscn").instantiate()
+	result_graph_node.add_child(state_graph_element)
+	state_graph_element.title = blt_node.resource_name
+	state_graph_element.transition_border_size = 10
 	result_graph_node.position_offset = blt_node.position
 	
 	blt_node.node_changed.connect(_trigger_graph_changed)
@@ -98,7 +101,7 @@ func _trigger_graph_changed(_node_name):
 	graph_changed.emit()
 
 
-func _remove_node_connections(graph_node:GraphNode):
+func _remove_node_connections(graph_node:GraphElement):
 	var node_connections:Array = []
 	
 	for connection:Dictionary in state_machine_graph_edit.connections:
@@ -157,7 +160,7 @@ func _on_state_machine_graph_edit_delete_nodes_request(nodes: Array[StringName])
 		
 		state_machine_node.node_changed.disconnect(_trigger_graph_changed)
 		
-		var graph_node:GraphNode = state_node_to_graph_node[state_machine_node]
+		var graph_node:GraphElement = state_node_to_graph_node[state_machine_node]
 		state_machine.remove_node(state_machine_node)
 		state_node_to_graph_node.erase(state_machine_node)
 		
@@ -170,7 +173,7 @@ func _on_state_machine_graph_edit_delete_nodes_request(nodes: Array[StringName])
 
 
 func _on_state_machine_graph_edit_end_node_move() -> void:
-	for graph_node:GraphNode in selected_nodes.keys():
+	for graph_node:GraphElement in selected_nodes.keys():
 		graph_node_to_state_node[graph_node].position = graph_node.position_offset
 	
 	state_machine_graph_edit.queue_redraw()
@@ -208,7 +211,7 @@ func _on_add_state_popup_menu_index_pressed(index: int) -> void:
 	var new_state_node: BLTAnimationNode = ClassDB.instantiate(registered_nodes[index])
 	state_machine.add_state(new_state_node)	
 	
-	var graph_node:GraphNode = create_graph_node_for_blt_node(new_state_node)
+	var graph_node:GraphElement = create_graph_node_for_blt_node(new_state_node)
 	state_machine_graph_edit.add_child(graph_node)
 	
 	graph_node_to_state_node[graph_node] = new_state_node
@@ -222,9 +225,25 @@ func _on_add_state_popup_menu_index_pressed(index: int) -> void:
 
 
 #
+# General input handling
+#
+func _on_gui_input(event: InputEvent) -> void:
+	if transition_trag_start_position != Vector2.INF:
+		return
+		
+	var mouse_button_event:InputEventMouseButton = event as InputEventMouseButton
+	if not is_instance_valid(mouse_button_event):
+		return
+	
+	if mouse_button_event.button_mask & MOUSE_BUTTON_LEFT == 0:
+		print("drag end")
+		transition_trag_start_position = Vector2.INF
+
+
+#
 # Handle Node double click
 #
-func _on_node_gui_input(input_event:InputEvent, graph_node:GraphNode):
+func _on_node_gui_input(input_event:InputEvent, graph_node:GraphElement):
 	# print("Got input event on graph node %s!" % graph_node.name)
 	
 	var mouse_button_event:InputEventMouseButton = input_event as InputEventMouseButton
@@ -235,9 +254,10 @@ func _on_node_gui_input(input_event:InputEvent, graph_node:GraphNode):
 	
 	if Input.is_key_pressed(KEY_CTRL) and mouse_button_event and mouse_button_event.pressed and mouse_button_event.button_index == MouseButton.MOUSE_BUTTON_LEFT:
 		print("drag_start")
+		transition_trag_start_position = state_machine_graph_edit.get_mouse_graph_position()
 
 
-func _on_node_double_click(graph_node:GraphNode):
+func _on_node_double_click(graph_node:GraphElement):
 	var state_machine_node:BLTAnimationNode = graph_node_to_state_node[graph_node]
 	
 	if state_machine_node is BLTBlendTree:
@@ -262,7 +282,7 @@ func _create_and_add_state(blt_node_type_name:String, name:String = "Test State"
 	new_state_node.position = position
 	state_machine.add_state(new_state_node)	
 	
-	var graph_node:GraphNode = create_graph_node_for_blt_node(new_state_node)
+	var graph_node:GraphElement = create_graph_node_for_blt_node(new_state_node)
 	state_machine_graph_edit.add_child(graph_node)
 	
 	graph_node_to_state_node[graph_node] = new_state_node
