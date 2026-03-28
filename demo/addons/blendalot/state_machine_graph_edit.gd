@@ -3,6 +3,8 @@
 extends GraphEdit
 class_name StateMachineGraphEdit
 
+signal transition_add_request(from_state: StringName, to_state: StringName)
+
 var transitions = []
 var transition_drag_start_state:GraphElement = null
 var hovered_state:GraphElement = null
@@ -79,7 +81,7 @@ func _draw():
 			target_position = get_state_graph_position(hovered_state)
 		else:
 			target_position = get_mouse_graph_position() * zoom - scroll_offset * zoom
-		_draw_transition_line(get_state_graph_position(transition_drag_start_state), get_mouse_graph_position() * zoom - scroll_offset * zoom)
+		_draw_transition_line(get_state_graph_position(transition_drag_start_state), target_position)
 
 
 func on_transition_drag_start(state_graph_element:GraphElement):
@@ -89,11 +91,15 @@ func on_transition_drag_start(state_graph_element:GraphElement):
 
 func on_transition_drag_end(position:Vector2):
 	print("Ending transition at pos %s" % position)
+	if hovered_state != null:
+		transition_add_request.emit(transition_drag_start_state.title, hovered_state.title)
 	transition_drag_start_state = null
 
 
 func on_state_mouse_entered(state:StateMachineState):
 	print("mouse entered %s" % state.title)
+	if transition_drag_start_state != null:
+		print("Should snap to this state %s" % state.title)
 	hovered_state = state
 
 
