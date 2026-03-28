@@ -48,6 +48,7 @@ signal transition_drag_end
 var is_dragging_node = false
 var is_mouse_over_transition_border = false
 var is_dragging_transition = false
+var is_mouse_hovering = false
 
 func _ready() -> void:
 	var parent_state_machine_graph_edit:StateMachineGraphEdit = get_parent() as StateMachineGraphEdit
@@ -57,8 +58,15 @@ func _ready() -> void:
 	
 	transition_drag_start.connect(parent_state_machine_graph_edit.on_transition_drag_start)
 	transition_drag_end.connect(parent_state_machine_graph_edit.on_transition_drag_end)
-	mouse_entered.connect(parent_state_machine_graph_edit.on_state_mouse_entered)
-	mouse_exited.connect(parent_state_machine_graph_edit.on_state_mouse_exited)
+	mouse_entered.connect(parent_state_machine_graph_edit.on_state_mouse_entered.bind(self))
+	mouse_exited.connect(parent_state_machine_graph_edit.on_state_mouse_exited.bind(self))
+
+
+func _process(delta: float) -> void:
+	if is_mouse_hovering:
+		if not transition_drag_container.get_rect().has_point(get_local_mouse_position()):
+			is_mouse_hovering = false
+			mouse_exited.emit()
 
 
 func _on_gui_input(event: InputEvent) -> void:
@@ -66,6 +74,11 @@ func _on_gui_input(event: InputEvent) -> void:
 	
 	var mouse_motion_event:InputEventMouseMotion = event as InputEventMouseMotion
 	if mouse_motion_event:
+		if not is_mouse_hovering:
+			mouse_entered.emit.call_deferred()
+			
+		is_mouse_hovering = true
+		
 		if is_dragging_node:
 			return
 			

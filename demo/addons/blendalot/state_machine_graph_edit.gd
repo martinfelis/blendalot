@@ -5,6 +5,8 @@ class_name StateMachineGraphEdit
 
 var transitions = []
 var transition_drag_start_state:GraphElement = null
+var hovered_state:GraphElement = null
+
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
@@ -72,6 +74,11 @@ func _draw():
 		_draw_transition_line(get_state_graph_position(from_node), get_state_graph_position(to_node))
 	
 	if is_instance_valid(transition_drag_start_state):
+		var target_position:Vector2
+		if hovered_state:
+			target_position = get_state_graph_position(hovered_state)
+		else:
+			target_position = get_mouse_graph_position() * zoom - scroll_offset * zoom
 		_draw_transition_line(get_state_graph_position(transition_drag_start_state), get_mouse_graph_position() * zoom - scroll_offset * zoom)
 
 
@@ -87,7 +94,9 @@ func on_transition_drag_end(position:Vector2):
 
 func on_state_mouse_entered(state:StateMachineState):
 	print("mouse entered %s" % state.title)
+	hovered_state = state
 
 
 func on_state_mouse_exited(state:StateMachineState):
 	print("mouse exited %s" % state.title)
+	hovered_state = null

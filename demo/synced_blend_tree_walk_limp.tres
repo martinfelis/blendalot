@@ -15,11 +15,28 @@ resource_name = "BLTAnimationNodeSampler"
 position = Vector2(-1300, -40)
 animation = &"animation_library/Walk-InPlace"
 
+[sub_resource type="BLTStateMachine" id="BLTStateMachine_04gep"]
+resource_name = "BLTStateMachine 1"
+position = Vector2(680, 180)
+graph_offset = Vector2(-366.79407, -58.023994)
+graph_offset = Vector2(-366.79407, -58.023994)
+
+[sub_resource type="BLTStateMachine" id="BLTStateMachine_c847x"]
+resource_name = "BLTStateMachine"
+position = Vector2(-334, -96)
+graph_offset = Vector2(-797.4927, -226.74481)
+graph_offset = Vector2(-797.4927, -226.74481)
+
 [resource]
+resource_name = "Root"
 nodes/BLTAnimationNodeBlend2/node = SubResource("BLTAnimationNodeBlend2_bvt3d")
 nodes/BLTAnimationNodeBlend2/graph_offset = Vector2(-600, 180)
 "nodes/BLTAnimationNodeSampler 1/node" = SubResource("BLTAnimationNodeSampler_sntl5")
 "nodes/BLTAnimationNodeSampler 1/graph_offset" = Vector2(-1200, 560)
 nodes/BLTAnimationNodeSampler/node = SubResource("BLTAnimationNodeSampler_n4m28")
 nodes/BLTAnimationNodeSampler/graph_offset = Vector2(-1300, -40)
+nodes/BLTStateMachine/node = SubResource("BLTStateMachine_c847x")
+nodes/BLTStateMachine/graph_offset = Vector2(-334, -96)
+"nodes/BLTStateMachine 1/node" = SubResource("BLTStateMachine_04gep")
+"nodes/BLTStateMachine 1/graph_offset" = Vector2(680, 180)
 node_connections = ["BLTAnimationNodeBlend2", 0, "BLTAnimationNodeSampler", "BLTAnimationNodeBlend2", 1, "BLTAnimationNodeSampler 1", "Output", 0, "BLTAnimationNodeBlend2"]
