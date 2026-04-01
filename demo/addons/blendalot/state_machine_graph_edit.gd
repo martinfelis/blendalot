@@ -5,7 +5,10 @@ class_name StateMachineGraphEdit
 
 signal transition_add_request(from_state: StringName, to_state: StringName)
 
+@onready var debug_label: Label = %DebugLabel
+
 var transitions = []
+var closest_transition_to_mouse = null
 var transition_drag_start_state:GraphElement = null
 var hovered_state:GraphElement = null
 
@@ -28,7 +31,39 @@ func get_state_graph_position(state:GraphElement) -> Vector2:
 	return (state.position_offset) * zoom + state.get_rect().size * 0.5 - scroll_offset
 
 
+func calc_distance_point_to_line_segment(p:Vector2, a:Vector2, b:Vector2) -> float:
+	var dist_a_b_squared = (b - a).length_squared()
+	var t:float = 0
+	
+	if is_zero_approx(dist_a_b_squared):
+		t = 0.5
+	else:
+		t = max(0, min(1, (p - a).dot(b - a) / dist_a_b_squared))
+	
+	return (p - (a + t * (b - a))).length()
+
+
+func _update_closest_transition_to_mouse() -> void:
+	var closest_distance:float = INF
+	for transition in transitions:
+		var distance:float = calc_distance_point_to_line_segment(
+			get_mouse_graph_position() * zoom - scroll_offset * zoom, 
+			get_state_graph_position(transition[0]),
+			get_state_graph_position(transition[1]))
+		if distance < closest_distance:
+			closest_transition_to_mouse = transition
+			closest_distance = distance
+	
+	if closest_transition_to_mouse != null:
+		debug_label.text = "Closest transition: %s -> %s (%s)" % [closest_transition_to_mouse[0], closest_transition_to_mouse[1], closest_distance]
+	else:
+		debug_label.text = "No transition found: %s" % closest_distance
+
+
 func _process(_delta: float) -> void:
+	_update_closest_transition_to_mouse()
+	queue_redraw()
+	
 	if not is_instance_valid(transition_drag_start_state):
 		return
 	
@@ -36,11 +71,18 @@ func _process(_delta: float) -> void:
 
 
 func _draw_transition_line(start_position:Vector2, end_position:Vector2) -> void:
+	var line_width = 2.0
+	var line_color = Color.WHITE
+
+	if closest_transition_to_mouse != null and start_position == get_state_graph_position(closest_transition_to_mouse[0]) and end_position == get_state_graph_position(closest_transition_to_mouse[1]):
+		line_width = 4.0
+		line_color = Color.WHITE
+	
 	var line_center = (start_position + end_position) * 0.5
 	var direction = (end_position - start_position).normalized()
 	var orthogonal = Vector2(-direction.y, direction.x)
 	
-	draw_line(start_position, end_position, Color.WHITE, 2.0, true)
+	draw_line(start_position, end_position, line_color, line_width, true)
 	# draw_circle(line_center, 4.0, Color.GREEN)
 	
 	var triangle_size = 20
