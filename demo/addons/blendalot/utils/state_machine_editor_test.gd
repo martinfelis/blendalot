@@ -9,8 +9,9 @@ var states = {}
 
 func _ready():
 	state_machine_graph_edit.transition_add_request.connect(_on_transition_add_request)
+	state_machine_graph_edit.transition_remove_request.connect(_on_transition_remove_request)
 	state_machine_graph_edit.transition_selected.connect(_on_transition_selected)
-	state_machine_graph_edit.transition_deselected.connect(_on_transition_deselected)	
+	state_machine_graph_edit.transition_deselected.connect(_on_transition_deselected)
 
 
 func remove_state_transitions(node:GraphElement) -> void:
@@ -41,6 +42,11 @@ func _on_add_state_button_pressed() -> void:
 
 func _on_transition_add_request(from_state_name:String, to_state_name:String):
 	state_machine_graph_edit.add_transition(states[from_state_name], states[to_state_name])
+
+
+func _on_transition_remove_request(from_state_name:String, to_state_name:String):
+	print("will try to remove transition %s -> %s" % [from_state_name, to_state_name])
+	state_machine_graph_edit.remove_transition(states[from_state_name], states[to_state_name])
 
 
 func _on_transition_selected(from_state_name:String, to_state_name:String):

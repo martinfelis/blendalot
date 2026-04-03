@@ -4,11 +4,11 @@ extends GraphEdit
 class_name StateMachineGraphEdit
 
 signal transition_add_request(from_state: StringName, to_state: StringName)
-
-# TODO
 signal transition_selected(from_state: StringName, to_state: StringName)
 signal transition_deselected(from_state: StringName, to_state: StringName)
 signal transition_remove_request(from_state: StringName, to_state: StringName)
+
+# TODO
 signal begin_state_move()
 signal end_state_move()
 
@@ -45,6 +45,16 @@ func _ready() -> void:
 
 func add_transition(from_node:GraphElement, to_node:GraphElement):
 	transitions.append([from_node, to_node])
+	queue_redraw()
+
+
+func remove_transition(from_node:GraphElement, to_node:GraphElement):
+	for i in range(0, len(transitions)):
+		if transitions[i][0] == from_node and transitions[i][1] == to_node:
+			transitions.remove_at(i)
+			
+			queue_redraw()
+			return
 
 
 func get_mouse_graph_position() -> Vector2:
@@ -181,13 +191,24 @@ func on_state_mouse_exited(state:StateMachineState):
 	hovered_state = null
 
 
-func _unhandled_input(event: InputEvent) -> void:
+func _on_gui_input(event: InputEvent) -> void:
 	var mouse_button_event:InputEventMouseButton = event as InputEventMouseButton
 	if mouse_button_event and mouse_button_event.button_index == MOUSE_BUTTON_LEFT and mouse_button_event.pressed:
 		if selected_transition != null and closest_transition_to_mouse != selected_transition:
 			transition_deselected.emit(selected_transition[0].title, selected_transition[1].title)
 			selected_transition = null
+			get_viewport().set_input_as_handled()
 		
 		if selected_transition == null and closest_transition_to_mouse != null:
 			selected_transition = closest_transition_to_mouse
 			transition_selected.emit(selected_transition[0].title, selected_transition[1].title)
+			get_viewport().set_input_as_handled()
+		
+		return
+
+	var key_event:InputEventKey = event as InputEventKey
+	if key_event and key_event.pressed and key_event.physical_keycode == KEY_DELETE:
+		if selected_transition != null:
+			transition_remove_request.emit(selected_transition[0].title, selected_transition[1].title)
+			get_viewport().set_input_as_handled()
+			return

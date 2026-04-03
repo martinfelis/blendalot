@@ -45,3 +45,4 @@ metadata/_custom_type_script = "uid://bsy6drpth2ong"
 
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/AddStateButton" to="." method="_on_add_state_button_pressed"]
 [connection signal="delete_nodes_request" from="VBoxContainer/StateMachineGraphEdit" to="." method="_on_state_machine_graph_edit_delete_nodes_request"]
+[connection signal="gui_input" from="VBoxContainer/StateMachineGraphEdit" to="VBoxContainer/StateMachineGraphEdit" method="_on_gui_input"]
