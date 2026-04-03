@@ -157,7 +157,7 @@ func _on_gui_input(event: InputEvent) -> void:
 		# We ignore mouse motion events that are outside of our rect.
 		if not get_rect().has_point(get_local_mouse_position()):
 			return
-		
+		StateMachineState
 		if not is_mouse_hovering:
 			mouse_entered.emit.call_deferred(self)
 		

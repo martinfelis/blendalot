@@ -5,10 +5,35 @@ class_name StateMachineGraphEdit
 
 signal transition_add_request(from_state: StringName, to_state: StringName)
 
+# TODO
+signal transition_selected(from_state: StringName, to_state: StringName)
+signal transition_deselected(from_state: StringName, to_state: StringName)
+signal transition_remove_request(from_state: StringName, to_state: StringName)
+signal begin_state_move()
+signal end_state_move()
+
+# Postponed
+# signal state_begin_move
+
+enum TransitionDrawMode {
+	DEFAULT,
+	HOVER,
+	SELECTED
+}
+
+const TRANSITION_HOVER_DISTANCE:float = 20
+const TRANSITION_LINE_COLOR_DEFAULT:Color = Color.WHITE
+const TRANSITION_LINE_WIDTH_DEFAULT:float = 2
+const TRANSITION_LINE_COLOR_HOVER:Color = Color.PALE_GOLDENROD
+const TRANSITION_LINE_WIDTH_HOVER:float = 10
+const TRANSITION_LINE_COLOR_SELECTED:Color = Color.WHITE
+const TRANSITION_LINE_WIDTH_SELECTED:float = 6
+
 @onready var debug_label: Label = %DebugLabel
 
 var transitions = []
 var closest_transition_to_mouse = null
+var selected_transition = null
 var transition_drag_start_state:GraphElement = null
 var hovered_state:GraphElement = null
 
@@ -54,6 +79,10 @@ func _update_closest_transition_to_mouse() -> void:
 			closest_transition_to_mouse = transition
 			closest_distance = distance
 	
+	if closest_distance > TRANSITION_HOVER_DISTANCE:
+		closest_distance = INF
+		closest_transition_to_mouse = null
+	
 	if closest_transition_to_mouse != null:
 		debug_label.text = "Closest transition: %s -> %s (%s)" % [closest_transition_to_mouse[0], closest_transition_to_mouse[1], closest_distance]
 	else:
@@ -70,20 +99,22 @@ func _process(_delta: float) -> void:
 	queue_redraw()
 
 
-func _draw_transition_line(start_position:Vector2, end_position:Vector2) -> void:
-	var line_width = 2.0
-	var line_color = Color.WHITE
-
-	if closest_transition_to_mouse != null and start_position == get_state_graph_position(closest_transition_to_mouse[0]) and end_position == get_state_graph_position(closest_transition_to_mouse[1]):
-		line_width = 4.0
-		line_color = Color.WHITE
+func _draw_transition_line(start_position:Vector2, end_position:Vector2, draw_mode:TransitionDrawMode = TransitionDrawMode.DEFAULT) -> void:
+	var line_width:float = TRANSITION_LINE_WIDTH_DEFAULT
+	var line_color:Color = TRANSITION_LINE_COLOR_DEFAULT
 	
+	if draw_mode == TransitionDrawMode.HOVER:
+		line_width = TRANSITION_LINE_WIDTH_HOVER
+		line_color = TRANSITION_LINE_COLOR_HOVER
+	elif draw_mode == TransitionDrawMode.SELECTED:
+		line_width = TRANSITION_LINE_WIDTH_SELECTED
+		line_color = TRANSITION_LINE_COLOR_SELECTED
+
 	var line_center = (start_position + end_position) * 0.5
 	var direction = (end_position - start_position).normalized()
 	var orthogonal = Vector2(-direction.y, direction.x)
 	
 	draw_line(start_position, end_position, line_color, line_width, true)
-	# draw_circle(line_center, 4.0, Color.GREEN)
 	
 	var triangle_size = 20
 	
@@ -115,7 +146,13 @@ func _draw():
 		var start_position:Vector2 = (from_node.position_offset) * zoom + from_node.get_rect().size * 0.5 - scroll_offset
 		var end_position:Vector2 = (to_node.position_offset) * zoom + to_node.get_rect().size * 0.5 - scroll_offset
 		
-		_draw_transition_line(get_state_graph_position(from_node), get_state_graph_position(to_node))
+		var transition_draw_mode:TransitionDrawMode = TransitionDrawMode.DEFAULT
+		if closest_transition_to_mouse != null and closest_transition_to_mouse[0] == from_node and closest_transition_to_mouse[1] == to_node:
+			transition_draw_mode = TransitionDrawMode.HOVER
+		elif selected_transition != null and selected_transition[0] == from_node and selected_transition[1] == to_node:
+			transition_draw_mode = TransitionDrawMode.SELECTED
+		
+		_draw_transition_line(get_state_graph_position(from_node), get_state_graph_position(to_node), transition_draw_mode)
 	
 	if is_instance_valid(transition_drag_start_state):
 		var target_position:Vector2
@@ -127,24 +164,30 @@ func _draw():
 
 
 func on_transition_drag_start(state_graph_element:GraphElement):
-	print("Starting transition start from state %s" % state_graph_element)
 	transition_drag_start_state = state_graph_element
 
 
 func on_transition_drag_end(position:Vector2):
-	print("Ending transition at pos %s" % position)
 	if hovered_state != null:
 		transition_add_request.emit(transition_drag_start_state.title, hovered_state.title)
 	transition_drag_start_state = null
 
 
 func on_state_mouse_entered(state:StateMachineState):
-	print("mouse entered %s" % state.title)
-	if transition_drag_start_state != null:
-		print("Should snap to this state %s" % state.title)
 	hovered_state = state
 
 
 func on_state_mouse_exited(state:StateMachineState):
-	print("mouse exited %s" % state.title)
 	hovered_state = null
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	var mouse_button_event:InputEventMouseButton = event as InputEventMouseButton
+	if mouse_button_event and mouse_button_event.button_index == MOUSE_BUTTON_LEFT and mouse_button_event.pressed:
+		if selected_transition != null and closest_transition_to_mouse != selected_transition:
+			transition_deselected.emit(selected_transition[0].title, selected_transition[1].title)
+			selected_transition = null
+		
+		if selected_transition == null and closest_transition_to_mouse != null:
+			selected_transition = closest_transition_to_mouse
+			transition_selected.emit(selected_transition[0].title, selected_transition[1].title)

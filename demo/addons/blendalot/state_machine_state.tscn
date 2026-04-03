@@ -48,8 +48,6 @@ size_flags_vertical = 3
 mouse_filter = 0
 selected = true
 script = ExtResource("1_4ua7p")
-transition_border_color = Color(0.5019608, 0.5019608, 0.5019608, 1)
-state_content_color = Color(0.4117647, 0.4117647, 0.4117647, 1)
 title = "Kloea33323"
 
 [node name="TransitionDragPanel" type="Panel" parent="." unique_id=111051950]
