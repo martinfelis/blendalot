@@ -17,8 +17,8 @@ func _ready():
 func remove_state_transitions(node:GraphElement) -> void:
 	var state_transition_indices:Array[int] = []
 	
-	for i in range(0, len(state_machine_graph_edit.transitions)):
-		if state_machine_graph_edit.transitions[i][0] == node or state_machine_graph_edit.transitions[i][1] == node:
+	for i in range(0, len(state_machine_graph_edit.transition_lines)):
+		if state_machine_graph_edit.transition_lines[i].from_state == node or state_machine_graph_edit.transition_lines[i].to_state == node:
 			state_transition_indices.append(i)
 
 	if len(state_transition_indices) > 0:
@@ -26,7 +26,7 @@ func remove_state_transitions(node:GraphElement) -> void:
 		
 	state_transition_indices.reverse()
 	for index in state_transition_indices:
-		state_machine_graph_edit.transitions.remove_at(index)
+		state_machine_graph_edit.transition_lines.remove_at(index)
 
 func _on_add_state_button_pressed() -> void:
 	var state_node:StateMachineState = preload("res://addons/blendalot/state_machine_state.tscn").instantiate()

@@ -8,12 +8,15 @@ signal transition_selected(from_state: StringName, to_state: StringName)
 signal transition_deselected(from_state: StringName, to_state: StringName)
 signal transition_remove_request(from_state: StringName, to_state: StringName)
 
-# TODO
-signal begin_state_move()
-signal end_state_move()
-
-# Postponed
-# signal state_begin_move
+class TransitionLine:
+	var from_state:StateMachineState = null
+	var to_state:StateMachineState = null
+	var from_position:Vector2 = Vector2.INF
+	var to_position:Vector2 = Vector2.INF
+	
+	func _init(from:StateMachineState, to:StateMachineState) -> void:
+		from_state = from
+		to_state = to
 
 enum TransitionDrawMode {
 	DEFAULT,
@@ -24,37 +27,72 @@ enum TransitionDrawMode {
 const TRANSITION_HOVER_DISTANCE:float = 20
 const TRANSITION_LINE_COLOR_DEFAULT:Color = Color.WHITE
 const TRANSITION_LINE_WIDTH_DEFAULT:float = 2
-const TRANSITION_LINE_COLOR_HOVER:Color = Color.PALE_GOLDENROD
-const TRANSITION_LINE_WIDTH_HOVER:float = 10
-const TRANSITION_LINE_COLOR_SELECTED:Color = Color.WHITE
-const TRANSITION_LINE_WIDTH_SELECTED:float = 6
+const TRANSITION_LINE_COLOR_HOVER:Color = Color.WHITE
+const TRANSITION_LINE_WIDTH_HOVER:float = 6
+const TRANSITION_LINE_COLOR_SELECTED:Color = Color.PALE_GOLDENROD
+const TRANSITION_LINE_WIDTH_SELECTED:float = 10
+const TRANSITION_BIDIRECTIONAL_OFFSET:float = 20
 
 @onready var debug_label: Label = %DebugLabel
 
-var transitions = []
-var closest_transition_to_mouse = null
+var hover_transition = null
 var selected_transition = null
 var transition_drag_start_state:GraphElement = null
 var hovered_state:GraphElement = null
 
+var state_out_transitions = {}
+var state_in_transitions = {}
+var transition_lines = []
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-	transitions = []
+	transition_lines = []
+	state_out_transitions = {}
+	state_in_transitions = {}
 
 
 func add_transition(from_node:GraphElement, to_node:GraphElement):
-	transitions.append([from_node, to_node])
+	if state_out_transitions.has(from_node):
+		if state_out_transitions[from_node].find(to_node) != -1:
+			return
+		state_out_transitions[from_node].append(to_node)
+	else:
+		state_out_transitions[from_node] = [to_node]
+	
+	if state_in_transitions.has(to_node):
+		if state_in_transitions[to_node].find(from_node) != -1:
+			return
+		state_in_transitions[to_node].append(from_node)
+	else:
+		state_in_transitions[to_node] = [from_node]
+	
+	transition_lines.append(TransitionLine.new(from_node, to_node))
+	
 	queue_redraw()
 
 
 func remove_transition(from_node:GraphElement, to_node:GraphElement):
-	for i in range(0, len(transitions)):
-		if transitions[i][0] == from_node and transitions[i][1] == to_node:
-			transitions.remove_at(i)
-			
+	if from_node == null or to_node == null:
+		push_warning("Cannot remove transition %s -> %s. One node is null." % [from_node, to_node])
+	
+	for i in range(0, len(transition_lines)):
+		if transition_lines[i].from_state == from_node and transition_lines[i].to_state == to_node:
+			state_out_transitions[from_node].erase(to_node)
+			state_in_transitions[to_node].erase(from_node)
+			transition_lines.remove_at(i)
+
+			assert(has_reverse_transition(to_node, from_node) == false)
+
 			queue_redraw()
 			return
+
+
+func has_reverse_transition(from_node:GraphElement, to_node:GraphElement) -> bool:
+	var transition_line:TransitionLine = null
+	if state_out_transitions.has(to_node):
+		return state_out_transitions[to_node].find(from_node) != -1
+	
+	return false
 
 
 func get_mouse_graph_position() -> Vector2:
@@ -78,30 +116,37 @@ func calc_distance_point_to_line_segment(p:Vector2, a:Vector2, b:Vector2) -> flo
 	return (p - (a + t * (b - a))).length()
 
 
-func _update_closest_transition_to_mouse() -> void:
+func _update_hover_transition() -> bool:
+	var previouse_hover_transition = hover_transition
+	if hovered_state != null:
+		hover_transition = null
+		return previouse_hover_transition != null
+	
 	var closest_distance:float = INF
-	for transition in transitions:
+	for transition:TransitionLine in transition_lines:
 		var distance:float = calc_distance_point_to_line_segment(
 			get_mouse_graph_position() * zoom - scroll_offset * zoom, 
-			get_state_graph_position(transition[0]),
-			get_state_graph_position(transition[1]))
+			transition.from_position,
+			transition.to_position)
 		if distance < closest_distance:
-			closest_transition_to_mouse = transition
+			hover_transition = transition
 			closest_distance = distance
 	
 	if closest_distance > TRANSITION_HOVER_DISTANCE:
 		closest_distance = INF
-		closest_transition_to_mouse = null
+		hover_transition = null
 	
-	if closest_transition_to_mouse != null:
-		debug_label.text = "Closest transition: %s -> %s (%s)" % [closest_transition_to_mouse[0], closest_transition_to_mouse[1], closest_distance]
+	if hover_transition != null:
+		debug_label.text = "Closest transition: %s -> %s (%s)" % [hover_transition.from_state, hover_transition.to_state, closest_distance]
 	else:
 		debug_label.text = "No transition found: %s" % closest_distance
+		
+	return previouse_hover_transition != hover_transition
 
 
 func _process(_delta: float) -> void:
-	_update_closest_transition_to_mouse()
-	queue_redraw()
+	if _update_hover_transition():
+		queue_redraw()
 	
 	if not is_instance_valid(transition_drag_start_state):
 		return
@@ -122,11 +167,11 @@ func _draw_transition_line(start_position:Vector2, end_position:Vector2, draw_mo
 
 	var line_center = (start_position + end_position) * 0.5
 	var direction = (end_position - start_position).normalized()
-	var orthogonal = Vector2(-direction.y, direction.x)
+	var orthogonal = direction.orthogonal()
 	
-	draw_line(start_position, end_position, line_color, line_width, true)
+	draw_line(start_position, end_position, line_color, line_width * zoom, true)
 	
-	var triangle_size = 20
+	var triangle_size = 20 * zoom
 	
 	var triangle_vertices:PackedVector2Array = PackedVector2Array([
 		line_center - direction * triangle_size * 0.5 + orthogonal * triangle_size * 0.5,
@@ -148,22 +193,44 @@ func _draw_transition_line(start_position:Vector2, end_position:Vector2, draw_mo
 	draw_polyline(triangle_vertices, triangle_outline_color, 1, true)
 
 
+func _update_transition_lines() -> void:
+	for transition_line:TransitionLine in transition_lines:
+		transition_line.from_position = get_state_graph_position(transition_line.from_state)
+		transition_line.to_position = get_state_graph_position(transition_line.to_state)
+		
+		var line_offset:Vector2 = Vector2.ZERO
+		
+		if has_reverse_transition(transition_line.from_state, transition_line.to_state):
+			line_offset = (transition_line.to_position - transition_line.from_position).normalized().orthogonal() * TRANSITION_BIDIRECTIONAL_OFFSET * zoom
+			
+		transition_line.from_position = get_state_graph_position(transition_line.from_state) + line_offset
+		transition_line.to_position = get_state_graph_position(transition_line.to_state) + line_offset
+
+
 func _draw():
-	for transition in transitions:
-		var from_node:GraphElement = transition[0]
-		var to_node:GraphElement = transition[1]
+	_update_transition_lines()
+	
+	for transition_line:TransitionLine in transition_lines:
+		var from_node:GraphElement = transition_line.from_state
+		var to_node:GraphElement = transition_line.to_state
+		
+		var transition_draw_mode:TransitionDrawMode = TransitionDrawMode.DEFAULT
+		if hover_transition != null and hover_transition.from_state == from_node and hover_transition.to_state == to_node:
+			transition_draw_mode = TransitionDrawMode.HOVER
+		elif selected_transition != null and selected_transition.from_state == from_node and selected_transition.to_state == to_node:
+			transition_draw_mode = TransitionDrawMode.SELECTED
+		
+		_draw_transition_line(transition_line.from_position, transition_line.to_position, transition_draw_mode)
+	
+		
+	for transition:TransitionLine in transition_lines:
+		var from_node:GraphElement = transition.from_state
+		var to_node:GraphElement = transition.to_state
 		
 		var start_position:Vector2 = (from_node.position_offset) * zoom + from_node.get_rect().size * 0.5 - scroll_offset
 		var end_position:Vector2 = (to_node.position_offset) * zoom + to_node.get_rect().size * 0.5 - scroll_offset
 		
-		var transition_draw_mode:TransitionDrawMode = TransitionDrawMode.DEFAULT
-		if closest_transition_to_mouse != null and closest_transition_to_mouse[0] == from_node and closest_transition_to_mouse[1] == to_node:
-			transition_draw_mode = TransitionDrawMode.HOVER
-		elif selected_transition != null and selected_transition[0] == from_node and selected_transition[1] == to_node:
-			transition_draw_mode = TransitionDrawMode.SELECTED
-		
-		_draw_transition_line(get_state_graph_position(from_node), get_state_graph_position(to_node), transition_draw_mode)
-	
+
 	if is_instance_valid(transition_drag_start_state):
 		var target_position:Vector2
 		if hovered_state:
@@ -194,14 +261,16 @@ func on_state_mouse_exited(state:StateMachineState):
 func _on_gui_input(event: InputEvent) -> void:
 	var mouse_button_event:InputEventMouseButton = event as InputEventMouseButton
 	if mouse_button_event and mouse_button_event.button_index == MOUSE_BUTTON_LEFT and mouse_button_event.pressed:
-		if selected_transition != null and closest_transition_to_mouse != selected_transition:
-			transition_deselected.emit(selected_transition[0].title, selected_transition[1].title)
+		if selected_transition != null and hover_transition != selected_transition:
+			transition_deselected.emit(selected_transition.from_state.title, selected_transition.to_state.title)
 			selected_transition = null
+			queue_redraw()
 			get_viewport().set_input_as_handled()
 		
-		if selected_transition == null and closest_transition_to_mouse != null:
-			selected_transition = closest_transition_to_mouse
-			transition_selected.emit(selected_transition[0].title, selected_transition[1].title)
+		if selected_transition == null and hover_transition != null:
+			selected_transition = hover_transition
+			transition_selected.emit(selected_transition.from_state.title, selected_transition.to_state.title)
+			queue_redraw()
 			get_viewport().set_input_as_handled()
 		
 		return
@@ -209,6 +278,6 @@ func _on_gui_input(event: InputEvent) -> void:
 	var key_event:InputEventKey = event as InputEventKey
 	if key_event and key_event.pressed and key_event.physical_keycode == KEY_DELETE:
 		if selected_transition != null:
-			transition_remove_request.emit(selected_transition[0].title, selected_transition[1].title)
+			transition_remove_request.emit(selected_transition.from_state.title, selected_transition.to_state.title)
 			get_viewport().set_input_as_handled()
 			return
