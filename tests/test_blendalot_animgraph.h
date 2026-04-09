@@ -3,6 +3,8 @@
 #include "../blendalot_animation_graph.h"
 #include "../blendalot_blend_tree.h"
 
+#include "core/io/resource_loader.h"
+#include "core/io/resource_saver.h"
 #include "core/object/class_db.h"
 #include "scene/animation/animation_tree.h"
 #include "scene/main/window.h"
