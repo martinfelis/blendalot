@@ -23,14 +23,14 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer" unique_id=1932714782]
+[node name="DebugBar" type="HBoxContainer" parent="VBoxContainer" unique_id=1932714782]
 layout_mode = 2
 
-[node name="AddStateButton" type="Button" parent="VBoxContainer/HBoxContainer" unique_id=1745899359]
+[node name="AddStateButton" type="Button" parent="VBoxContainer/DebugBar" unique_id=1745899359]
 layout_mode = 2
 text = "Add State"
 
-[node name="DebugLabel" type="Label" parent="VBoxContainer/HBoxContainer" unique_id=83710473]
+[node name="DebugLabel" type="Label" parent="VBoxContainer/DebugBar" unique_id=83710473]
 unique_name_in_owner = true
 layout_mode = 2
 text = "No transition found: inf"
@@ -43,6 +43,6 @@ mouse_filter = 1
 script = ExtResource("2_knjhx")
 metadata/_custom_type_script = "uid://bsy6drpth2ong"
 
-[connection signal="pressed" from="VBoxContainer/HBoxContainer/AddStateButton" to="." method="_on_add_state_button_pressed"]
+[connection signal="pressed" from="VBoxContainer/DebugBar/AddStateButton" to="." method="_on_add_state_button_pressed"]
 [connection signal="delete_nodes_request" from="VBoxContainer/StateMachineGraphEdit" to="." method="_on_state_machine_graph_edit_delete_nodes_request"]
 [connection signal="gui_input" from="VBoxContainer/StateMachineGraphEdit" to="VBoxContainer/StateMachineGraphEdit" method="_on_gui_input"]

@@ -2,6 +2,7 @@ extends Control
 class_name StateMachineEditorTest
 
 @onready var state_machine_graph_edit: StateMachineGraphEdit = %StateMachineGraphEdit
+@onready var debug_label: Label = %DebugLabel
 
 var iter:int = 0
 
@@ -12,6 +13,15 @@ func _ready():
 	state_machine_graph_edit.transition_remove_request.connect(_on_transition_remove_request)
 	state_machine_graph_edit.transition_selected.connect(_on_transition_selected)
 	state_machine_graph_edit.transition_deselected.connect(_on_transition_deselected)
+
+
+func _process(_delta):
+	var hover_transition = state_machine_graph_edit.hover_transition
+	
+	if hover_transition != null:
+		debug_label.text = "Closest transition: %s -> %s" % [hover_transition.from_state, hover_transition.to_state]
+	else:
+		debug_label.text = "No transition close to mouse"
 
 
 func remove_state_transitions(node:GraphElement) -> void:
@@ -28,10 +38,12 @@ func remove_state_transitions(node:GraphElement) -> void:
 	for index in state_transition_indices:
 		state_machine_graph_edit.transition_lines.remove_at(index)
 
+
 func _on_add_state_button_pressed() -> void:
 	var state_node:StateMachineState = preload("res://addons/blendalot/state_machine_state.tscn").instantiate()
 	state_machine_graph_edit.add_child(state_node)
 	state_node.title = "State " + str(iter)
+	state_node.name = state_node.title
 	state_node.transition_border_size = 10
 	state_node.active = false
 	state_node.position_offset = state_machine_graph_edit.get_rect().get_center() + state_machine_graph_edit.scroll_offset
@@ -41,7 +53,7 @@ func _on_add_state_button_pressed() -> void:
 
 
 func _on_transition_add_request(from_state_name:String, to_state_name:String):
-	state_machine_graph_edit.add_transition(states[from_state_name], states[to_state_name])
+	state_machine_graph_edit.add_transition(from_state_name, to_state_name)
 
 
 func _on_transition_remove_request(from_state_name:String, to_state_name:String):

@@ -33,10 +33,8 @@ const TRANSITION_LINE_COLOR_SELECTED:Color = Color.PALE_GOLDENROD
 const TRANSITION_LINE_WIDTH_SELECTED:float = 10
 const TRANSITION_BIDIRECTIONAL_OFFSET:float = 20
 
-@onready var debug_label: Label = %DebugLabel
-
-var hover_transition = null
-var selected_transition = null
+var hover_transition:TransitionLine = null
+var selected_transition:TransitionLine = null
 var transition_drag_start_state:GraphElement = null
 var hovered_state:GraphElement = null
 
@@ -125,7 +123,7 @@ func calc_distance_point_to_line_segment(p:Vector2, a:Vector2, b:Vector2) -> flo
 
 
 func _update_hover_transition() -> bool:
-	var previouse_hover_transition = hover_transition
+	var previouse_hover_transition:TransitionLine = hover_transition
 	if hovered_state != null:
 		hover_transition = null
 		return previouse_hover_transition != null
@@ -144,11 +142,6 @@ func _update_hover_transition() -> bool:
 		closest_distance = INF
 		hover_transition = null
 	
-	if hover_transition != null:
-		debug_label.text = "Closest transition: %s -> %s (%s)" % [hover_transition.from_state, hover_transition.to_state, closest_distance]
-	else:
-		debug_label.text = "No transition found: %s" % closest_distance
-		
 	return previouse_hover_transition != hover_transition
 
 
