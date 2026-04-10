@@ -57,7 +57,7 @@ func edit_state_machine(blt_state_machine:BLTStateMachine):
 
 func _update_editor_nodes_from_state_machine():
 	for state_name in state_machine.get_state_names():
-		var state_node:BLTAnimationNode = state_machine.get_node(state_name)
+		var state_node:BLTAnimationNode = state_machine.get_state(state_name)
 		var graph_node:GraphElement = create_graph_node_for_blt_node(state_node)
 		state_machine_graph_edit.add_child(graph_node)
 		
@@ -65,20 +65,19 @@ func _update_editor_nodes_from_state_machine():
 		graph_node_to_state_node[graph_node] = state_node
 
 
-func create_graph_node_for_blt_node(blt_node: BLTAnimationNode) -> GraphElement:
-	var result_graph_node:GraphElement = GraphElement.new()
-	result_graph_node.name = blt_node.resource_name
+func create_graph_node_for_blt_node(blt_node: BLTAnimationNode) -> StateMachineState:
 	var state_graph_element:StateMachineState = preload("res://addons/blendalot/state_machine_state.tscn").instantiate()
-	result_graph_node.add_child(state_graph_element)
+	state_graph_element.name = blt_node.resource_name
 	state_graph_element.title = blt_node.resource_name
 	state_graph_element.transition_border_size = 10
-	result_graph_node.position_offset = blt_node.position
+	state_graph_element.position_offset = blt_node.position
 	
 	blt_node.node_changed.connect(_trigger_graph_changed)
 	
-	result_graph_node.gui_input.connect(_on_node_gui_input.bind(result_graph_node))
+	if blt_node.get_class() == "BLTBlendTree" or blt_node.get_class() == "BLTStateMachine":
+		state_graph_element.gui_input.connect(_on_node_gui_input.bind(state_graph_element))
 	
-	return result_graph_node
+	return state_graph_element
 
 
 func _update_editor_connections_from_state_machine():
@@ -92,7 +91,7 @@ func _update_editor_connections_from_state_machine():
 		
 		var from_state_node = state_node_to_graph_node[from_state]
 		
-		var connect_result = state_machine_graph_edit.connect_node(from_state.resource_name, 0, to_state.resource_name, 0, true)
+		var connect_result = state_machine_graph_edit.add_transition(from_state.resource_name, to_state.resource_name)
 		if not connect_result:
 			success = false
 
@@ -116,22 +115,35 @@ func _remove_node_connections(graph_node:GraphElement):
 #
 # GraphEdit signal handling
 #
-func _on_state_machine_graph_edit_connection_request(from_node: StringName, from_port: int, to_node: StringName, to_port: int) -> void:
-	var source_node:BLTAnimationNode = state_machine.get_node(from_node)
-	var target_node:BLTAnimationNode = state_machine.get_node(to_node)
-	
-	if target_node == null:
-		push_error("Invalid connection, target node %s not found." % to_node)
+func _on_state_machine_graph_edit_transition_add_request(from_state: StringName, to_state: StringName) -> void:
+	var from_node:BLTAnimationNode = state_machine.get_state(from_state)
+	var to_node:BLTAnimationNode = state_machine.get_state(to_state)
+
+	if from_node == null:
+		push_error("Invalid transition: from state %s not found." % to_state)
 		return
 	
-	var target_node_port_name = target_node.get_input_names()[to_port]
-	
-	var connection_result = state_machine.is_connection_valid(source_node, target_node, target_node_port_name)
-	if connection_result != state_machine.CONNECTION_OK:
-		push_error("Could not add connection (error %d)" % connection_result)
+	if to_node == null:
+		push_error("Invalid transition: target state %s not found." % to_state)
 		return
 	
-	state_machine.add_connection(source_node, target_node, target_node_port_name)
+	var transition_result = state_machine.is_transition_valid(from_node, to_node)
+	if transition_result != state_machine.TRANSITION_OK:
+		push_error("Could not add transition (error %d)" % transition_result)
+		return
+	
+	var transition:BLTStateMachineTransition = BLTStateMachineTransition.new()
+	state_machine.add_transition(from_node, to_node, transition)
+	state_machine_graph_edit.add_transition(from_state, to_state)
+
+
+func _on_state_machine_graph_edit_transition_remove_request(from_state: StringName, to_state: StringName) -> void:
+	var from_node:BLTAnimationNode = state_machine.get_state(from_state)
+	var to_node:BLTAnimationNode = state_machine.get_state(to_state)
+
+	if from_node == null:
+		push_error("Cannot remove transition: from state %s not found." % to_state)
+		return
 	
 	var connect_result = state_machine_graph_edit.connect_node(from_node, from_port, to_node, to_port, true)
 
@@ -148,7 +160,7 @@ func _on_state_machine_graph_edit_disconnection_request(from_node: StringName, f
 func _on_state_machine_graph_edit_delete_nodes_request(nodes: Array[StringName]) -> void:
 	for node_name:StringName in nodes:
 		print("remove node '%s'" % node_name)
-		var state_machine_node:BLTAnimationNode = state_machine.get_node(node_name)
+		var state_machine_node:BLTAnimationNode = state_machine.get_state(node_name)
 		
 		if state_machine_node == null:
 			push_error("Cannot delete node '%s': node not found." % node_name)
@@ -211,7 +223,7 @@ func _on_add_state_popup_menu_index_pressed(index: int) -> void:
 	var new_state_node: BLTAnimationNode = ClassDB.instantiate(registered_nodes[index])
 	state_machine.add_state(new_state_node)	
 	
-	var graph_node:GraphElement = create_graph_node_for_blt_node(new_state_node)
+	var graph_node:StateMachineState = create_graph_node_for_blt_node(new_state_node)
 	state_machine_graph_edit.add_child(graph_node)
 	
 	graph_node_to_state_node[graph_node] = new_state_node
@@ -236,7 +248,6 @@ func _on_gui_input(event: InputEvent) -> void:
 		return
 	
 	if mouse_button_event.button_mask & MOUSE_BUTTON_LEFT == 0:
-		print("drag end")
 		transition_trag_start_position = Vector2.INF
 
 
@@ -248,13 +259,10 @@ func _on_node_gui_input(input_event:InputEvent, graph_node:GraphElement):
 	
 	var mouse_button_event:InputEventMouseButton = input_event as InputEventMouseButton
 	if mouse_button_event and mouse_button_event.double_click:
-		_on_node_double_click(graph_node)
 		get_viewport().set_input_as_handled()
+		_on_node_double_click(graph_node)
+		
 		return
-	
-	if Input.is_key_pressed(KEY_CTRL) and mouse_button_event and mouse_button_event.pressed and mouse_button_event.button_index == MouseButton.MOUSE_BUTTON_LEFT:
-		print("drag_start")
-		transition_trag_start_position = state_machine_graph_edit.get_mouse_graph_position()
 
 
 func _on_node_double_click(graph_node:GraphElement):
@@ -273,41 +281,9 @@ func _on_animation_select(index:int, blt_node_sampler:BLTAnimationNodeSampler, o
 	blt_node_sampler.node_changed.emit(blt_node_sampler.resource_name)
 
 
-#
-# Testdata
-#
-func _create_and_add_state(blt_node_type_name:String, name:String = "Test State", position:Vector2 = Vector2.ZERO):
-	var new_state_node: BLTAnimationNode = ClassDB.instantiate(blt_node_type_name)
-	new_state_node.resource_name = name
-	new_state_node.position = position
-	state_machine.add_state(new_state_node)	
-	
-	var graph_node:GraphElement = create_graph_node_for_blt_node(new_state_node)
-	state_machine_graph_edit.add_child(graph_node)
-	
-	graph_node_to_state_node[graph_node] = new_state_node
-	state_node_to_graph_node[new_state_node] = graph_node
-
-	return new_state_node
+func _on_state_machine_graph_edit_transition_selected(from_state: StringName, to_state: StringName) -> void:
+	pass # Replace with function body.
 
 
-func _add_transition_lines(from_state:BLTAnimationNode, to_state:BLTAnimationNode):
-	transition_lines.append([from_state, to_state])
-
-
-func _create_simple_state_machine():
-	var sampler_a = _create_and_add_state("BLTAnimationNodeSampler", "Sampler A")
-	var sampler_b = _create_and_add_state("BLTAnimationNodeSampler", "Sampler B")
-	var sampler_c = _create_and_add_state("BLTAnimationNodeSampler", "Sampler C")
-
-
-func _add_simple_state_machine_transitions():
-	var sampler_a = state_node_to_graph_node[state_machine.get_state("Sampler A")]
-	var sampler_b = state_node_to_graph_node[state_machine.get_state("Sampler B")]
-	var sampler_c = state_node_to_graph_node[state_machine.get_state("Sampler C")]
-	
-	state_machine_graph_edit.add_transition(sampler_a, sampler_b)
-	state_machine_graph_edit.add_transition(sampler_a, sampler_c)
-	state_machine_graph_edit.add_transition(sampler_b, sampler_c)
-	
-	state_machine_graph_edit.queue_redraw()
+func _on_state_machine_graph_edit_transition_deselected(from_state: StringName, to_state: StringName) -> void:
+	pass # Replace with function body.

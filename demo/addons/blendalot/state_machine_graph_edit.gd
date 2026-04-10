@@ -51,17 +51,23 @@ func _ready() -> void:
 	state_in_transitions = {}
 
 
-func add_transition(from_node:GraphElement, to_node:GraphElement):
+func add_transition(from_node_name:String, to_node_name:String) -> bool:
+	var from_node:GraphElement = find_child(from_node_name, false, false) as GraphElement
+	var to_node:GraphElement = find_child(to_node_name, false, false) as GraphElement
+	
+	assert(from_node != null)
+	assert(to_node != null)
+	
 	if state_out_transitions.has(from_node):
 		if state_out_transitions[from_node].find(to_node) != -1:
-			return
+			return false
 		state_out_transitions[from_node].append(to_node)
 	else:
 		state_out_transitions[from_node] = [to_node]
 	
 	if state_in_transitions.has(to_node):
 		if state_in_transitions[to_node].find(from_node) != -1:
-			return
+			return false
 		state_in_transitions[to_node].append(from_node)
 	else:
 		state_in_transitions[to_node] = [from_node]
@@ -69,6 +75,8 @@ func add_transition(from_node:GraphElement, to_node:GraphElement):
 	transition_lines.append(TransitionLine.new(from_node, to_node))
 	
 	queue_redraw()
+	
+	return true
 
 
 func remove_transition(from_node:GraphElement, to_node:GraphElement):
