@@ -60,10 +60,12 @@ func _edit(object: Object):
 	
 	if object is BLTBlendTree:
 		animation_graph_editor.edit_animation_root_node(object)
+		editor_dock.make_visible()
 		return
 	
 	if object is BLTStateMachine:
 		animation_graph_editor.edit_animation_root_node(object)
+		editor_dock.make_visible()
 		return
 	
 	print("Cannot (yet) edit object " + str(object))
