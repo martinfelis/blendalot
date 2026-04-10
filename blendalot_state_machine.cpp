@@ -41,12 +41,19 @@ void BLTStateMachine::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_state", "state_name"), &BLTStateMachine::get_state);
 	ClassDB::bind_method(D_METHOD("get_state_names"), &BLTStateMachine::get_state_names_as_typed_array);
 
+	ClassDB::bind_method(D_METHOD("is_transition_valid", "from_state", "to_state"), &BLTStateMachine::is_transition_valid);
 	ClassDB::bind_method(D_METHOD("add_transition", "from_state", "to_state", "transition"), &BLTStateMachine::add_transition);
+	ClassDB::bind_method(D_METHOD("remove_transition", "from_state", "to_state"), &BLTStateMachine::remove_transition);
 	ClassDB::bind_method(D_METHOD("get_transitions"), &BLTStateMachine::get_transitions_as_array);
 
 	ClassDB::bind_method(D_METHOD("set_graph_offset", "graph_offset"), &BLTStateMachine::set_graph_offset);
 	ClassDB::bind_method(D_METHOD("get_graph_offset"), &BLTStateMachine::get_graph_offset);
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "graph_offset", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_graph_offset", "get_graph_offset");
+
+	BIND_CONSTANT(TRANSITION_OK);
+	BIND_CONSTANT(TRANSITION_ERROR_NO_FROM_STATE);
+	BIND_CONSTANT(TRANSITION_ERROR_NO_TO_STATE);
+	BIND_CONSTANT(TRANSITION_ERROR_ALREADY_EXISTS);
 }
 
 void BLTStateMachine::_get_property_list(List<PropertyInfo> *p_list) const {

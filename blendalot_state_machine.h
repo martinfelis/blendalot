@@ -69,10 +69,19 @@ public:
 class BLTStateMachine : public BLTAnimationNode {
 	GDCLASS(BLTStateMachine, BLTAnimationNode);
 
+public:
+	enum TransitionError {
+		TRANSITION_OK,
+		TRANSITION_ERROR_NO_FROM_STATE,
+		TRANSITION_ERROR_NO_TO_STATE,
+		TRANSITION_ERROR_ALREADY_EXISTS
+	};
+
+private:
 	GraphEvaluationContext *_graph_evaluation_context = nullptr;
 
 	LocalVector<Ref<BLTAnimationNode>> states;
-	LocalVector<Ref<BLTAnimationNode>> transitions;
+	LocalVector<Ref<BLTStateMachineTransition>> transitions;
 
 	// must be sorted by priority
 	LocalVector<LocalVector<Ref<BLTStateMachineTransition>>> state_leaving_transitions;
@@ -203,21 +212,39 @@ public:
 		return nullptr;
 	}
 
-	bool add_transition(const Ref<BLTAnimationNode> &from_state, const Ref<BLTAnimationNode> &to_state, const Ref<BLTStateMachineTransition> &transition) {
+	TransitionError is_transition_valid(const Ref<BLTAnimationNode> &from_state, const Ref<BLTAnimationNode> &to_state) const {
 		int64_t from_state_index = find_state_index(from_state);
 		if (from_state_index == -1) {
 			print_error(vformat("Cannot add transition from %s to %s: from state not found in StateMachine.", from_state->get_name(), to_state->get_name()));
-			return false;
+			return TRANSITION_ERROR_NO_FROM_STATE;
 		}
 
 		if (find_state_index(to_state) == -1) {
 			print_error(vformat("Cannot add transition from %s to %s: to state not found in StateMachine.", from_state->get_name(), to_state->get_name()));
-			return false;
+			return TRANSITION_ERROR_NO_TO_STATE;
+		}
+
+		for (const LocalVector<Ref<BLTAnimationNode>> &from_to_states : transition_states) {
+			if (from_to_states[0] == from_state && from_to_states[1] == to_state) {
+				print_error(vformat("Cannot add transition from %s to %s: transition already exists.", from_state->get_name(), to_state->get_name()));
+				return TRANSITION_ERROR_ALREADY_EXISTS;
+			}
+		}
+
+		return TRANSITION_OK;
+	}
+
+	TransitionError add_transition(const Ref<BLTAnimationNode> &from_state, const Ref<BLTAnimationNode> &to_state, const Ref<BLTStateMachineTransition> &transition) {
+		const int64_t from_state_index = find_state_index(from_state);
+
+		const TransitionError transition_error = is_transition_valid(from_state, to_state);
+		if (transition_error != TRANSITION_OK) {
+			return transition_error;
 		}
 
 		if (find_transition_index(transition) != -1) {
 			print_error(vformat("Cannot add transition: transition already added."));
-			return false;
+			return TRANSITION_ERROR_ALREADY_EXISTS;
 		}
 
 		transitions.push_back(transition);
@@ -225,7 +252,35 @@ public:
 
 		state_leaving_transitions[from_state_index].push_back(transition);
 
-		return true;
+		return TRANSITION_OK;
+	}
+
+	void remove_transition(const Ref<BLTAnimationNode> &from_state, const Ref<BLTAnimationNode> &to_state) {
+		int transition_index = -1;
+		for (unsigned int i = 0; i < transition_states.size(); i++) {
+			const LocalVector<Ref<BLTAnimationNode>> &from_to_states = transition_states[i];
+			if (from_to_states[0] == from_state && from_to_states[1] == to_state) {
+				transition_index = i;
+				break;
+			}
+		}
+
+		if (transition_index == -1) {
+			return;
+		}
+
+		if (active_transition_index == transition_index || active_transition == transitions[transition_index]) {
+			print_error(vformat("Cannot delete transition %s -> %s: transition is active!", from_state->get_name(), to_state->get_name()));
+			return;
+		}
+
+		int from_state_index = find_state_index(from_state);
+		state_leaving_transitions[from_state_index].erase(transitions[transition_index]);
+
+		transition_states.remove_at(transition_index);
+		transitions.remove_at(transition_index);
+
+		_node_changed();
 	}
 
 	Array get_transitions_as_array() const {
@@ -366,3 +421,5 @@ public:
 		}
 	}
 };
+
+VARIANT_ENUM_CAST(BLTStateMachine::TransitionError)
