@@ -145,7 +145,13 @@ func _on_state_machine_graph_edit_transition_remove_request(from_state: StringNa
 		push_error("Cannot remove transition: from state %s not found." % to_state)
 		return
 	
-	var connect_result = state_machine_graph_edit.connect_node(from_node, from_port, to_node, to_port, true)
+	if to_node == null:
+		push_error("Cannot remove transition: target state %s not found." % to_state)
+		return
+	
+	print("Removing transition %s -> %s" % [from_state, to_state])
+	state_machine.remove_transition(from_node, to_node)
+	state_machine_graph_edit.remove_transition(state_node_to_graph_node[from_node], state_node_to_graph_node[to_node])
 
 
 func _on_state_machine_graph_edit_disconnection_request(from_node: StringName, from_port: int, to_node: StringName, to_port: int) -> void:
@@ -164,10 +170,6 @@ func _on_state_machine_graph_edit_delete_nodes_request(nodes: Array[StringName])
 		
 		if state_machine_node == null:
 			push_error("Cannot delete node '%s': node not found." % node_name)
-			continue
-		
-		if state_machine_node == state_machine.get_output_node():
-			push_warning("Output node not allowed to be removed.")
 			continue
 		
 		state_machine_node.node_changed.disconnect(_trigger_graph_changed)

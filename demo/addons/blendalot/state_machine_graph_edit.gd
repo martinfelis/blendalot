@@ -4,9 +4,9 @@ extends GraphEdit
 class_name StateMachineGraphEdit
 
 signal transition_add_request(from_state: StringName, to_state: StringName)
+signal transition_remove_request(from_state: StringName, to_state: StringName)
 signal transition_selected(from_state: StringName, to_state: StringName)
 signal transition_deselected(from_state: StringName, to_state: StringName)
-signal transition_remove_request(from_state: StringName, to_state: StringName)
 
 class TransitionLine:
 	var from_state:StateMachineState = null
@@ -279,6 +279,7 @@ func _on_gui_input(event: InputEvent) -> void:
 	var key_event:InputEventKey = event as InputEventKey
 	if key_event and key_event.pressed and key_event.physical_keycode == KEY_DELETE:
 		if selected_transition != null:
+			print("trying to remove transition %s" % selected_transition)
 			transition_remove_request.emit(selected_transition.from_state.title, selected_transition.to_state.title)
 			get_viewport().set_input_as_handled()
 			return

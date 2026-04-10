@@ -234,4 +234,53 @@ TEST_CASE_FIXTURE(StateMachineFixture, "[SceneTree][Blendalot][StateMachine] Non
 	CHECK(animation_sampler_node_b->node_time_info.position == doctest::Approx(0.3));
 }
 
+TEST_CASE("[Blendalot][StateMachine] StateMachine modification") {
+	BLTStateMachine state_machine;
+	Ref<BLTAnimationNodeSampler> sampler_a;
+	sampler_a.instantiate();
+	sampler_a->set_name("Sampler A");
+
+	Ref<BLTAnimationNodeSampler> sampler_b;
+	sampler_b.instantiate();
+	sampler_a->set_name("Sampler B");
+
+	Ref<BLTAnimationNodeSampler> sampler_c;
+	sampler_c.instantiate();
+	sampler_a->set_name("Sampler C");
+
+	state_machine.add_state(sampler_a);
+	state_machine.add_state(sampler_b);
+	state_machine.add_state(sampler_c);
+
+	REQUIRE(state_machine.get_state_names_as_typed_array().size() == 3);
+
+	Ref<BLTStateMachineTransition> transition_a_b;
+	transition_a_b.instantiate();
+	CHECK(BLTStateMachine::TRANSITION_OK == state_machine.add_transition(sampler_a, sampler_b, transition_a_b));
+	CHECK(BLTStateMachine::TRANSITION_ERROR_ALREADY_EXISTS == state_machine.add_transition(sampler_a, sampler_b, transition_a_b));
+	CHECK(transition_a_b == state_machine.get_transition_by_index(state_machine.find_transition_index(sampler_a, sampler_b)));
+
+	Ref<BLTStateMachineTransition> transition_b_a;
+	transition_b_a.instantiate();
+	CHECK(BLTStateMachine::TRANSITION_OK == state_machine.add_transition(sampler_b, sampler_a, transition_b_a));
+	CHECK(transition_b_a == state_machine.get_transition_by_index(state_machine.find_transition_index(sampler_b, sampler_a)));
+
+	Ref<BLTStateMachineTransition> transition_c_a;
+	transition_c_a.instantiate();
+	CHECK(BLTStateMachine::TRANSITION_OK == state_machine.add_transition(sampler_c, sampler_a, transition_c_a));
+	int transition_c_a_index = state_machine.find_transition_index(sampler_c, sampler_a);
+
+	// When removing b -> a the index of c -> a should change but the transition should still be available.
+	state_machine.remove_transition(sampler_b, sampler_a);
+	CHECK(state_machine.find_transition_index(sampler_b, sampler_a) == -1);
+	int transition_c_a_index_new = state_machine.find_transition_index(sampler_c, sampler_a);
+	CHECK(transition_c_a_index_new != -1);
+	CHECK(transition_c_a_index_new != transition_c_a_index);
+
+	// When removing Sampler B the transition a -> b should be removed automatically
+	state_machine.remove_state(sampler_b);
+	CHECK(state_machine.find_transition_index(sampler_a, sampler_b) == -1);
+	CHECK(state_machine.get_state("Sampler A").is_null());
+}
+
 } //namespace TestBlendalotStateMachine

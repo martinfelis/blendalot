@@ -106,7 +106,7 @@ private:
 	void activate_transition(const Ref<BLTStateMachineTransition> &transition) {
 		transition->reset();
 		active_transition = transition;
-		active_transition_index = find_transition_index(transition);
+		active_transition_index = transitions.find(transition);
 
 		previous_state = active_state;
 		activate_state(transition_states[active_transition_index][1]);
@@ -151,10 +151,6 @@ public:
 		return -1;
 	}
 
-	int64_t find_transition_index(const Ref<BLTStateMachineTransition> &transition) const {
-		return transitions.find(transition);
-	}
-
 	Ref<BLTStateMachineTransition> get_transition_by_index(int64_t index) const {
 		if (index < 0 || index >= transitions.size()) {
 			return nullptr;
@@ -186,6 +182,18 @@ public:
 		if (entry_state.is_null()) {
 			entry_state = state;
 		}
+	}
+
+	void remove_state(const Ref<BLTAnimationNode> &state) {
+		int state_index = find_state_index(state);
+		if (state_index == -1) {
+			print_error(vformat("Cannot delete state %s: state not found.", state->get_name()));
+			return;
+		}
+
+		// remove all transitions
+
+		// remove all references to this state
 	}
 
 	TypedArray<StringName> get_state_names_as_typed_array() const {
@@ -224,11 +232,9 @@ public:
 			return TRANSITION_ERROR_NO_TO_STATE;
 		}
 
-		for (const LocalVector<Ref<BLTAnimationNode>> &from_to_states : transition_states) {
-			if (from_to_states[0] == from_state && from_to_states[1] == to_state) {
-				print_error(vformat("Cannot add transition from %s to %s: transition already exists.", from_state->get_name(), to_state->get_name()));
-				return TRANSITION_ERROR_ALREADY_EXISTS;
-			}
+		if (find_transition_index(from_state, to_state) != -1) {
+			print_error(vformat("Cannot add transition from %s to %s: transition already exists.", from_state->get_name(), to_state->get_name()));
+			return TRANSITION_ERROR_ALREADY_EXISTS;
 		}
 
 		return TRANSITION_OK;
@@ -242,7 +248,7 @@ public:
 			return transition_error;
 		}
 
-		if (find_transition_index(transition) != -1) {
+		if (transitions.find(transition) != -1) {
 			print_error(vformat("Cannot add transition: transition already added."));
 			return TRANSITION_ERROR_ALREADY_EXISTS;
 		}
@@ -281,6 +287,16 @@ public:
 		transitions.remove_at(transition_index);
 
 		_node_changed();
+	}
+
+	int64_t find_transition_index(const Ref<BLTAnimationNode> &from_state, const Ref<BLTAnimationNode> &to_state) const {
+		for (unsigned int i = 0; i < transition_states.size(); i++) {
+			if (transition_states[i][0] == from_state && transition_states[i][1] == to_state) {
+				return i;
+			}
+		}
+
+		return -1;
 	}
 
 	Array get_transitions_as_array() const {
