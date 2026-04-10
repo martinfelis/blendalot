@@ -20,7 +20,7 @@ const STATE_PANEL_COLOR_HOVER:Color = Color.WEB_GREEN
 @export var transition_border_size:float = 10 :
 	set(value):
 		if not is_instance_valid(transition_drag_container):
-			return
+			await ready
 		
 		transition_border_size = value
 		transition_drag_container.add_theme_constant_override("margin_top", transition_border_size)
@@ -32,10 +32,10 @@ const STATE_PANEL_COLOR_HOVER:Color = Color.WEB_GREEN
 
 @export var transition_border_color:Color = Color.GRAY :
 	set(value):
-		if not is_instance_valid(transition_drag_container):
-			return
-		
 		transition_border_color = value
+		
+		if not is_instance_valid(transition_drag_container):
+			await ready
 		
 		var stylebox = transition_drag_panel.get_theme_stylebox("panel").duplicate()
 		stylebox.set("bg_color", value)
@@ -47,10 +47,10 @@ const STATE_PANEL_COLOR_HOVER:Color = Color.WEB_GREEN
 
 @export var state_content_color:Color = Color.GRAY :
 	set(value):
-		if not is_instance_valid(transition_drag_container):
-			return
-		
 		state_content_color = value
+		
+		if not is_instance_valid(transition_drag_container):
+			await ready
 		
 		var stylebox = state_content_panel.get_theme_stylebox("panel").duplicate()
 		stylebox.set("bg_color", value)
@@ -61,20 +61,20 @@ const STATE_PANEL_COLOR_HOVER:Color = Color.WEB_GREEN
 
 @export var title:String = "State" :
 	set(value):
-		if not is_instance_valid(title_label):
-			return
-		title_label.text = value
 		title = value
+		if not is_instance_valid(title_label):
+			await ready
+		title_label.text = value
 	get():
 		if not is_instance_valid(title_label):
-			return title
+			await ready
 		return title_label.text
 
 @export var active:bool = false:
 	set(value):
 		active = value
 		if not is_instance_valid(selection_outline_panel):
-			return
+			await ready
 		selection_outline_panel.visible = value
 	get():
 		return active
@@ -88,8 +88,11 @@ var is_mouse_hovering = false
 func _ready() -> void:
 	var parent_state_machine_graph_edit:StateMachineGraphEdit = get_parent() as StateMachineGraphEdit
 	if not is_instance_valid(parent_state_machine_graph_edit):
-		push_warning("StateMachineState %s not a child of a StateMachineGraphEdit. Transition editing limited." % self.title)
+		if not Engine.is_editor_hint():
+			push_warning("StateMachineState %s (path: %s) not a child of a StateMachineGraphEdit (editor hint %s). Transition editing limited." % [self.title, self.get_path()])
 		return
+	
+	title_label.text = title
 	
 	transition_drag_start.connect(parent_state_machine_graph_edit.on_transition_drag_start)
 	transition_drag_end.connect(parent_state_machine_graph_edit.on_transition_drag_end)

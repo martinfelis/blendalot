@@ -48,7 +48,6 @@ size_flags_vertical = 3
 mouse_filter = 0
 selected = true
 script = ExtResource("1_4ua7p")
-title = "Kloea33323"
 
 [node name="TransitionDragPanel" type="Panel" parent="." unique_id=111051950]
 unique_name_in_owner = true
@@ -65,6 +64,7 @@ theme_override_constants/margin_bottom = 5
 
 [node name="SelectionOutlinePanel" type="Panel" parent="TransitionDragContainer" unique_id=646543732]
 unique_name_in_owner = true
+visible = false
 material = SubResource("ShaderMaterial_g2tc1")
 layout_mode = 2
 
@@ -89,6 +89,6 @@ layout_mode = 2
 [node name="TitleLabel" type="Label" parent="TransitionDragContainer/CenterContainer/MarginContainer/StateContentContainer" unique_id=49180685]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Kloea33323"
+text = "State"
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
