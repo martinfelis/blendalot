@@ -109,7 +109,7 @@ bool BLTStateMachine::_get(const StringName &p_name, Variant &r_value) const {
 
 bool BLTStateMachine::_set(const StringName &p_name, const Variant &p_value) {
 	String prop_name = p_name;
-	if (prop_name.begins_with("transitions/")) {
+	if (prop_name.begins_with("states/")) {
 		String state_name = prop_name.get_slicec('/', 1);
 		String what = prop_name.get_slicec('/', 2);
 
@@ -129,7 +129,6 @@ bool BLTStateMachine::_set(const StringName &p_name, const Variant &p_value) {
 			}
 			return true;
 		}
-
 	} else if (prop_name == "transitions") {
 		Array transitions = p_value;
 		ERR_FAIL_COND_V(transitions.size() % 3 != 0, false);
