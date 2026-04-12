@@ -10,7 +10,6 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 1
 script = ExtResource("1_0b2te")
 
 [node name="Panel" type="VBoxContainer" parent="." unique_id=977653135]
@@ -42,7 +41,6 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 300)
 layout_mode = 2
 size_flags_vertical = 3
-mouse_filter = 1
 right_disconnects = true
 script = ExtResource("2_vdaym")
 
@@ -52,6 +50,7 @@ script = ExtResource("2_vdaym")
 [connection signal="delete_nodes_request" from="Panel/StateMachineGraphEdit" to="." method="_on_state_machine_graph_edit_delete_nodes_request"]
 [connection signal="disconnection_request" from="Panel/StateMachineGraphEdit" to="." method="_on_state_machine_graph_edit_disconnection_request"]
 [connection signal="end_node_move" from="Panel/StateMachineGraphEdit" to="." method="_on_state_machine_graph_edit_end_node_move"]
+[connection signal="gui_input" from="Panel/StateMachineGraphEdit" to="Panel/StateMachineGraphEdit" method="_on_gui_input"]
 [connection signal="node_deselected" from="Panel/StateMachineGraphEdit" to="." method="_on_state_machine_graph_edit_node_deselected"]
 [connection signal="node_selected" from="Panel/StateMachineGraphEdit" to="." method="_on_state_machine_graph_edit_node_selected"]
 [connection signal="popup_request" from="Panel/StateMachineGraphEdit" to="." method="_on_state_machine_graph_edit_popup_request"]
