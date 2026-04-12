@@ -242,15 +242,19 @@ TEST_CASE("[Blendalot][StateMachine] StateMachine modification") {
 
 	Ref<BLTAnimationNodeSampler> sampler_b;
 	sampler_b.instantiate();
-	sampler_a->set_name("Sampler B");
+	sampler_b->set_name("Sampler B");
 
 	Ref<BLTAnimationNodeSampler> sampler_c;
 	sampler_c.instantiate();
-	sampler_a->set_name("Sampler C");
+	sampler_c->set_name("Sampler C");
 
 	state_machine.add_state(sampler_a);
 	state_machine.add_state(sampler_b);
 	state_machine.add_state(sampler_c);
+
+	REQUIRE(state_machine.find_state_index_by_name("Sampler A") == 0);
+	REQUIRE(state_machine.find_state_index_by_name("Sampler B") == 1);
+	REQUIRE(state_machine.find_state_index_by_name("Sampler C") == 2);
 
 	REQUIRE(state_machine.get_state_names_as_typed_array().size() == 3);
 
@@ -280,7 +284,12 @@ TEST_CASE("[Blendalot][StateMachine] StateMachine modification") {
 	// When removing Sampler B the transition a -> b should be removed automatically
 	state_machine.remove_state(sampler_b);
 	CHECK(state_machine.find_transition_index(sampler_a, sampler_b) == -1);
-	CHECK(state_machine.get_state("Sampler A").is_null());
+	CHECK(state_machine.find_state_index_by_name("Sampler A") == 0);
+	CHECK(state_machine.find_state_index_by_name("Sampler B") == -1);
+	CHECK(state_machine.find_state_index_by_name("Sampler C") == 1);
+
+	// Removing it again should not crash
+	state_machine.remove_state(sampler_b);
 }
 
 } //namespace TestBlendalotStateMachine

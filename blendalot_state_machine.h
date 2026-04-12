@@ -85,8 +85,8 @@ private:
 
 	// must be sorted by priority
 	LocalVector<LocalVector<Ref<BLTStateMachineTransition>>> state_leaving_transitions;
-
-	LocalVector<LocalVector<Ref<BLTAnimationNode>>> transition_states;
+	typedef LocalVector<Ref<BLTAnimationNode>> TransitionStatePair;
+	LocalVector<TransitionStatePair> transition_states;
 
 	Ref<BLTAnimationNode> entry_state;
 	Ref<BLTAnimationNode> active_state;
@@ -191,9 +191,17 @@ public:
 			return;
 		}
 
-		// remove all transitions
+		// remove all transitions involving specified state
+		unsigned int transition_index = transition_states.size();
+		while (transition_index > 0) {
+			transition_index--;
+			const TransitionStatePair &transition_state_pair = transition_states[transition_index];
+			if (transition_state_pair[0] == state || transition_state_pair[1] == state) {
+				remove_transition(transition_state_pair[0], transition_state_pair[1]);
+			}
+		}
 
-		// remove all references to this state
+		states.remove_at(state_index);
 	}
 
 	TypedArray<StringName> get_state_names_as_typed_array() const {
@@ -264,7 +272,7 @@ public:
 	void remove_transition(const Ref<BLTAnimationNode> &from_state, const Ref<BLTAnimationNode> &to_state) {
 		int transition_index = -1;
 		for (unsigned int i = 0; i < transition_states.size(); i++) {
-			const LocalVector<Ref<BLTAnimationNode>> &from_to_states = transition_states[i];
+			const TransitionStatePair &from_to_states = transition_states[i];
 			if (from_to_states[0] == from_state && from_to_states[1] == to_state) {
 				transition_index = i;
 				break;
