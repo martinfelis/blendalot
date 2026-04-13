@@ -38,6 +38,7 @@ bool BLTStateMachineTransition::_set(const StringName &p_name, const Variant &p_
 //
 void BLTStateMachine::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("add_state", "state"), &BLTStateMachine::add_state);
+	ClassDB::bind_method(D_METHOD("remove_state", "state"), &BLTStateMachine::remove_state);
 	ClassDB::bind_method(D_METHOD("get_state", "state_name"), &BLTStateMachine::get_state);
 	ClassDB::bind_method(D_METHOD("get_state_names"), &BLTStateMachine::get_state_names_as_typed_array);
 

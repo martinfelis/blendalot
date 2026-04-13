@@ -181,6 +181,7 @@ public:
 
 		if (entry_state.is_null()) {
 			entry_state = state;
+			_node_changed();
 		}
 	}
 
@@ -199,6 +200,15 @@ public:
 			if (transition_state_pair[0] == state || transition_state_pair[1] == state) {
 				remove_transition(transition_state_pair[0], transition_state_pair[1]);
 			}
+		}
+
+		if (entry_state == state) {
+			if (states.size() > 0) {
+				entry_state = states[0];
+			}
+			entry_state = nullptr;
+
+			_node_changed();
 		}
 
 		states.remove_at(state_index);
@@ -265,6 +275,8 @@ public:
 		transition_states.push_back({ from_state, to_state });
 
 		state_leaving_transitions[from_state_index].push_back(transition);
+
+		_node_changed();
 
 		return TRANSITION_OK;
 	}
