@@ -13,12 +13,13 @@ signal graph_changed()
 
 var state_machine:BLTStateMachine
 
-var state_node_to_graph_node = {}
-var graph_node_to_state_node = {}
+var state_node_to_editor_node = {}
+var editor_node_to_state_node = {}
 var transition_lines = []
 
 var selected_nodes = {}
-var last_selected_graph_node:GraphElement = null
+var selected_transition:BLTStateMachineTransition = null
+var last_selected_editor_node:GraphElement = null
 var new_state_position:Vector2 = Vector2.ZERO
 var transition_trag_start_position:Vector2 = Vector2.INF
 
@@ -27,7 +28,10 @@ func _ready() -> void:
 	add_state_popup_menu.clear(true)
 	
 	for node_name in registered_nodes:
-		add_state_popup_menu.add_item(node_name)
+		# Only nodes without inputs can be used as states.
+		var blt_node:BLTAnimationNode = ClassDB.instantiate(node_name)
+		if blt_node.get_input_count() == 0:
+			add_state_popup_menu.add_item(node_name)
 
 
 func _reset_editor():
@@ -38,49 +42,48 @@ func _reset_editor():
 		child.get_parent().remove_child(child)
 		child.queue_free()
 	
-	state_machine_graph_edit.clear_connections()
-	
 	state_machine = null
-	state_node_to_graph_node = {}
-	graph_node_to_state_node = {}
+	state_node_to_editor_node = {}
+	editor_node_to_state_node = {}
 	selected_nodes = {}
 
 
 func edit_state_machine(blt_state_machine:BLTStateMachine):
 	_reset_editor()
+	
 	state_machine = blt_state_machine
 	state_machine_graph_edit.scroll_offset = state_machine.graph_offset
 	
-	_update_editor_nodes_from_state_machine()
-	_update_editor_connections_from_state_machine()
+	_create_editor_nodes_from_state_machine()
+	_create_editor_transitions_from_state_machine()
 
 
-func _update_editor_nodes_from_state_machine():
+func _create_editor_nodes_from_state_machine():
 	for state_name in state_machine.get_state_names():
 		var state_node:BLTAnimationNode = state_machine.get_state(state_name)
-		var graph_node:GraphElement = create_graph_node_for_blt_node(state_node)
-		state_machine_graph_edit.add_child(graph_node)
+		var editor_node:GraphElement = create_editor_node_for_blt_node(state_node)
+		state_machine_graph_edit.add_child(editor_node)
 		
-		state_node_to_graph_node[state_node] = graph_node
-		graph_node_to_state_node[graph_node] = state_node
+		state_node_to_editor_node[state_node] = editor_node
+		editor_node_to_state_node[editor_node] = state_node
 
 
-func create_graph_node_for_blt_node(blt_node: BLTAnimationNode) -> StateMachineState:
-	var state_graph_element:StateMachineState = preload("res://addons/blendalot/state_machine_state.tscn").instantiate()
-	state_graph_element.name = blt_node.resource_name
-	state_graph_element.title = blt_node.resource_name
-	state_graph_element.transition_border_size = 10
-	state_graph_element.position_offset = blt_node.position
+func create_editor_node_for_blt_node(blt_node: BLTAnimationNode) -> StateMachineState:
+	var editor_node:StateMachineState = preload("res://addons/blendalot/state_machine_state.tscn").instantiate()
+	editor_node.name = blt_node.resource_name
+	editor_node.title = blt_node.resource_name
+	editor_node.transition_border_size = 10
+	editor_node.position_offset = blt_node.position
 	
 	blt_node.node_changed.connect(_trigger_graph_changed)
 	
 	if blt_node.get_class() == "BLTBlendTree" or blt_node.get_class() == "BLTStateMachine":
-		state_graph_element.gui_input.connect(_on_node_gui_input.bind(state_graph_element))
+		editor_node.gui_input.connect(_on_node_gui_input.bind(editor_node))
 	
-	return state_graph_element
+	return editor_node
 
 
-func _update_editor_connections_from_state_machine():
+func _create_editor_transitions_from_state_machine():
 	var transitions_array = state_machine.get_transitions()
 
 	var success:bool = true
@@ -89,7 +92,7 @@ func _update_editor_connections_from_state_machine():
 		var to_state:BLTAnimationNode = transitions_array[i * 3 + 1]
 		var transition:BLTStateMachineTransition = transitions_array[i * 3 + 2]
 		
-		var from_state_node = state_node_to_graph_node[from_state]
+		var from_state_node = state_node_to_editor_node[from_state]
 		
 		var connect_result = state_machine_graph_edit.add_transition(from_state.resource_name, to_state.resource_name)
 		if not connect_result:
@@ -100,16 +103,16 @@ func _trigger_graph_changed(_node_name):
 	graph_changed.emit()
 
 
-func _remove_node_connections(graph_node:GraphElement):
-	var node_connections:Array = []
+func _remove_graph_state_transitions(editor_node:GraphElement):
+	var state_node:BLTAnimationNode = editor_node_to_state_node[editor_node]
 	
-	for connection:Dictionary in state_machine_graph_edit.connections:
-		if connection["from_node"] == graph_node.name or connection["to_node"] == graph_node.name:
-			node_connections.append(connection)
-	
-	for node_connection:Dictionary in node_connections:
-		print("Removing connection %s" % str(node_connection))
-		state_machine_graph_edit.disconnect_node(node_connection["from_node"], node_connection["from_port"], node_connection["to_node"], node_connection["to_port"])
+	var transitions:Array = state_machine.get_transitions()
+	for i in range(len(transitions) / 3):
+		var from_state = transitions[i * 3]
+		var to_state = transitions[i * 3 + 1]
+		
+		if from_state == state_node or to_state == state_node:		
+			state_machine_graph_edit.remove_transition(state_node_to_editor_node[from_state], state_node_to_editor_node[to_state])
 
 
 #
@@ -151,16 +154,7 @@ func _on_state_machine_graph_edit_transition_remove_request(from_state: StringNa
 	
 	print("Removing transition %s -> %s" % [from_state, to_state])
 	state_machine.remove_transition(from_node, to_node)
-	state_machine_graph_edit.remove_transition(state_node_to_graph_node[from_node], state_node_to_graph_node[to_node])
-
-
-func _on_state_machine_graph_edit_disconnection_request(from_node: StringName, from_port: int, to_node: StringName, to_port: int) -> void:
-	var state_machine_source_node = state_machine.get_node(from_node)
-	var state_machine_target_node = state_machine.get_node(to_node)
-	var target_port_name = state_machine_target_node.get_input_names()[to_port]
-	state_machine.remove_connection(state_machine_source_node, state_machine_target_node, target_port_name)
-	
-	state_machine_graph_edit.disconnect_node(from_node, from_port, to_node, to_port)
+	state_machine_graph_edit.remove_transition(state_node_to_editor_node[from_node], state_node_to_editor_node[to_node])
 
 
 func _on_state_machine_graph_edit_delete_nodes_request(nodes: Array[StringName]) -> void:
@@ -174,34 +168,38 @@ func _on_state_machine_graph_edit_delete_nodes_request(nodes: Array[StringName])
 		
 		state_machine_node.node_changed.disconnect(_trigger_graph_changed)
 		
-		var graph_node:GraphElement = state_node_to_graph_node[state_machine_node]
-		state_machine.remove_node(state_machine_node)
-		state_node_to_graph_node.erase(state_machine_node)
+		var editor_node:GraphElement = state_node_to_editor_node[state_machine_node]
+
+		_on_state_machine_graph_edit_node_deselected(editor_node)
+		_remove_graph_state_transitions(editor_node)
 		
-		_remove_node_connections(graph_node)
-		graph_node_to_state_node.erase(graph_node)
-		state_machine_graph_edit.remove_child(graph_node)
-		_on_state_machine_graph_edit_node_deselected(graph_node)
+		editor_node_to_state_node.erase(editor_node)
+		state_node_to_editor_node.erase(state_machine_node)
+
+		state_machine_graph_edit.remove_child(editor_node)
+		editor_node.queue_free()
+		
+		state_machine.remove_state(state_machine_node)
 		
 		EditorInterface.get_inspector().edit(null)
 
 
 func _on_state_machine_graph_edit_end_node_move() -> void:
-	for graph_node:GraphElement in selected_nodes.keys():
-		graph_node_to_state_node[graph_node].position = graph_node.position_offset
+	for editor_node:GraphElement in selected_nodes.keys():
+		editor_node_to_state_node[editor_node].position = editor_node.position_offset
 	
 	state_machine_graph_edit.queue_redraw()
 
 
-func _on_state_machine_graph_edit_node_deselected(graph_node: Node) -> void:
-	if selected_nodes.has(graph_node):
-		selected_nodes.erase(graph_node)
+func _on_state_machine_graph_edit_node_deselected(editor_node: Node) -> void:
+	if selected_nodes.has(editor_node):
+		selected_nodes.erase(editor_node)
 
 
-func _on_state_machine_graph_edit_node_selected(graph_node: Node) -> void:
-	selected_nodes[graph_node] = graph_node
-	last_selected_graph_node = graph_node
-	EditorInterface.get_inspector().edit(graph_node_to_state_node[graph_node])
+func _on_state_machine_graph_edit_node_selected(editor_node: Node) -> void:
+	selected_nodes[editor_node] = editor_node
+	last_selected_editor_node = editor_node
+	EditorInterface.get_inspector().edit(editor_node_to_state_node[editor_node])
 
 
 func _on_state_machine_graph_edit_scroll_offset_changed(offset: Vector2) -> void:
@@ -222,18 +220,18 @@ func _on_state_machine_graph_edit_popup_request(at_position: Vector2) -> void:
 
 
 func _on_add_state_popup_menu_index_pressed(index: int) -> void:
-	var new_state_node: BLTAnimationNode = ClassDB.instantiate(registered_nodes[index])
-	state_machine.add_state(new_state_node)	
-	
-	var graph_node:StateMachineState = create_graph_node_for_blt_node(new_state_node)
-	state_machine_graph_edit.add_child(graph_node)
-	
-	graph_node_to_state_node[graph_node] = new_state_node
-	state_node_to_graph_node[new_state_node] = graph_node
+	var new_state_node:BLTAnimationNode = ClassDB.instantiate(add_state_popup_menu.get_item_text(index))
+	state_machine.add_state(new_state_node)
+
+	var editor_node:StateMachineState = create_editor_node_for_blt_node(new_state_node)
+	state_machine_graph_edit.add_child(editor_node)
+
+	editor_node_to_state_node[editor_node] = new_state_node
+	state_node_to_editor_node[new_state_node] = editor_node
 	
 	if new_state_position != Vector2.INF:
-		graph_node.position_offset = new_state_position
-		new_state_node.position = graph_node.position_offset
+		editor_node.position_offset = new_state_position
+		new_state_node.position = editor_node.position_offset
 	
 	new_state_position = Vector2.INF
 
@@ -256,19 +254,17 @@ func _on_gui_input(event: InputEvent) -> void:
 #
 # Handle Node double click
 #
-func _on_node_gui_input(input_event:InputEvent, graph_node:GraphElement):
-	# print("Got input event on graph node %s!" % graph_node.name)
-	
+func _on_node_gui_input(input_event:InputEvent, editor_node:GraphElement):
 	var mouse_button_event:InputEventMouseButton = input_event as InputEventMouseButton
 	if mouse_button_event and mouse_button_event.double_click:
 		get_viewport().set_input_as_handled()
-		_on_node_double_click(graph_node)
+		_on_node_double_click(editor_node)
 		
 		return
 
 
-func _on_node_double_click(graph_node:GraphElement):
-	var state_machine_node:BLTAnimationNode = graph_node_to_state_node[graph_node]
+func _on_node_double_click(editor_node:GraphElement):
+	var state_machine_node:BLTAnimationNode = editor_node_to_state_node[editor_node]
 	
 	if state_machine_node is BLTBlendTree:
 		edit_subgraph.emit(state_machine_node)
@@ -283,9 +279,29 @@ func _on_animation_select(index:int, blt_node_sampler:BLTAnimationNodeSampler, o
 	blt_node_sampler.node_changed.emit(blt_node_sampler.resource_name)
 
 
-func _on_state_machine_graph_edit_transition_selected(from_state: StringName, to_state: StringName) -> void:
-	pass # Replace with function body.
+func _on_state_machine_graph_edit_transition_selected(from_state_name: StringName, to_state_name: StringName) -> void:
+	var transitions:Array = state_machine.get_transitions()
+	
+	for i in range(0, len(transitions) / 3):
+		var from_state:BLTAnimationNode = transitions[i * 3] as BLTAnimationNode
+		var to_state:BLTAnimationNode = transitions[i * 3 + 1] as BLTAnimationNode
+		
+		if is_instance_valid(from_state) and is_instance_valid(to_state) and from_state.resource_name == from_state_name and to_state.resource_name == to_state_name:
+			selected_transition = transitions[i * 3 + 2] as BLTStateMachineTransition
+			EditorInterface.get_inspector().edit(selected_transition)
+			return
 
 
-func _on_state_machine_graph_edit_transition_deselected(from_state: StringName, to_state: StringName) -> void:
-	pass # Replace with function body.
+func _on_state_machine_graph_edit_transition_deselected(from_state_name: StringName, to_state_name: StringName) -> void:
+	var transitions:Array = state_machine.get_transitions()
+	
+	for i in range(0, len(transitions) / 3):
+		var from_state:BLTAnimationNode = transitions[i * 3] as BLTAnimationNode
+		var to_state:BLTAnimationNode = transitions[i * 3 + 1] as BLTAnimationNode
+				
+		if is_instance_valid(from_state) and is_instance_valid(to_state) and from_state.resource_name == from_state_name and to_state.resource_name == to_state_name:
+			var transition = transitions[i * 3 + 2] as BLTStateMachineTransition
+			if transition == selected_transition:
+				selected_transition = null
+				EditorInterface.get_inspector().edit(null)
+				return
