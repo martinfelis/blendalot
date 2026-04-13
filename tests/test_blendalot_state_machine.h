@@ -292,4 +292,36 @@ TEST_CASE("[Blendalot][StateMachine] StateMachine modification") {
 	state_machine.remove_state(sampler_b);
 }
 
+TEST_CASE_FIXTURE(StateMachineFixture, "[SceneTree][Blendalot][StateMachine] Embedded state machines") {
+	Ref<BLTStateMachine> embedded_state_machine;
+	embedded_state_machine.instantiate();
+
+	Ref<BLTStateMachine> state_machine;
+	state_machine.instantiate();
+
+	Ref<BLTAnimationNodeSampler> animation_sampler_node_a;
+	animation_sampler_node_a.instantiate();
+	animation_sampler_node_a->animation_name = "animation_library/TestAnimationA";
+
+	embedded_state_machine->add_state(animation_sampler_node_a);
+	state_machine->add_state(embedded_state_machine);
+
+	animation_graph->set_root_animation_node(state_machine);
+
+	state_machine->initialize(animation_graph->get_context());
+	GraphEvaluationContext &graph_context = animation_graph->get_context();
+
+	// Perform evaluation
+	double delta = 0.1;
+
+	graph_context.graph_process_delta_time = delta;
+	AnimationData *graph_output = graph_context.animation_data_allocator.allocate();
+	state_machine->activate_inputs(LocalVector<Ref<BLTAnimationNode>>());
+	state_machine->calculate_sync_track(LocalVector<Ref<BLTAnimationNode>>());
+	state_machine->update_time(delta);
+	state_machine->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
+
+	CHECK(animation_sampler_node_a->node_time_info.position == doctest::Approx(0.1));
+}
+
 } //namespace TestBlendalotStateMachine
