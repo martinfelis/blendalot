@@ -110,12 +110,18 @@ func create_graph_node_for_blt_node(blt_node: BLTAnimationNode) -> GraphNode:
 		var animation_player:AnimationPlayer = animation_sampler_node.get_animation_player()
 		
 		if is_instance_valid(animation_player):
+			animation_selector_button.item_selected.connect(_on_animation_select.bind(animation_sampler_node, animation_selector_button))
+			
 			for animation_name in animation_player.get_animation_list():
 				animation_selector_button.add_item(animation_name)
 				if animation_name == animation_sampler_node.animation:
 					animation_selector_button.select(animation_selector_button.item_count - 1)
-					
-			animation_selector_button.item_selected.connect(_on_animation_select.bind(animation_sampler_node, animation_selector_button))
+			
+			# Select first animation by default.
+			if animation_sampler_node.animation == "" and animation_selector_button.item_count > 0:
+				# TODO: Need to manually trigger callable of the selection. Not sure why, though.
+				animation_selector_button.select(0)
+				_on_animation_select(0, animation_sampler_node, animation_selector_button)
 	
 	blt_node.node_changed.connect(_trigger_graph_changed)
 	

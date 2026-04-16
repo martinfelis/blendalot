@@ -1,0 +1,20 @@
+[gd_resource type="BLTBlendTree" format=3 uid="uid://c5jnrn5ca6ujh"]
+
+[sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_c16f4"]
+resource_name = "BLTAnimationNodeSampler 1"
+position = Vector2(-520, -100)
+animation = &"animation_library/Idle"
+
+[sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_u5ra8"]
+resource_name = "BLTAnimationNodeSampler"
+position = Vector2(-500, 80)
+animation = &"animation_library/TestAnimationC"
+
+[resource]
+resource_name = "Root"
+graph_offset = Vector2(-616.1018, -160)
+nodes/BLTAnimationNodeSampler/node = SubResource("BLTAnimationNodeSampler_u5ra8")
+nodes/BLTAnimationNodeSampler/graph_offset = Vector2(-500, 80)
+"nodes/BLTAnimationNodeSampler 1/node" = SubResource("BLTAnimationNodeSampler_c16f4")
+"nodes/BLTAnimationNodeSampler 1/graph_offset" = Vector2(-520, -100)
+node_connections = ["Output", 0, "BLTAnimationNodeSampler"]

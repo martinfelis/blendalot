@@ -250,7 +250,11 @@ NodePath BLTAnimationGraph::get_animation_player() const {
 }
 
 void BLTAnimationGraph::set_root_animation_node(const Ref<BLTAnimationNode> &p_animation_node) {
-	print_line(vformat("setting root node to node %s", p_animation_node->get_name()));
+	if (p_animation_node.is_null()) {
+		print_line("setting root node to node null");
+	} else {
+		print_line(vformat("setting root node to node %s", p_animation_node->get_name()));
+	}
 
 	if (root_animation_node.is_valid()) {
 		root_animation_node->disconnect(SNAME("node_changed"), callable_mp(this, &BLTAnimationGraph::_graph_changed));

@@ -1,0 +1,131 @@
+[gd_scene format=3 uid="uid://bhr6eqp17vi0s"]
+
+[ext_resource type="Script" uid="uid://bjvgqujpqumj7" path="res://main.gd" id="1_nt558"]
+[ext_resource type="PackedScene" uid="uid://d1xcqdqr1qeu6" path="res://assets/MixamoAmy.glb" id="2_ha0yy"]
+[ext_resource type="BLTBlendTree" uid="uid://c5jnrn5ca6ujh" path="res://sinlge_character_animation_graph.tres" id="4_mgu05"]
+[ext_resource type="AnimationLibrary" uid="uid://dwubn740aqx51" path="res://animation_library.res" id="5_7lkht"]
+
+[sub_resource type="Theme" id="Theme_272bh"]
+default_font_size = 30
+Label/fonts/DefaultFont = null
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_h2yge"]
+albedo_color = Color(0.427493, 0.42749307, 0.42749307, 1)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_h2yge"]
+material = SubResource("StandardMaterial3D_h2yge")
+size = Vector2(20, 20)
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_h2yge"]
+sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+ground_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+
+[sub_resource type="Sky" id="Sky_1bvp3"]
+sky_material = SubResource("ProceduralSkyMaterial_h2yge")
+
+[sub_resource type="Environment" id="Environment_lquwl"]
+background_mode = 2
+sky = SubResource("Sky_1bvp3")
+tonemap_mode = 2
+glow_enabled = true
+
+[node name="Main" type="Node3D" unique_id=933302313]
+script = ExtResource("1_nt558")
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=833570844]
+
+[node name="MarginContainer" type="MarginContainer" parent="UI" unique_id=2079852348]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -153.5
+offset_top = -40.0
+offset_right = 153.5
+grow_horizontal = 2
+grow_vertical = 0
+size_flags_horizontal = 4
+size_flags_vertical = 8
+theme = SubResource("Theme_272bh")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="UI/MarginContainer" unique_id=965781454]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Label" type="Label" parent="UI/MarginContainer/HBoxContainer" unique_id=634588892]
+layout_mode = 2
+text = "Blend Weight"
+
+[node name="BlendWeightSlider" type="HSlider" parent="UI/MarginContainer/HBoxContainer" unique_id=708139207]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.001
+
+[node name="BlendWeightLabel" type="Label" parent="UI/MarginContainer/HBoxContainer" unique_id=1745243570]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+text = "0.0"
+horizontal_alignment = 2
+
+[node name="MarginContainer2" type="MarginContainer" parent="UI" unique_id=1639984576]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 23.0
+grow_horizontal = 2
+theme_override_constants/margin_top = 80
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="UI/MarginContainer2" unique_id=1134641196]
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_constants/separation = 400
+alignment = 1
+
+[node name="Label" type="Label" parent="UI/MarginContainer2/HBoxContainer2" unique_id=1630716301]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Unsynced"
+
+[node name="EmptyLabel" type="Label" parent="UI/MarginContainer2/HBoxContainer2" unique_id=991022601]
+layout_mode = 2
+
+[node name="Label3" type="Label" parent="UI/MarginContainer2/HBoxContainer2" unique_id=736671898]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Synced"
+
+[node name="Level" type="Node3D" parent="." unique_id=1485026735]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Level" unique_id=2025315417]
+mesh = SubResource("PlaneMesh_h2yge")
+skeleton = NodePath("../..")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="Level" unique_id=468068224]
+transform = Transform3D(1, 0, 0, 0, 0.14081486, 0.99003595, 0, -0.99003595, 0.14081486, 0, 2.0531263, 4.9494514)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="Level" unique_id=1787092986]
+environment = SubResource("Environment_lquwl")
+
+[node name="Camera3D" type="Camera3D" parent="Level" unique_id=1534208216]
+transform = Transform3D(1, 0, 0, 0, 0.95413065, 0.29939055, 0, -0.29939055, 0.95413065, 0, 1.649, 3.197)
+fov = 36.8
+
+[node name="Character" parent="." unique_id=1018815116 instance=ExtResource("2_ha0yy")]
+unique_name_in_owner = true
+
+[node name="AnimationPlayer2" type="AnimationPlayer" parent="Character" unique_id=379737684]
+libraries/animation_library = ExtResource("5_7lkht")
+
+[node name="SyncedAnimationGraph" type="BLTAnimationGraph" parent="Character" unique_id=1866796918]
+animation_player = NodePath("../AnimationPlayer2")
+tree_root = ExtResource("4_mgu05")
+skeleton = NodePath("../Armature/Skeleton3D")
+
+[connection signal="value_changed" from="UI/MarginContainer/HBoxContainer/BlendWeightSlider" to="." method="_on_blend_weight_slider_value_changed"]
+
+[editable path="Character"]

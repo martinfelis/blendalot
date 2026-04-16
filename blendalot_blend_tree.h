@@ -281,6 +281,11 @@ public:
 
 		const HashSet<int> &output_subtree = tree_graph.node_connection_info[0].input_subtree_node_indices;
 
+		if (output_subtree.size() == 1) {
+			// Nothing connected to the output.
+			return false;
+		}
+
 		for (unsigned int i = 0; i < tree_graph.nodes.size(); i++) {
 			const Ref<BLTAnimationNode> &node = tree_graph.nodes[i];
 
