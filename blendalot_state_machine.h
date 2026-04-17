@@ -2,6 +2,8 @@
 
 #include "blendalot_animation_node.h"
 
+#include "core/object/callable_mp.h"
+
 class BLTStateMachineTransition : public BLTAnimationNodeBlend2 {
 	GDCLASS(BLTStateMachineTransition, BLTAnimationNodeBlend2);
 
@@ -138,6 +140,10 @@ public:
 		graph_offset = p_graph_offset;
 	}
 
+	void _state_machine_changed(const StringName &node_name) {
+		_node_changed();
+	}
+
 	int64_t find_state_index(const Ref<BLTAnimationNode> &state) const {
 		return states.find(state);
 	}
@@ -175,14 +181,21 @@ public:
 			state->set_name(vformat("%s %d", node_base_name, number_suffix));
 			number_suffix++;
 		}
+		state->node_path = vformat("%s/%s", node_path, state->get_name());
 
 		states.push_back(state);
 		state_leaving_transitions.push_back(LocalVector<Ref<BLTStateMachineTransition>>());
+
+		if (_graph_evaluation_context != nullptr) {
+			state->initialize(*_graph_evaluation_context);
+		}
 
 		if (entry_state.is_null()) {
 			entry_state = state;
 			_node_changed();
 		}
+
+		state->connect(SNAME("node_changed"), callable_mp(this, &BLTStateMachine::_state_machine_changed));
 	}
 
 	void remove_state(const Ref<BLTAnimationNode> &state) {
@@ -202,16 +215,21 @@ public:
 			}
 		}
 
+		states.remove_at(state_index);
+
 		if (entry_state == state) {
 			if (states.size() > 0) {
 				entry_state = states[0];
+			} else {
+				entry_state = nullptr;
 			}
-			entry_state = nullptr;
-
-			_node_changed();
 		}
 
-		states.remove_at(state_index);
+		if (active_state == state && entry_state.is_valid()) {
+			activate_state(entry_state);
+		}
+
+		_node_changed();
 	}
 
 	TypedArray<StringName> get_state_names_as_typed_array() const {
@@ -337,8 +355,9 @@ public:
 
 		_graph_evaluation_context = &context;
 
-		bool has_failed_state = true;
+		bool has_failed_state = false;
 		for (Ref<BLTAnimationNode> state : states) {
+			state->node_path = vformat("%s/%s", node_path, state->get_name());
 			if (!state->initialize(context)) {
 				has_failed_state = true;
 			}
@@ -347,6 +366,11 @@ public:
 		active_transition = nullptr;
 		active_state_index = -1;
 		active_transition_index = -1;
+
+		if (entry_state.is_null()) {
+			context.validation_messages.push_back(vformat("Invalid node %s: No valid entry state defined.", node_path));
+			return false;
+		}
 
 		return !has_failed_state;
 	}

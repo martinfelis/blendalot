@@ -24,17 +24,13 @@ size_flags_vertical = 3
 [node name="AddStatePopupMenu" type="PopupMenu" parent="Panel" unique_id=108570539]
 unique_name_in_owner = true
 oversampling_override = 1.0
-item_count = 5
+item_count = 3
 item_0/text = "BLTAnimationNodeSampler"
 item_0/id = 0
-item_1/text = "BLTAnimationNodeBlend2"
+item_1/text = "BLTBlendTree"
 item_1/id = 1
-item_2/text = "BLTAnimationNodeTimeScale"
+item_2/text = "BLTStateMachine"
 item_2/id = 2
-item_3/text = "BLTBlendTree"
-item_3/id = 3
-item_4/text = "BLTStateMachine"
-item_4/id = 4
 
 [node name="StateMachineGraphEdit" type="GraphEdit" parent="Panel" unique_id=391120290]
 unique_name_in_owner = true
@@ -56,6 +52,6 @@ script = ExtResource("2_vdaym")
 [connection signal="popup_request" from="Panel/StateMachineGraphEdit" to="." method="_on_state_machine_graph_edit_popup_request"]
 [connection signal="scroll_offset_changed" from="Panel/StateMachineGraphEdit" to="." method="_on_state_machine_graph_edit_scroll_offset_changed"]
 [connection signal="transition_add_request" from="Panel/StateMachineGraphEdit" to="." method="_on_state_machine_graph_edit_transition_add_request"]
+[connection signal="transition_deselected" from="Panel/StateMachineGraphEdit" to="." method="_on_state_machine_graph_edit_transition_deselected"]
 [connection signal="transition_remove_request" from="Panel/StateMachineGraphEdit" to="." method="_on_state_machine_graph_edit_transition_remove_request"]
 [connection signal="transition_selected" from="Panel/StateMachineGraphEdit" to="." method="_on_state_machine_graph_edit_transition_selected"]
-[connection signal="transition_deselected" from="Panel/StateMachineGraphEdit" to="." method="_on_state_machine_graph_edit_transition_deselected"]

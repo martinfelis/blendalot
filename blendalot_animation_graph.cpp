@@ -1,10 +1,13 @@
 #include "blendalot_animation_graph.h"
 
+#include "core/config/engine.h"
 #include "core/object/callable_mp.h"
 #include "core/object/class_db.h"
 #include "core/profiling/profiling.h"
 #include "scene/3d/skeleton_3d.h"
 #include "scene/animation/animation_player.h"
+#include "scene/main/scene_tree.h"
+#include "scene/main/window.h"
 
 void BLTAnimationGraph::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_active", "active"), &BLTAnimationGraph::set_active);
@@ -389,8 +392,16 @@ void BLTAnimationGraph::_setup_graph() {
 	print_line(vformat("_setup_graph() on graph %x and root node %x", (uintptr_t)(void *)(this), (uintptr_t)(root_animation_node.ptr())));
 	graph_context.validation_messages.clear();
 	is_graph_initialization_valid = root_animation_node->initialize(graph_context);
-	if (graph_context.validation_messages.size() > 0) {
-		print_line("BLTAnimationGraph invalid:");
+	if (!is_graph_initialization_valid) {
+		String animation_graph_path;
+		if (Engine::get_singleton()->is_editor_hint()) {
+			animation_graph_path = String(get_tree()->get_edited_scene_root()->get_path_to(this));
+		} else {
+			animation_graph_path = String(get_tree()->get_root()->get_path_to(this));
+		}
+
+		print_line(vformat("BLTAnimationGraph %s invalid:", animation_graph_path));
+
 		for (const String &message : graph_context.validation_messages) {
 			print_line(message);
 		}

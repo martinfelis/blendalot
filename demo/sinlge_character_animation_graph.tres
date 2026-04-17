@@ -1,20 +1,42 @@
 [gd_resource type="BLTBlendTree" format=3 uid="uid://c5jnrn5ca6ujh"]
 
 [sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_c16f4"]
-resource_name = "BLTAnimationNodeSampler 1"
-position = Vector2(-520, -100)
-animation = &"animation_library/Idle"
+resource_name = "BLTAnimationNodeSampler"
+position = Vector2(-680, -60)
+animation = &"animation_library/Walk-InPlace"
 
 [sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_u5ra8"]
 resource_name = "BLTAnimationNodeSampler"
-position = Vector2(-500, 80)
-animation = &"animation_library/TestAnimationC"
+position = Vector2(-580, -160)
+animation = &"animation_library/Run-InPlace"
+
+[sub_resource type="BLTBlendTree" id="BLTBlendTree_c16f4"]
+resource_name = "BLTBlendTree"
+position = Vector2(-280, -81)
+graph_offset = Vector2(-638.95215, -218.81744)
+nodes/BLTAnimationNodeSampler/node = SubResource("BLTAnimationNodeSampler_u5ra8")
+nodes/BLTAnimationNodeSampler/graph_offset = Vector2(-580, -160)
+node_connections = ["Output", 0, "BLTAnimationNodeSampler"]
+
+[sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_ykbnt"]
+resource_name = "BLTAnimationNodeSampler"
+position = Vector2(514, 172)
+animation = &"animation_library/Limping-InPlace"
+
+[sub_resource type="BLTStateMachine" id="BLTStateMachine_arlsq"]
+resource_name = "BLTStateMachine"
+position = Vector2(-280, 60)
+states/BLTAnimationNodeSampler/node = SubResource("BLTAnimationNodeSampler_ykbnt")
+states/BLTAnimationNodeSampler/position = Vector2(514, 172)
 
 [resource]
 resource_name = "Root"
-graph_offset = Vector2(-616.1018, -160)
-nodes/BLTAnimationNodeSampler/node = SubResource("BLTAnimationNodeSampler_u5ra8")
-nodes/BLTAnimationNodeSampler/graph_offset = Vector2(-500, 80)
-"nodes/BLTAnimationNodeSampler 1/node" = SubResource("BLTAnimationNodeSampler_c16f4")
-"nodes/BLTAnimationNodeSampler 1/graph_offset" = Vector2(-520, -100)
+graph_offset = Vector2(-658, -190)
+nodes/Output/graph_offset = Vector2(0, -1)
+nodes/BLTAnimationNodeSampler/node = SubResource("BLTAnimationNodeSampler_c16f4")
+nodes/BLTAnimationNodeSampler/graph_offset = Vector2(-680, -60)
+nodes/BLTBlendTree/node = SubResource("BLTBlendTree_c16f4")
+nodes/BLTBlendTree/graph_offset = Vector2(-280, -81)
+nodes/BLTStateMachine/node = SubResource("BLTStateMachine_arlsq")
+nodes/BLTStateMachine/graph_offset = Vector2(-280, 60)
 node_connections = ["Output", 0, "BLTAnimationNodeSampler"]

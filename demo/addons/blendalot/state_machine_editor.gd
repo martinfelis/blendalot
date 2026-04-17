@@ -42,6 +42,9 @@ func _reset_editor():
 		child.get_parent().remove_child(child)
 		child.queue_free()
 	
+	if is_instance_valid(state_machine) and state_machine.has_connections("node_changed"):
+		state_machine.disconnect("node_changed", _trigger_graph_changed)
+	
 	state_machine = null
 	state_node_to_editor_node = {}
 	editor_node_to_state_node = {}
@@ -56,6 +59,8 @@ func edit_state_machine(blt_state_machine:BLTStateMachine):
 	
 	_create_editor_nodes_from_state_machine()
 	_create_editor_transitions_from_state_machine()
+
+	state_machine.node_changed.connect(_trigger_graph_changed)
 
 
 func _create_editor_nodes_from_state_machine():
@@ -75,12 +80,14 @@ func create_editor_node_for_blt_node(blt_node: BLTAnimationNode) -> StateMachine
 	editor_node.transition_border_size = 10
 	editor_node.position_offset = blt_node.position
 	
-	blt_node.node_changed.connect(_trigger_graph_changed)
-	
 	if blt_node.get_class() == "BLTBlendTree" or blt_node.get_class() == "BLTStateMachine":
 		editor_node.gui_input.connect(_on_node_gui_input.bind(editor_node))
 	
 	return editor_node
+
+
+func _trigger_graph_changed(_node_name):
+	graph_changed.emit()
 
 
 func _create_editor_transitions_from_state_machine():
@@ -97,10 +104,6 @@ func _create_editor_transitions_from_state_machine():
 		var connect_result = state_machine_graph_edit.add_transition(from_state.resource_name, to_state.resource_name)
 		if not connect_result:
 			success = false
-
-
-func _trigger_graph_changed(_node_name):
-	graph_changed.emit()
 
 
 func _remove_graph_state_transitions(editor_node:GraphElement):
@@ -165,8 +168,6 @@ func _on_state_machine_graph_edit_delete_nodes_request(nodes: Array[StringName])
 		if state_machine_node == null:
 			push_error("Cannot delete node '%s': node not found." % node_name)
 			continue
-		
-		state_machine_node.node_changed.disconnect(_trigger_graph_changed)
 		
 		var editor_node:GraphElement = state_node_to_editor_node[state_machine_node]
 
