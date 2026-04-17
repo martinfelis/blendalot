@@ -167,14 +167,17 @@ bool BLTAnimationNodeSampler::initialize(GraphEvaluationContext &context) {
 	animation_player = context.animation_player;
 
 	if (animation_player == nullptr) {
+		context.validation_messages.push_back(vformat("Invalid node %s: No animation player specified for node.", node_path));
 		return false;
 	}
 
 	if (animation_name.is_empty()) {
+		context.validation_messages.push_back(vformat("Invalid node %s: No animation specified for playback.", node_path));
 		return false;
 	}
 
 	if (!set_animation(animation_name)) {
+		context.validation_messages.push_back(vformat("Invalid node %s: Could not set animation %s.", node_path, animation_name));
 		return false;
 	}
 

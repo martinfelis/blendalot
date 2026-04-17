@@ -226,6 +226,7 @@ struct GraphEvaluationContext {
 	AnimationPlayer *animation_player = nullptr;
 	Skeleton3D *skeleton_3d = nullptr;
 	AnimationDataAllocator animation_data_allocator;
+	LocalVector<String> validation_messages;
 	double graph_process_delta_time = 0.f;
 };
 
@@ -264,10 +265,13 @@ public:
 	};
 	NodeTimeInfo node_time_info;
 	bool active = false;
+	StringName node_path;
 
 	Vector2 position;
 
 	virtual ~BLTAnimationNode() override = default;
+
+	/// Validates the node and also the nodes it contains. If node cannot be evaluated this function must add a message to context.validation_messages and return false.
 	virtual bool initialize(GraphEvaluationContext &context) {
 		node_time_info = {};
 		return true;

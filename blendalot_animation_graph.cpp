@@ -134,8 +134,6 @@ void BLTAnimationGraph::_get_property_list(List<PropertyInfo> *p_list) const {
 }
 
 void BLTAnimationGraph::_graph_changed(const StringName &node_name) {
-	print_line(vformat("Graph changed %x", (uintptr_t)this));
-
 	if (properties_dirty) {
 		return;
 	}
@@ -261,6 +259,7 @@ void BLTAnimationGraph::set_root_animation_node(const Ref<BLTAnimationNode> &p_a
 	}
 
 	root_animation_node = p_animation_node;
+	root_animation_node->node_path = root_animation_node->get_name();
 
 	if (root_animation_node.is_valid()) {
 		_setup_graph();
@@ -388,8 +387,14 @@ void BLTAnimationGraph::_setup_graph() {
 	}
 
 	print_line(vformat("_setup_graph() on graph %x and root node %x", (uintptr_t)(void *)(this), (uintptr_t)(root_animation_node.ptr())));
+	graph_context.validation_messages.clear();
 	is_graph_initialization_valid = root_animation_node->initialize(graph_context);
-	print_line(vformat("is_graph_initialization_valid = %s", is_graph_initialization_valid ? "true" : "false"));
+	if (graph_context.validation_messages.size() > 0) {
+		print_line("BLTAnimationGraph invalid:");
+		for (const String &message : graph_context.validation_messages) {
+			print_line(message);
+		}
+	}
 }
 
 BLTAnimationGraph::BLTAnimationGraph() {

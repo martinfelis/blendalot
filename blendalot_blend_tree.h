@@ -2,6 +2,8 @@
 
 #include "blendalot_animation_node.h"
 
+#include "core/object/callable_mp.h"
+
 class BLTBlendTree : public BLTAnimationNode {
 	GDCLASS(BLTBlendTree, BLTAnimationNode);
 
@@ -176,10 +178,13 @@ public:
 
 	void add_node(const Ref<BLTAnimationNode> &node) {
 		tree_graph.add_node(node);
+		node->node_path = vformat("%s/%s", node_path, node->get_name());
 
 		if (_graph_evaluation_context != nullptr) {
 			node->initialize(*_graph_evaluation_context);
 		}
+
+		node->connect(SNAME("node_changed"), callable_mp(this, &BLTBlendTree::_tree_node_changed));
 	}
 
 	void remove_node(const Ref<BLTAnimationNode> &node) {
@@ -240,6 +245,7 @@ public:
 
 	ConnectionError remove_connection(const Ref<BLTAnimationNode> &source_node, const Ref<BLTAnimationNode> &target_node, const StringName &target_port_name) {
 		ConnectionError result = tree_graph.remove_connection(source_node, target_node, target_port_name);
+
 		if (result == CONNECTION_OK) {
 			is_evaluation_order_dirty = true;
 			_node_changed();
@@ -282,12 +288,15 @@ public:
 		const HashSet<int> &output_subtree = tree_graph.node_connection_info[0].input_subtree_node_indices;
 
 		if (output_subtree.size() == 1) {
-			// Nothing connected to the output.
+			context.validation_messages.push_back(vformat("Invalid node %s: Nothing connected to output node in node.", node_path));
 			return false;
 		}
 
 		for (unsigned int i = 0; i < tree_graph.nodes.size(); i++) {
 			const Ref<BLTAnimationNode> &node = tree_graph.nodes[i];
+
+			// Re-apply node name as names of parents may have changed.
+			node->node_path = vformat("%s/%s", node_path, node->get_name());
 
 			// Initialize, but skip validation of nodes that are not part of the active tree.
 			if (!output_subtree.has(i)) {
