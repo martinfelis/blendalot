@@ -234,62 +234,101 @@ TEST_CASE_FIXTURE(StateMachineFixture, "[SceneTree][Blendalot][StateMachine] Non
 	CHECK(animation_sampler_node_b->node_time_info.position == doctest::Approx(0.3));
 }
 
-TEST_CASE("[Blendalot][StateMachine] StateMachine modification") {
-	BLTStateMachine state_machine;
+TEST_CASE_FIXTURE(StateMachineFixture, "[SceneTree][Blendalot][StateMachine] StateMachine modification") {
+	Ref<BLTStateMachine> state_machine;
+	state_machine.instantiate();
+
 	Ref<BLTAnimationNodeSampler> sampler_a;
 	sampler_a.instantiate();
 	sampler_a->set_name("Sampler A");
+	sampler_a->set_animation("animation_library/TestAnimationA");
 
 	Ref<BLTAnimationNodeSampler> sampler_b;
 	sampler_b.instantiate();
 	sampler_b->set_name("Sampler B");
+	sampler_b->set_animation("animation_library/TestAnimationB");
 
 	Ref<BLTAnimationNodeSampler> sampler_c;
 	sampler_c.instantiate();
 	sampler_c->set_name("Sampler C");
+	sampler_c->set_animation("animation_library/TestAnimationC");
 
-	state_machine.add_state(sampler_a);
-	state_machine.add_state(sampler_b);
-	state_machine.add_state(sampler_c);
+	state_machine->add_state(sampler_a);
+	state_machine->add_state(sampler_b);
+	state_machine->add_state(sampler_c);
 
-	REQUIRE(state_machine.find_state_index_by_name("Sampler A") == 0);
-	REQUIRE(state_machine.find_state_index_by_name("Sampler B") == 1);
-	REQUIRE(state_machine.find_state_index_by_name("Sampler C") == 2);
+	state_machine->add_state(state_machine);
 
-	REQUIRE(state_machine.get_state_names_as_typed_array().size() == 3);
+	animation_graph->set_root_animation_node(state_machine);
+
+	state_machine->initialize(animation_graph->get_context());
+	GraphEvaluationContext &graph_context = animation_graph->get_context();
+
+	REQUIRE(state_machine->find_state_index_by_name("Sampler A") == 0);
+	REQUIRE(state_machine->find_state_index_by_name("Sampler B") == 1);
+	REQUIRE(state_machine->find_state_index_by_name("Sampler C") == 2);
+
+	REQUIRE(state_machine->get_state_names_as_typed_array().size() == 3);
 
 	Ref<BLTStateMachineTransition> transition_a_b;
 	transition_a_b.instantiate();
-	CHECK(BLTStateMachine::TRANSITION_OK == state_machine.add_transition(sampler_a, sampler_b, transition_a_b));
-	CHECK(BLTStateMachine::TRANSITION_ERROR_ALREADY_EXISTS == state_machine.add_transition(sampler_a, sampler_b, transition_a_b));
-	CHECK(transition_a_b == state_machine.get_transition_by_index(state_machine.find_transition_index(sampler_a, sampler_b)));
+	CHECK(BLTStateMachine::TRANSITION_OK == state_machine->add_transition(sampler_a, sampler_b, transition_a_b));
+	CHECK(BLTStateMachine::TRANSITION_ERROR_ALREADY_EXISTS == state_machine->add_transition(sampler_a, sampler_b, transition_a_b));
+	CHECK(transition_a_b == state_machine->get_transition_by_index(state_machine->find_transition_index(sampler_a, sampler_b)));
 
 	Ref<BLTStateMachineTransition> transition_b_a;
 	transition_b_a.instantiate();
-	CHECK(BLTStateMachine::TRANSITION_OK == state_machine.add_transition(sampler_b, sampler_a, transition_b_a));
-	CHECK(transition_b_a == state_machine.get_transition_by_index(state_machine.find_transition_index(sampler_b, sampler_a)));
+	CHECK(BLTStateMachine::TRANSITION_OK == state_machine->add_transition(sampler_b, sampler_a, transition_b_a));
+	CHECK(transition_b_a == state_machine->get_transition_by_index(state_machine->find_transition_index(sampler_b, sampler_a)));
 
 	Ref<BLTStateMachineTransition> transition_c_a;
 	transition_c_a.instantiate();
-	CHECK(BLTStateMachine::TRANSITION_OK == state_machine.add_transition(sampler_c, sampler_a, transition_c_a));
-	int transition_c_a_index = state_machine.find_transition_index(sampler_c, sampler_a);
+	CHECK(BLTStateMachine::TRANSITION_OK == state_machine->add_transition(sampler_c, sampler_a, transition_c_a));
+	int transition_c_a_index = state_machine->find_transition_index(sampler_c, sampler_a);
 
 	// When removing b -> a the index of c -> a should change but the transition should still be available.
-	state_machine.remove_transition(sampler_b, sampler_a);
-	CHECK(state_machine.find_transition_index(sampler_b, sampler_a) == -1);
-	int transition_c_a_index_new = state_machine.find_transition_index(sampler_c, sampler_a);
+	state_machine->remove_transition(sampler_b, sampler_a);
+	CHECK(state_machine->find_transition_index(sampler_b, sampler_a) == -1);
+	int transition_c_a_index_new = state_machine->find_transition_index(sampler_c, sampler_a);
 	CHECK(transition_c_a_index_new != -1);
 	CHECK(transition_c_a_index_new != transition_c_a_index);
 
 	// When removing Sampler B the transition a -> b should be removed automatically
-	state_machine.remove_state(sampler_b);
-	CHECK(state_machine.find_transition_index(sampler_a, sampler_b) == -1);
-	CHECK(state_machine.find_state_index_by_name("Sampler A") == 0);
-	CHECK(state_machine.find_state_index_by_name("Sampler B") == -1);
-	CHECK(state_machine.find_state_index_by_name("Sampler C") == 1);
+	state_machine->remove_state(sampler_b);
+	CHECK(state_machine->find_transition_index(sampler_a, sampler_b) == -1);
+	CHECK(state_machine->find_state_index_by_name("Sampler A") == 0);
+	CHECK(state_machine->find_state_index_by_name("Sampler B") == -1);
+	CHECK(state_machine->find_state_index_by_name("Sampler C") == 1);
 
-	// Removing it again should not crash
-	state_machine.remove_state(sampler_b);
+	// Removing it again should not crash when evaluating graph.
+	CHECK(state_machine->get_entry_state() == sampler_a);
+	// No evaluation has happened, therefore active state is null.
+	CHECK(state_machine->get_active_state().is_null());
+	// Perform evaluation
+	double delta = 0.1;
+	graph_context.graph_process_delta_time = delta;
+	AnimationData *graph_output = graph_context.animation_data_allocator.allocate();
+	state_machine->activate_inputs(LocalVector<Ref<BLTAnimationNode>>());
+	state_machine->calculate_sync_track(LocalVector<Ref<BLTAnimationNode>>());
+	state_machine->update_time(delta);
+	state_machine->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
+
+	CHECK(state_machine->get_active_state() == sampler_a);
+
+	// Remove entry and active state. This should set the entry state to the first available state.
+	state_machine->remove_state(sampler_a);
+
+	CHECK(state_machine->get_entry_state() == sampler_c);
+	CHECK(state_machine->get_active_state() == sampler_c);
+
+	// Next evaluation
+	state_machine->activate_inputs(LocalVector<Ref<BLTAnimationNode>>());
+	state_machine->calculate_sync_track(LocalVector<Ref<BLTAnimationNode>>());
+	state_machine->update_time(delta);
+	state_machine->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
+
+	CHECK(state_machine->get_entry_state() == sampler_c);
+	CHECK(state_machine->get_active_state() == sampler_c);
 }
 
 TEST_CASE_FIXTURE(StateMachineFixture, "[SceneTree][Blendalot][StateMachine] Embedded state machines") {

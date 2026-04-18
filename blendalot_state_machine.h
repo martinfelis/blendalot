@@ -169,7 +169,24 @@ public:
 		return active_transition;
 	}
 
+	int get_active_state_index() const {
+		return active_state_index;
+	}
+
+	Ref<BLTAnimationNode> get_active_state() const {
+		return active_state;
+	}
+
+	Ref<BLTAnimationNode> get_entry_state() const {
+		return entry_state;
+	}
+
 	void add_state(const Ref<BLTAnimationNode> &state) {
+		if (state == this) {
+			print_error(vformat("Error: cannot add state machine %s to itself!", state->node_path));
+			return;
+		}
+
 		StringName node_base_name = state->get_name();
 		if (node_base_name.is_empty()) {
 			node_base_name = state->get_class_name();
