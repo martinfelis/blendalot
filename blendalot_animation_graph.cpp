@@ -235,6 +235,14 @@ AnimationMixer::AnimationCallbackModeDiscrete BLTAnimationGraph::get_callback_mo
 	return callback_mode_discrete;
 }
 
+void BLTAnimationGraph::print_property_list() const {
+	_update_properties();
+	print_line("animation graph params:");
+	for (unsigned int i = 0; i < parameter_to_node_parameter_map.size(); i++) {
+		print_line(vformat("%03d: %s", i, parameter_to_node_parameter_map.get_by_index(i).key));
+	}
+}
+
 void BLTAnimationGraph::set_animation_player(const NodePath &p_path) {
 	print_line(vformat("set_animation_player(%s) ", p_path));
 

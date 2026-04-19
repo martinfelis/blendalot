@@ -51,6 +51,8 @@ public:
 	void reset() {
 		transition_time = 0.f;
 		is_transition_forced = false;
+		// TODO: We need to set it to LOOP_LINEAR here so that update_time() properly updates the sync position. Does this semantically make sense?
+		node_time_info.loop_mode = Animation::LOOP_LINEAR;
 	}
 
 	void update_transition_time_and_weight(double p_delta) {
@@ -113,6 +115,24 @@ private:
 
 		previous_state = active_state;
 		activate_state(transition_states[active_transition_index][1]);
+
+		if (active_transition->sync && previous_state.is_valid()) {
+			double previous_sync_position = previous_state->node_time_info.sync_track.calc_sync_from_abs_time(previous_state->node_time_info.position);
+			active_transition->node_time_info.sync_position = previous_sync_position;
+		}
+	}
+
+	void deactivate_transition(const Ref<BLTStateMachineTransition> &transition) {
+		if (active_transition != transition) {
+			return;
+		}
+
+		previous_state = nullptr;
+		active_transition = nullptr;
+
+		// A transition may have marked an input as synced. The node_time_info is unchanged by the
+		// transition and can be used as a backup value.
+		active_state->node_time_info.is_synced = node_time_info.is_synced;
 	}
 
 	void find_and_activate_transition() {
@@ -434,7 +454,6 @@ public:
 			if (active_state->active) {
 				transition_states[active_transition_index][0]->activate_inputs({});
 			}
-
 		} else {
 			active_state->active = true;
 			active_state->activate_inputs({});
@@ -463,15 +482,22 @@ public:
 		GodotProfileZone("BLTStateMachine::update_time");
 
 		if (active_transition.is_valid()) {
+			active_transition->update_time(p_delta);
+
+			double delta;
+			if (!active_transition->sync) {
+				delta = active_transition->node_time_info.delta;
+			} else {
+				delta = active_transition->node_time_info.sync_position;
+			}
+
 			if (previous_state->active) {
-				previous_state->update_time(p_delta);
+				previous_state->update_time(delta);
 			}
 
 			if (active_state->active) {
-				active_state->update_time(p_delta);
+				active_state->update_time(delta);
 			}
-
-			active_transition->update_time(p_delta);
 		} else {
 			active_state->update_time(p_delta);
 		}
@@ -508,8 +534,7 @@ public:
 
 			// Deactivate any finished transitions
 			if (Math::is_zero_approx(1. - active_transition->blend_weight)) {
-				previous_state = nullptr;
-				active_transition = nullptr;
+				deactivate_transition(active_transition);
 			}
 		} else {
 			active_state->evaluate(context, input_datas, output_data);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "blendalot_animation_node.h"
+
 #include "scene/animation/animation_player.h"
 
 class Skeleton3D;
@@ -70,6 +71,8 @@ public:
 	GraphEvaluationContext &get_context() {
 		return graph_context;
 	}
+
+	void print_property_list() const;
 
 	BLTAnimationGraph();
 

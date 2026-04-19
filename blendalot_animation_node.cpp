@@ -190,7 +190,8 @@ void BLTAnimationNodeSampler::update_time(double p_time) {
 	BLTAnimationNode::update_time(p_time);
 
 	if (node_time_info.is_synced) {
-		// Any potential looping has already been performed in the sync-controlling node.
+		// Convert the sync time to actual animation time.
+		node_time_info.position = node_time_info.sync_track.calc_ratio_from_sync_time(node_time_info.sync_position) * animation->get_length();
 		return;
 	}
 
@@ -209,10 +210,6 @@ void BLTAnimationNodeSampler::evaluate(GraphEvaluationContext &context, const Lo
 	GodotProfileZone("AnimationSamplerNode::evaluate");
 
 	assert(inputs.size() == 0);
-
-	if (node_time_info.is_synced) {
-		node_time_info.position = node_time_info.sync_track.calc_ratio_from_sync_time(node_time_info.sync_position) * animation->get_length();
-	}
 
 	output.sample_from_animation(animation, context.skeleton_3d, node_time_info.position);
 }
