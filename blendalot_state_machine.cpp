@@ -57,6 +57,63 @@ void BLTStateMachine::_bind_methods() {
 	BIND_CONSTANT(TRANSITION_ERROR_ALREADY_EXISTS);
 }
 
+void BLTStateMachine::get_parameter_list(List<PropertyInfo> *p_list) const {
+	for (const Ref<BLTStateMachineTransition> &transition : transitions) {
+		String parameter_name = vformat("transition/%s/activate", transition->get_name());
+		p_list->push_back(PropertyInfo(Variant::BOOL, parameter_name));
+	}
+}
+
+void BLTStateMachine::set_parameter(const StringName &p_name, const Variant &p_value) {
+	String prop_name = p_name;
+	if (prop_name.begins_with("transition/")) {
+		String transition_name = prop_name.get_slicec('/', 1);
+		String transition_parameter = prop_name.get_slicec('/', 2);
+		int transition_index = find_transition_index_by_name(transition_name);
+
+		if (transition_parameter == "activate") {
+			if (transition_index != -1) {
+				transitions[transition_index]->force_transition(p_value);
+				return;
+			}
+		}
+	}
+}
+
+Variant BLTStateMachine::get_parameter(const StringName &p_name) const {
+	String prop_name = p_name;
+	if (prop_name.begins_with("transition/")) {
+		String transition_name = prop_name.get_slicec('/', 1);
+		String transition_parameter = prop_name.get_slicec('/', 2);
+		int transition_index = find_transition_index_by_name(transition_name);
+
+		if (transition_parameter == "activate") {
+			if (transition_index != -1) {
+				return transitions[transition_index]->is_transition_forced;
+			}
+		}
+	}
+
+	return Variant();
+}
+
+Variant BLTStateMachine::get_parameter_default_value(const StringName &p_parameter) const {
+	String prop_name = p_parameter;
+	if (prop_name.begins_with("transition/")) {
+		String transition_name = prop_name.get_slicec('/', 1);
+		String transition_parameter = prop_name.get_slicec('/', 2);
+		int transition_index = find_transition_index_by_name(transition_name);
+
+		if (transition_parameter == "activate") {
+			if (transition_index != -1) {
+				return false;
+			}
+		}
+	}
+
+	return Variant();
+}
+
 void BLTStateMachine::_get_property_list(List<PropertyInfo> *p_list) const {
 	for (const Ref<BLTAnimationNode> &state : states) {
 		String prop_name = state->get_name();

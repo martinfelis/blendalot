@@ -17,6 +17,7 @@ class BLTStateMachineTransition : public BLTAnimationNodeBlend2 {
 
 protected:
 	static void _bind_methods();
+
 	void _get_property_list(List<PropertyInfo> *p_list) const;
 	bool _get(const StringName &p_name, Variant &r_ret) const;
 	bool _set(const StringName &p_name, const Variant &p_value);
@@ -125,6 +126,12 @@ private:
 
 protected:
 	static void _bind_methods();
+
+	void get_parameter_list(List<PropertyInfo> *p_list) const override;
+	Variant get_parameter_default_value(const StringName &p_parameter) const override;
+	void set_parameter(const StringName &p_name, const Variant &p_value) override;
+	Variant get_parameter(const StringName &p_name) const override;
+
 	void _get_property_list(List<PropertyInfo> *p_list) const;
 	bool _set(const StringName &p_name, const Variant &p_value);
 	bool _get(const StringName &p_name, Variant &r_ret) const;
@@ -296,6 +303,8 @@ public:
 	TransitionError add_transition(const Ref<BLTAnimationNode> &from_state, const Ref<BLTAnimationNode> &to_state, const Ref<BLTStateMachineTransition> &transition) {
 		const int64_t from_state_index = find_state_index(from_state);
 
+		transition->set_name(vformat("%s_to_%s", from_state->get_name(), to_state->get_name()));
+
 		const TransitionError transition_error = is_transition_valid(from_state, to_state);
 		if (transition_error != TRANSITION_OK) {
 			return transition_error;
@@ -347,6 +356,16 @@ public:
 	int64_t find_transition_index(const Ref<BLTAnimationNode> &from_state, const Ref<BLTAnimationNode> &to_state) const {
 		for (unsigned int i = 0; i < transition_states.size(); i++) {
 			if (transition_states[i][0] == from_state && transition_states[i][1] == to_state) {
+				return i;
+			}
+		}
+
+		return -1;
+	}
+
+	int64_t find_transition_index_by_name(const String &transition_name) const {
+		for (unsigned int i = 0; i < transitions.size(); i++) {
+			if (transitions[i]->get_name() == transition_name) {
 				return i;
 			}
 		}
