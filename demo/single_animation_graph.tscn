@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://bjvgqujpqumj7" path="res://main.gd" id="1_nt558"]
 [ext_resource type="PackedScene" uid="uid://d1xcqdqr1qeu6" path="res://assets/MixamoAmy.glb" id="2_ha0yy"]
-[ext_resource type="BLTBlendTree" uid="uid://c5jnrn5ca6ujh" path="res://sinlge_character_animation_graph.tres" id="4_mgu05"]
+[ext_resource type="BLTBlendTree" uid="uid://c5jnrn5ca6ujh" path="res://single_character_animation_graph.tres" id="4_mgu05"]
 [ext_resource type="AnimationLibrary" uid="uid://dwubn740aqx51" path="res://animation_library.res" id="5_7lkht"]
 
 [sub_resource type="Theme" id="Theme_272bh"]
@@ -125,6 +125,10 @@ libraries/animation_library = ExtResource("5_7lkht")
 animation_player = NodePath("../AnimationPlayer2")
 tree_root = ExtResource("4_mgu05")
 skeleton = NodePath("../Armature/Skeleton3D")
+parameters/BLTAnimationNodeBlend2/blend_amount = 0.27
+"parameters/BLTStateMachine/transition/BLTAnimationNodeSampler_to_BLTAnimationNodeSampler 1/activate" = false
+"parameters/BLTStateMachine/transition/BLTAnimationNodeSampler 1_to_BLTAnimationNodeSampler/activate" = false
+"parameters/BLTStateMachine/transition/BLTAnimationNodeSampler 1_to_BLTAnimationNodeSampler 1/activate" = false
 
 [connection signal="value_changed" from="UI/MarginContainer/HBoxContainer/BlendWeightSlider" to="." method="_on_blend_weight_slider_value_changed"]
 
