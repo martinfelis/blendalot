@@ -125,10 +125,9 @@ libraries/animation_library = ExtResource("5_7lkht")
 animation_player = NodePath("../AnimationPlayer2")
 tree_root = ExtResource("4_mgu05")
 skeleton = NodePath("../Armature/Skeleton3D")
-parameters/BLTAnimationNodeBlend2/blend_amount = 0.27
-"parameters/BLTStateMachine/transition/BLTAnimationNodeSampler_to_BLTAnimationNodeSampler 1/activate" = false
-"parameters/BLTStateMachine/transition/BLTAnimationNodeSampler 1_to_BLTAnimationNodeSampler/activate" = false
-"parameters/BLTStateMachine/transition/BLTAnimationNodeSampler 1_to_BLTAnimationNodeSampler 1/activate" = false
+parameters/BLTAnimationNodeBlend2/blend_amount = 0.57
+parameters/BLTStateMachine/transition/BLTAnimationNodeSampler_to_BLTBlendTree/activate = false
+parameters/BLTStateMachine/transition/BLTBlendTree_to_BLTAnimationNodeSampler/activate = false
 
 [connection signal="value_changed" from="UI/MarginContainer/HBoxContainer/BlendWeightSlider" to="." method="_on_blend_weight_slider_value_changed"]
 

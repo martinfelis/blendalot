@@ -116,7 +116,10 @@ private:
 		previous_state = active_state;
 		activate_state(transition_states[active_transition_index][1]);
 
-		if (active_transition->sync && previous_state.is_valid()) {
+		if (node_time_info.is_synced) {
+			active_transition->node_time_info.sync_position = node_time_info.sync_position;
+			active_transition->node_time_info.is_synced = true;
+		} else if (active_transition->sync && previous_state.is_valid()) {
 			double previous_sync_position = previous_state->node_time_info.sync_track.calc_sync_from_abs_time(previous_state->node_time_info.position);
 			active_transition->node_time_info.sync_position = previous_sync_position;
 		}
@@ -449,14 +452,18 @@ public:
 			active_transition->activate_inputs(transition_states[active_transition_index]);
 
 			if (previous_state->active) {
-				transition_states[active_transition_index][1]->activate_inputs({});
+				previous_state->activate_inputs({});
+				previous_state->node_time_info.is_synced = node_time_info.is_synced || active_transition->sync;
+				;
 			}
 			if (active_state->active) {
-				transition_states[active_transition_index][0]->activate_inputs({});
+				active_state->activate_inputs({});
+				active_state->node_time_info.is_synced = node_time_info.is_synced || active_transition->sync;
 			}
 		} else {
 			active_state->active = true;
 			active_state->activate_inputs({});
+			active_state->node_time_info.is_synced = node_time_info.is_synced;
 		}
 	}
 
@@ -473,19 +480,23 @@ public:
 			}
 
 			active_transition->calculate_sync_track(transition_states[active_transition_index]);
+			node_time_info.sync_track = active_transition->node_time_info.sync_track;
 		} else {
 			active_state->calculate_sync_track({});
+			node_time_info.sync_track = active_state->node_time_info.sync_track;
 		}
 	}
 
 	void update_time(double p_delta) override {
 		GodotProfileZone("BLTStateMachine::update_time");
 
+		BLTAnimationNode::update_time(p_delta);
+
 		if (active_transition.is_valid()) {
 			active_transition->update_time(p_delta);
 
 			double delta;
-			if (!active_transition->sync) {
+			if (!node_time_info.is_synced && !active_transition->sync) {
 				delta = active_transition->node_time_info.delta;
 			} else {
 				delta = active_transition->node_time_info.sync_position;

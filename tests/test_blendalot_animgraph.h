@@ -690,7 +690,6 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 
 			CHECK(blend_tree_graph.node_connection_info[0].input_subtree_node_indices.size() == 1);
 			CHECK(blend_tree_graph.node_connection_info[blend2_node_b_index_post_remove].input_subtree_node_indices.size() == 3);
-			blend_tree_graph.node_connection_info[blend2_node_b_index_post_remove]._print_subtree();
 			CHECK(blend_tree_graph.node_connection_info[blend2_node_b_index_post_remove].input_subtree_node_indices.has(blend2_node_b_index_post_remove));
 			CHECK(blend_tree_graph.node_connection_info[blend2_node_b_index_post_remove].input_subtree_node_indices.has(animation_sampler_node_b_index_post_remove));
 			CHECK(blend_tree_graph.node_connection_info[blend2_node_b_index_post_remove].input_subtree_node_indices.has(animation_sampler_node_c_index_post_remove));
@@ -892,6 +891,73 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree][StateMach
 	blend_tree->add_connection(embedded_state_machine, blend2, "Input1");
 	blend_tree->add_connection(blend2, blend_tree->get_output_node(), "Output");
 
+	SUBCASE("Blending Sampler and State Machine") {
+		animation_sampler_node_a->animation_name = "animation_library/TestAnimationSyncA";
+		animation_sampler_node_b->animation_name = "animation_library/TestAnimationSyncB";
+		animation_sampler_node_c->animation_name = "animation_library/TestAnimationSyncC";
+		blend2->blend_weight = 0.5;
+		blend2->sync = true;
+
+		// Trigger initialization
+		animation_graph->set_root_animation_node(blend_tree);
+		GraphEvaluationContext &graph_context = animation_graph->get_context();
+		REQUIRE(blend_tree->initialize(graph_context));
+		AnimationData *graph_output = graph_context.animation_data_allocator.allocate();
+
+		graph_context.graph_process_delta_time = 0.1;
+		blend_tree->activate_inputs(LocalVector<Ref<BLTAnimationNode>>());
+		blend_tree->calculate_sync_track(LocalVector<Ref<BLTAnimationNode>>());
+		CHECK_EQ(embedded_state_machine->node_time_info.sync_track.duration, animation_sampler_node_b->node_time_info.sync_track.duration);
+		CHECK_EQ(animation_sampler_node_b->node_time_info.sync_track.duration, 1.0);
+		CHECK_EQ(blend2->node_time_info.sync_track.duration, 1.5);
+		blend_tree->update_time(graph_context.graph_process_delta_time);
+		blend_tree->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
+
+		CHECK_EQ(blend2->node_time_info.sync_track.duration, 1.5);
+		CHECK_EQ(blend2->node_time_info.sync_position, embedded_state_machine->node_time_info.sync_position);
+		CHECK_EQ(blend2->node_time_info.sync_position, animation_sampler_node_a->node_time_info.sync_position);
+		CHECK_EQ(blend2->node_time_info.sync_position, animation_sampler_node_b->node_time_info.sync_position);
+
+		SUBCASE("Activate unsynced transition") {
+			// Activate transition
+			transition_b_c->set_transition_duration(0.2);
+			transition_b_c->sync = false;
+			animation_graph->set("parameters/StateMachine/transition/AnimB_to_AnimC/activate", true);
+
+			blend_tree->activate_inputs(LocalVector<Ref<BLTAnimationNode>>());
+			blend_tree->calculate_sync_track(LocalVector<Ref<BLTAnimationNode>>());
+			blend_tree->update_time(graph_context.graph_process_delta_time);
+			blend_tree->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
+
+			CHECK(embedded_state_machine->node_time_info.is_synced);
+			CHECK(animation_sampler_node_b->node_time_info.is_synced);
+			CHECK(animation_sampler_node_c->node_time_info.is_synced);
+
+			CHECK_EQ(animation_sampler_node_a->node_time_info.sync_position, blend2->node_time_info.sync_position);
+			CHECK_EQ(animation_sampler_node_b->node_time_info.sync_position, blend2->node_time_info.sync_position);
+			CHECK_EQ(animation_sampler_node_c->node_time_info.sync_position, blend2->node_time_info.sync_position);
+		}
+
+		SUBCASE("Activate synced transition whith non-synced Blend2 in parent graph.") {
+			blend2->sync = false;
+
+			// Activate transition
+			transition_b_c->set_transition_duration(0.2);
+			transition_b_c->sync = true;
+			animation_graph->set("parameters/StateMachine/transition/AnimB_to_AnimC/activate", true);
+
+			blend_tree->activate_inputs(LocalVector<Ref<BLTAnimationNode>>());
+			CHECK(!embedded_state_machine->node_time_info.is_synced);
+			CHECK(animation_sampler_node_b->node_time_info.is_synced);
+			CHECK(animation_sampler_node_c->node_time_info.is_synced);
+			blend_tree->calculate_sync_track(LocalVector<Ref<BLTAnimationNode>>());
+			blend_tree->update_time(graph_context.graph_process_delta_time);
+			blend_tree->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
+		}
+
+		graph_context.animation_data_allocator.free(graph_output);
+	}
+
 	SUBCASE("Non-synchronized transition") {
 		animation_sampler_node_a->animation_name = "animation_library/TestAnimationA";
 		animation_sampler_node_b->animation_name = "animation_library/TestAnimationB";
@@ -903,10 +969,10 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree][StateMach
 		animation_graph->set_root_animation_node(blend_tree);
 		GraphEvaluationContext &graph_context = animation_graph->get_context();
 		REQUIRE(blend_tree->initialize(graph_context));
+		AnimationData *graph_output = graph_context.animation_data_allocator.allocate();
 
 		// Perform evaluation
 		graph_context.graph_process_delta_time = 0.1;
-		AnimationData *graph_output = graph_context.animation_data_allocator.allocate();
 		blend_tree->activate_inputs(LocalVector<Ref<BLTAnimationNode>>());
 		blend_tree->calculate_sync_track(LocalVector<Ref<BLTAnimationNode>>());
 		blend_tree->update_time(graph_context.graph_process_delta_time);
@@ -919,7 +985,6 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree][StateMach
 		// Activate transition
 		transition_b_c->set_transition_duration(0.2);
 		transition_b_c->sync = false;
-		animation_graph->print_property_list();
 		animation_graph->set("parameters/StateMachine/transition/AnimB_to_AnimC/activate", true);
 
 		// and evaluation
@@ -932,6 +997,8 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree][StateMach
 		CHECK(animation_sampler_node_b->node_time_info.position == 0.2);
 		CHECK(animation_sampler_node_c->node_time_info.position == 0.1);
 		CHECK(transition_b_c->blend_weight == doctest::Approx(0.5));
+
+		graph_context.animation_data_allocator.free(graph_output);
 	}
 
 	SUBCASE("Synchronized transition") {
@@ -961,7 +1028,6 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree][StateMach
 		// Activate transition
 		transition_b_c->set_transition_duration(0.2);
 		transition_b_c->sync = true;
-		animation_graph->print_property_list();
 		animation_graph->set("parameters/StateMachine/transition/AnimB_to_AnimC/activate", true);
 
 		// And perform another evaluation
@@ -990,7 +1056,6 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree][StateMach
 
 		// Actual evaluation
 		blend_tree->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
-		CHECK_EQ(blend_tree->node_time_info.sync_track, embedded_state_machine->node_time_info.sync_track);
 
 		WHEN("Triggering an update right at the end of the transition") {
 			graph_context.graph_process_delta_time = 0.099999;
@@ -1016,6 +1081,8 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree][StateMach
 
 			blend_tree->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
 		}
+
+		graph_context.animation_data_allocator.free(graph_output);
 	}
 }
 
