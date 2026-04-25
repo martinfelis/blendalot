@@ -271,12 +271,17 @@ public:
 
 	virtual ~BLTAnimationNode() override = default;
 
-	/// Validates the node and also the nodes it contains. If node cannot be evaluated this function must add a message to context.validation_messages and return false.
+	/// Validates the node and also the nodes it contains. If node cannot be evaluated this function must add a
+	/// message to context.validation_messages and return false.
 	virtual bool initialize(GraphEvaluationContext &context) {
 		node_time_info = {};
 		return true;
 	}
 
+	/// Marks a node as active for the current graph evaluation.
+	/// This function marks a node as active such that the remaining functions calculate_sync_track(), update_time(),
+	/// and evaluate() are called. In addition, this function must also take care of propagating the is_synced flag
+	/// to its inputs.
 	virtual void activate_inputs(const LocalVector<Ref<BLTAnimationNode>> &input_nodes) {
 		// By default, all inputs nodes are activated.
 		for (const Ref<BLTAnimationNode> &node : input_nodes) {
@@ -289,6 +294,7 @@ public:
 			node->node_time_info.is_synced = node_time_info.is_synced;
 		}
 	}
+
 	virtual void calculate_sync_track(const LocalVector<Ref<BLTAnimationNode>> &input_nodes) {
 		// By default, use the SyncTrack of the first input.
 		if (input_nodes.size() > 0) {

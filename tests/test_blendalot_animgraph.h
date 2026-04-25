@@ -906,10 +906,15 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree][StateMach
 
 		graph_context.graph_process_delta_time = 0.1;
 		blend_tree->activate_inputs(LocalVector<Ref<BLTAnimationNode>>());
+		// The blend2 node has syncing enabled, therefore all active nodes should have their is_synced flag to be enabled.
+		CHECK(animation_sampler_node_a->node_time_info.is_synced);
+		CHECK(embedded_state_machine->node_time_info.is_synced);
+		CHECK(embedded_state_machine->get_active_state()->node_time_info.is_synced);
 		blend_tree->calculate_sync_track(LocalVector<Ref<BLTAnimationNode>>());
 		CHECK_EQ(embedded_state_machine->node_time_info.sync_track.duration, animation_sampler_node_b->node_time_info.sync_track.duration);
 		CHECK_EQ(animation_sampler_node_b->node_time_info.sync_track.duration, 1.0);
 		CHECK_EQ(blend2->node_time_info.sync_track.duration, 1.5);
+
 		blend_tree->update_time(graph_context.graph_process_delta_time);
 		blend_tree->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
 
@@ -924,7 +929,16 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree][StateMach
 			transition_b_c->sync = false;
 			animation_graph->set("parameters/StateMachine/transition/AnimB_to_AnimC/activate", true);
 
+			// To ensure that the is_synced flag is properly set we mess with the state here.
+			animation_sampler_node_a->node_time_info.is_synced = false;
+			embedded_state_machine->node_time_info.is_synced = false;
+			embedded_state_machine->get_active_state()->node_time_info.is_synced = false;
+
 			blend_tree->activate_inputs(LocalVector<Ref<BLTAnimationNode>>());
+			CHECK(animation_sampler_node_a->node_time_info.is_synced);
+			CHECK(embedded_state_machine->node_time_info.is_synced);
+			CHECK(embedded_state_machine->get_active_state()->node_time_info.is_synced);
+			CHECK(embedded_state_machine->get_previous_state()->node_time_info.is_synced);
 			blend_tree->calculate_sync_track(LocalVector<Ref<BLTAnimationNode>>());
 			blend_tree->update_time(graph_context.graph_process_delta_time);
 			blend_tree->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);

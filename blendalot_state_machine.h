@@ -207,6 +207,10 @@ public:
 		return active_state;
 	}
 
+	Ref<BLTAnimationNode> get_previous_state() const {
+		return previous_state;
+	}
+
 	Ref<BLTAnimationNode> get_entry_state() const {
 		return entry_state;
 	}
@@ -453,17 +457,14 @@ public:
 
 			if (previous_state->active) {
 				previous_state->activate_inputs({});
-				previous_state->node_time_info.is_synced = node_time_info.is_synced || active_transition->sync;
-				;
 			}
 			if (active_state->active) {
 				active_state->activate_inputs({});
-				active_state->node_time_info.is_synced = node_time_info.is_synced || active_transition->sync;
 			}
 		} else {
 			active_state->active = true;
-			active_state->activate_inputs({});
 			active_state->node_time_info.is_synced = node_time_info.is_synced;
+			active_state->activate_inputs({});
 		}
 	}
 
