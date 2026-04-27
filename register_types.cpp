@@ -25,7 +25,7 @@ void initialize_blendalot_module(ModuleInitializationLevel p_level) {
 	}
 	GDREGISTER_CLASS(ExampleClass);
 	GDREGISTER_CLASS(BLTAnimationNode);
-	//GDREGISTER_CLASS(BLTAnimationGraph);
+	GDREGISTER_CLASS(BLTAnimationGraph);
 	GDREGISTER_CLASS(BLTAnimationNodeOutput);
 	GDREGISTER_CLASS(BLTBlendTree);
 	GDREGISTER_CLASS(BLTAnimationNodeSampler);

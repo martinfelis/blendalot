@@ -9,6 +9,8 @@
 #include <godot_cpp/classes/skeleton3d.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/core/defs.hpp>
+#include <godot_cpp/variant/string_name.hpp>
+#include <godot_cpp/variant/quaternion.hpp>
 
 // Hack of a Hack (see comments in Animation::Track::get_unique_id()
 typedef uint64_t AnimationTrackUID;

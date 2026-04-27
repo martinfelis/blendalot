@@ -6,7 +6,7 @@ from methods import print_error
 
 
 libname = "Blendalot"
-projectdir = "project"
+projectdir = "demo"
 
 localEnv = Environment(tools=["default"], PLATFORM="")
 
@@ -41,10 +41,10 @@ env.Append(CPPPATH=["src/"])
 env.Append(CPPDEFINES=["BLENDALOT_GDEXTENSION"])
 sources = [
     "register_types.cpp",
-#    "blendalot_animation_node.cpp",
-#    "blendalot_animation_graph.cpp",
-#    "blendalot_blend_tree.cpp",
-#    "blendalot_state_machine.cpp",
+    "blendalot_animation_node.cpp",
+    "blendalot_animation_graph.cpp",
+    "blendalot_blend_tree.cpp",
+    "blendalot_state_machine.cpp",
     "src/example_class.cpp"
 ]
 
@@ -62,11 +62,11 @@ suffix = env['suffix'].replace(".dev", "").replace(".universal", "")
 lib_filename = "{}{}{}{}".format(env.subst('$SHLIBPREFIX'), libname, suffix, env.subst('$SHLIBSUFFIX'))
 
 library = env.SharedLibrary(
-    "bin/{}/{}".format(env['platform'], lib_filename),
+    "lib/{}".format(lib_filename),
     source=sources,
 )
 
-copy = env.Install("{}/bin/{}/".format(projectdir, env["platform"]), library)
+copy = env.Install("demo/addons/blendalot/lib/".format(projectdir, env["platform"]), library)
 
 default_args = [library, copy]
 Default(*default_args)
