@@ -38,9 +38,15 @@ Run the following command to download godot-cpp:
 env = SConscript("godot-cpp/SConstruct", {"env": env, "customs": customs})
 
 env.Append(CPPPATH=["src/"])
-env.Append(CPPDEFINES=["MODULEGDEXT_GDEXTENSION"])
-sources = Glob ("*.cpp")
-sources += Glob("src/*.cpp")
+env.Append(CPPDEFINES=["BLENDALOT_GDEXTENSION"])
+sources = [
+    "register_types.cpp",
+#    "blendalot_animation_node.cpp",
+#    "blendalot_animation_graph.cpp",
+#    "blendalot_blend_tree.cpp",
+#    "blendalot_state_machine.cpp",
+    "src/example_class.cpp"
+]
 
 if env["target"] in ["editor", "template_debug"]:
     try:

@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.17)
 if (CMAKE_C_COMPILER)
 endif ()
 
-set(LIBNAME "Blendalot") # "The name of the library"
+set(LIBNAME "libBlendalot") # "The name of the library"
 set(LIBNAME_DEFINE "BLENDALOT") # "Used for #define <LIBNAME>_GDEXTENSION"
 set(GODOT_PROJECT_DIR "project" CACHE STRING "The directory of a Godot project folder")
 
@@ -37,7 +37,7 @@ get_target_property(GODOTCPP_SUFFIX godot::cpp GODOTCPP_SUFFIX)
 get_target_property(GODOTCPP_PLATFORM godot::cpp GODOTCPP_PLATFORM)
 
 # Now we can specify our own project which will inherit any global cmake properties or variables that have been defined.
-project(godot-cpp-template
+project(Blendalot
         VERSION 1.0
         DESCRIPTION "This repository serves as a quickstart template for GDExtension development with Godot 4.0+."
         HOMEPAGE_URL "https://github.com/enetheru/godot-cpp-template/tree/main"
@@ -50,6 +50,10 @@ target_sources(${LIBNAME}
         PRIVATE
         register_types.cpp
         register_types.h
+        blendalot_animation_node.cpp
+        blendalot_animation_graph.cpp
+        blendalot_blend_tree.cpp
+        blendalot_state_machine.cpp
         src/example_class.cpp
         src/example_class.h
 )

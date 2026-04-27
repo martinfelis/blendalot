@@ -1,8 +1,10 @@
 #pragma once
 
-#include "blendalot_animation_node.h"
-
+#ifndef BLENDALOT_GDEXTENSION
 #include "core/object/callable_mp.h"
+#endif
+
+#include "blendalot_animation_node.h"
 
 class BLTBlendTree : public BLTAnimationNode {
 	GDCLASS(BLTBlendTree, BLTAnimationNode);

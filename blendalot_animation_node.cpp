@@ -4,18 +4,22 @@
 
 #include "blendalot_animation_node.h"
 
+#ifdef BLENDALOT_MODULE
 #include "core/object/class_db.h"
+#include "scene/resources/animation.h"
+#endif
+
+#ifdef BLENDALOT_GDEXTENSION
+#include "gdextension_helper.h"
+#endif
 
 void BLTAnimationNode::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_position", "position"), &BLTAnimationNode::set_position);
 	ClassDB::bind_method(D_METHOD("get_position"), &BLTAnimationNode::get_position);
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "position", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_position", "get_position");
-
 	ADD_SIGNAL(MethodInfo("animation_node_renamed", PropertyInfo(Variant::INT, "object_id"), PropertyInfo(Variant::STRING, "old_name"), PropertyInfo(Variant::STRING, "new_name")));
 	ADD_SIGNAL(MethodInfo("animation_node_removed", PropertyInfo(Variant::INT, "object_id"), PropertyInfo(Variant::STRING, "name")));
-
 	ADD_SIGNAL(MethodInfo(SNAME("node_changed"), PropertyInfo(Variant::STRING_NAME, "node_name")));
-
 	ClassDB::bind_method(D_METHOD("get_input_names"), &BLTAnimationNode::get_input_names_as_typed_array);
 	ClassDB::bind_method(D_METHOD("get_input_count"), &BLTAnimationNode::get_input_count);
 	ClassDB::bind_method(D_METHOD("get_input_index", "node"), &BLTAnimationNode::get_input_index);
@@ -54,31 +58,28 @@ void BLTAnimationNode::_animation_node_removed(const ObjectID &p_oid, const Stri
 void AnimationData::sample_from_animation(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d, double p_time) {
 	GodotProfileZone("AnimationData::sample_from_animation");
 
-	const LocalVector<Animation::Track *> &tracks = animation->get_tracks();
-	Animation::Track *const *tracks_ptr = tracks.ptr();
-
-	int count = tracks.size();
-	for (int i = 0; i < count; i++) {
-		const Animation::Track *animation_track = tracks_ptr[i];
-		if (!animation_track->enabled) {
+	int count = animation->get_track_count();
+	for (int32_t track_index = 0; track_index < count; track_index++) {
+		if (!animation->track_is_enabled(track_index)) {
 			continue;
 		}
 
-		Animation::TrackType ttype = animation_track->type;
+		Animation::TrackType ttype = animation->track_get_type(track_index);
+		AnimationTrackUID track_uid = get_track_unique_id(animation, track_index);
 		switch (ttype) {
 			case Animation::TYPE_POSITION_3D:
 			case Animation::TYPE_ROTATION_3D: {
-				TransformTrackValue *transform_track_value = get_value<TransformTrackValue>(animation_track->get_unique_id());
+				TransformTrackValue *transform_track_value = get_value<TransformTrackValue>(track_uid);
 
 				if (transform_track_value->bone_idx != -1) {
 					switch (ttype) {
 						case Animation::TYPE_POSITION_3D: {
-							animation->try_position_track_interpolate(i, p_time, &transform_track_value->loc);
+							transform_track_value->loc = animation->position_track_interpolate(track_index, p_time);
 							transform_track_value->loc_used = true;
 							break;
 						}
 						case Animation::TYPE_ROTATION_3D: {
-							animation->try_rotation_track_interpolate(i, p_time, &transform_track_value->rot);
+							transform_track_value->rot = animation->rotation_track_interpolate(track_index, p_time);
 							transform_track_value->rot_used = true;
 							break;
 						}
@@ -102,29 +103,34 @@ void AnimationData::sample_from_animation(const Ref<Animation> &animation, const
 	}
 }
 
-void AnimationData::allocate_track_value(const Animation::Track *animation_track, const Skeleton3D *skeleton_3d) {
-	switch (animation_track->type) {
+void AnimationData::allocate_track_value(const Ref<Animation> &animation, int32_t track_index, const Skeleton3D *skeleton_3d) {
+	Animation::TrackType track_type = animation->track_get_type(track_index);
+	AnimationTrackUID track_unique_id = get_track_unique_id(animation, track_index);
+
+	switch (track_type) {
 		case Animation::TrackType::TYPE_ROTATION_3D:
 		case Animation::TrackType::TYPE_POSITION_3D: {
 			size_t value_offset = 0;
 			AnimationData::TransformTrackValue *transform_track_value = nullptr;
-			if (value_buffer_offset.has(animation_track->get_unique_id())) {
-				value_offset = value_buffer_offset[animation_track->get_unique_id()];
+			if (value_buffer_offset.has(track_unique_id)) {
+				value_offset = value_buffer_offset[track_unique_id];
 				transform_track_value = reinterpret_cast<AnimationData::TransformTrackValue *>(&buffer[value_offset]);
 			} else {
 				value_offset = buffer.size();
-				value_buffer_offset.insert(animation_track->get_unique_id(), buffer.size());
+				value_buffer_offset.insert(track_unique_id, buffer.size());
 				buffer.resize(buffer.size() + sizeof(AnimationData::TransformTrackValue));
 				transform_track_value = new (reinterpret_cast<AnimationData::TransformTrackValue *>(&buffer[value_offset])) AnimationData::TransformTrackValue();
 			}
 			assert(transform_track_value != nullptr);
-			if (animation_track->path.get_subname_count() == 1) {
-				transform_track_value->bone_idx = skeleton_3d->find_bone(animation_track->path.get_subname(0));
+
+			const NodePath &track_node_path = animation->track_get_path(track_index);
+			if (track_node_path.get_subname_count() == 1) {
+				transform_track_value->bone_idx = skeleton_3d->find_bone(track_node_path.get_subname(0));
 			}
 
-			if (animation_track->type == Animation::TrackType::TYPE_POSITION_3D) {
+			if (track_type == Animation::TrackType::TYPE_POSITION_3D) {
 				transform_track_value->loc_used = true;
-			} else if (animation_track->type == Animation::TrackType::TYPE_ROTATION_3D) {
+			} else if (track_type == Animation::TrackType::TYPE_ROTATION_3D) {
 				transform_track_value->rot_used = true;
 			}
 
@@ -138,17 +144,13 @@ void AnimationData::allocate_track_value(const Animation::Track *animation_track
 void AnimationData::allocate_track_values(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d) {
 	GodotProfileZone("AnimationData::allocate_track_values");
 
-	const LocalVector<Animation::Track *> &tracks = animation->get_tracks();
-	Animation::Track *const *tracks_ptr = tracks.ptr();
-
-	int count = tracks.size();
-	for (int i = 0; i < count; i++) {
-		const Animation::Track *animation_track = tracks_ptr[i];
-		if (!animation_track->enabled) {
+	int count = animation->get_track_count();
+	for (int track_index = 0; track_index < count; track_index++) {
+		if (!animation->track_is_enabled(track_index)) {
 			continue;
 		}
 
-		allocate_track_value(animation_track, skeleton_3d);
+		allocate_track_value(animation, track_index, skeleton_3d);
 	}
 }
 
@@ -283,6 +285,7 @@ TypedArray<StringName> BLTAnimationNodeSampler::get_animations_as_typed_array() 
 		return typed_arr;
 	}
 
+#ifdef BLENDALOT_MODULE
 	Vector<StringName> vec;
 
 	LocalVector<StringName> animation_libraries;
@@ -302,6 +305,11 @@ TypedArray<StringName> BLTAnimationNodeSampler::get_animations_as_typed_array() 
 		typed_arr[i] = vec[i];
 	}
 	return typed_arr;
+#endif
+
+#ifdef BLENDALOT_GDEXTENSION
+	return animation_player->get_animation_library_list();
+#endif
 }
 
 void BLTAnimationNodeSampler::_bind_methods() {

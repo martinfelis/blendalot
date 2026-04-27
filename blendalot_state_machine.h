@@ -1,8 +1,14 @@
 #pragma once
 
-#include "blendalot_animation_node.h"
-
+#ifdef BLENDALOT_MODULE
 #include "core/object/callable_mp.h"
+#endif
+
+#ifdef BLENDALOT_GDEXTENSION
+
+#endif
+
+#include "blendalot_animation_node.h"
 
 class BLTStateMachineTransition : public BLTAnimationNodeBlend2 {
 	GDCLASS(BLTStateMachineTransition, BLTAnimationNodeBlend2);
@@ -223,7 +229,7 @@ public:
 
 		StringName node_base_name = state->get_name();
 		if (node_base_name.is_empty()) {
-			node_base_name = state->get_class_name();
+			node_base_name = state->get_class();
 		}
 		state->set_name(node_base_name);
 

@@ -1,6 +1,12 @@
 #include "blendalot_state_machine.h"
 
+#ifdef BLENDALOT_MODULE
 #include "core/object/class_db.h"
+#endif
+
+#ifdef BLENDALOT_GDEXTENSION
+
+#endif
 
 //
 // BLTStateMachineTransition

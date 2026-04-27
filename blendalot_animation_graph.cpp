@@ -1,5 +1,6 @@
 #include "blendalot_animation_graph.h"
 
+#ifdef BLENDALOT_MODULE
 #include "core/config/engine.h"
 #include "core/object/callable_mp.h"
 #include "core/object/class_db.h"
@@ -8,6 +9,18 @@
 #include "scene/animation/animation_player.h"
 #include "scene/main/scene_tree.h"
 #include "scene/main/window.h"
+
+static inline String PARAMETERS_BASE_PATH = Animation::PARAMETERS_BASE_PATH;
+#endif
+
+#ifdef BLENDALOT_GDEXTENSION
+#include "godot_cpp/classes/engine.hpp"
+#include "godot_cpp/classes/scene_tree.hpp"
+#include "godot_cpp/classes/skeleton3d.hpp"
+#include "godot_cpp/classes/window.hpp"
+
+static inline String PARAMETERS_BASE_PATH = "parameters/";
+#endif
 
 void BLTAnimationGraph::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_active", "active"), &BLTAnimationGraph::set_active);
@@ -19,7 +32,6 @@ void BLTAnimationGraph::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_callback_mode_method", "mode"), &BLTAnimationGraph::set_callback_mode_method);
 	ClassDB::bind_method(D_METHOD("get_callback_mode_method"), &BLTAnimationGraph::get_callback_mode_method);
-
 	ClassDB::bind_method(D_METHOD("set_animation_player", "animation_player"), &BLTAnimationGraph::set_animation_player);
 	ClassDB::bind_method(D_METHOD("get_animation_player"), &BLTAnimationGraph::get_animation_player);
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "animation_player", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "AnimationPlayer"), "set_animation_player", "get_animation_player");
@@ -68,7 +80,7 @@ void BLTAnimationGraph::_update_properties() const {
 	parameter_to_node_parameter_map.clear();
 
 	if (root_animation_node.is_valid()) {
-		_update_properties_for_node(Animation::PARAMETERS_BASE_PATH, root_animation_node);
+		_update_properties_for_node(PARAMETERS_BASE_PATH, root_animation_node);
 	}
 
 	properties_dirty = false;
@@ -104,7 +116,7 @@ bool BLTAnimationGraph::_set(const StringName &p_name, const Variant &p_value) {
 
 bool BLTAnimationGraph::_get(const StringName &p_name, Variant &r_ret) const {
 #ifndef DISABLE_DEPRECATED
-	if (p_name == "process_callback") {
+	if (p_name == StringName("process_callback")) {
 		r_ret = get_callback_mode_process();
 		return true;
 	}
@@ -141,7 +153,10 @@ void BLTAnimationGraph::_graph_changed(const StringName &node_name) {
 		return;
 	}
 
+#ifdef BLENDALOT_MODULE
+	// TODO (2026-04-26, GDExtension refactor): this somehow causes errors when compiling as GDExtension.
 	callable_mp(this, &BLTAnimationGraph::_update_properties).call_deferred();
+#endif
 	callable_mp(this, &BLTAnimationGraph::_setup_graph).call_deferred();
 
 	properties_dirty = true;
@@ -330,7 +345,7 @@ void BLTAnimationGraph::_process_graph(double p_delta, bool p_update_only) {
 void BLTAnimationGraph::_apply_animation_data(const AnimationData &output_data) const {
 	GodotProfileZone("BLTAnimationGraph::_apply_animation_data");
 
-	for (const KeyValue<Animation::TrackCacheID, size_t> &K : output_data.value_buffer_offset) {
+	for (const KeyValue<AnimationTrackUID, size_t> &K : output_data.value_buffer_offset) {
 		const AnimationData::TrackValue *track_value = output_data.get_value<AnimationData::TrackValue>(K.key);
 		switch (track_value->type) {
 			case AnimationData::TrackType::TYPE_POSITION_3D:

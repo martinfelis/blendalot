@@ -1,6 +1,12 @@
 #include "blendalot_blend_tree.h"
 
+#ifdef BLENDALOT_MODULE
 #include "core/object/class_db.h"
+#endif
+
+#ifdef BLENDALOT_GDEXTENSION
+
+#endif
 
 BLTBlendTree::BLTBlendTreeGraph::BLTBlendTreeGraph() {
 	Ref<BLTAnimationNodeOutput> output_node;
@@ -36,7 +42,7 @@ int BLTBlendTree::BLTBlendTreeGraph::find_node_index_by_name(const StringName &n
 void BLTBlendTree::BLTBlendTreeGraph::add_node(const Ref<BLTAnimationNode> &node) {
 	StringName node_base_name = node->get_name();
 	if (node_base_name.is_empty()) {
-		node_base_name = node->get_class_name();
+		node_base_name = node->get_class();
 	}
 	node->set_name(node_base_name);
 
@@ -143,7 +149,11 @@ LocalVector<int> BLTBlendTree::BLTBlendTreeGraph::get_sorted_node_indices() {
 	LocalVector<int> result;
 
 	sort_nodes_recursive(0, result);
+#ifdef BLENDALOT_MODULE
 	result.reverse();
+#else
+	result.invert();
+#endif
 
 	HashSet<int> connected_node_indices;
 	for (int node_index : result) {

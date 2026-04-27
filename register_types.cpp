@@ -14,21 +14,25 @@ using namespace godot;
 
 #include "src/example_class.h"
 
+#include "blendalot_animation_graph.h"
+#include "blendalot_animation_node.h"
+#include "blendalot_blend_tree.h"
+#include "blendalot_state_machine.h"
+
 void initialize_blendalot_module(ModuleInitializationLevel p_level) {
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
 		return;
 	}
 	GDREGISTER_CLASS(ExampleClass);
-
-	//	ClassDB::register_class<BLTAnimationGraph>();
-	//	ClassDB::register_class<BLTAnimationNode>();
-	//	ClassDB::register_class<BLTAnimationNodeOutput>();
-	//	ClassDB::register_class<BLTBlendTree>();
-	//	ClassDB::register_class<BLTAnimationNodeSampler>();
-	//	ClassDB::register_class<BLTAnimationNodeTimeScale>();
-	//	ClassDB::register_class<BLTAnimationNodeBlend2>();
-	//	ClassDB::register_class<BLTStateMachine>();
-	//	ClassDB::register_class<BLTStateMachineTransition>();
+	GDREGISTER_CLASS(BLTAnimationNode);
+	//GDREGISTER_CLASS(BLTAnimationGraph);
+	GDREGISTER_CLASS(BLTAnimationNodeOutput);
+	GDREGISTER_CLASS(BLTBlendTree);
+	GDREGISTER_CLASS(BLTAnimationNodeSampler);
+	GDREGISTER_CLASS(BLTAnimationNodeTimeScale);
+	GDREGISTER_CLASS(BLTAnimationNodeBlend2);
+	GDREGISTER_CLASS(BLTStateMachine);
+	GDREGISTER_CLASS(BLTStateMachineTransition);
 }
 
 void uninitialize_blendalot_module(ModuleInitializationLevel p_level) {
