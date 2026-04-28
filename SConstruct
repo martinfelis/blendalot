@@ -45,7 +45,6 @@ sources = [
     "blendalot_animation_graph.cpp",
     "blendalot_blend_tree.cpp",
     "blendalot_state_machine.cpp",
-    "src/example_class.cpp"
 ]
 
 if env["target"] in ["editor", "template_debug"]:

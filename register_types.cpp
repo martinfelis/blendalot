@@ -12,8 +12,6 @@
 using namespace godot;
 #endif
 
-#include "src/example_class.h"
-
 #include "blendalot_animation_graph.h"
 #include "blendalot_animation_node.h"
 #include "blendalot_blend_tree.h"
@@ -23,7 +21,6 @@ void initialize_blendalot_module(ModuleInitializationLevel p_level) {
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
 		return;
 	}
-	GDREGISTER_CLASS(ExampleClass);
 	GDREGISTER_CLASS(BLTAnimationNode);
 	GDREGISTER_CLASS(BLTAnimationGraph);
 	GDREGISTER_CLASS(BLTAnimationNodeOutput);

@@ -54,8 +54,6 @@ target_sources(${LIBNAME}
         blendalot_animation_graph.cpp
         blendalot_blend_tree.cpp
         blendalot_state_machine.cpp
-        src/example_class.cpp
-        src/example_class.h
 )
 
 # Fetch a list of the xml files to use for documentation and add to our target
