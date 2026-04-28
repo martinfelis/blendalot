@@ -1,0 +1,81 @@
+[gd_scene format=3 uid="uid://c1etrqvie5ua3"]
+
+[ext_resource type="PackedScene" uid="uid://d1xcqdqr1qeu6" path="res://assets/MixamoAmy.glb" id="1_dvpr4"]
+[ext_resource type="AnimationLibrary" uid="uid://dwubn740aqx51" path="res://animation_library.res" id="2_cjnx4"]
+
+[sub_resource type="BLTAnimationNodeBlend2" id="BLTAnimationNodeBlend2_dvpr4"]
+position = Vector2(-280, 40)
+resource_name = "BLTAnimationNodeBlend2"
+
+[sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_cjnx4"]
+animation = &"animation_library/Limping-InPlace"
+position = Vector2(-800, 180)
+resource_name = "BLTAnimationNodeSampler 1"
+
+[sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_4napt"]
+animation = &"animation_library/Walk-InPlace"
+position = Vector2(180, 260)
+resource_name = "BLTAnimationNodeSampler"
+
+[sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_wun1a"]
+animation = &"animation_library/Run-InPlace"
+position = Vector2(-500, -80)
+resource_name = "BLTAnimationNodeSampler"
+
+[sub_resource type="BLTBlendTree" id="BLTBlendTree_wrlmb"]
+graph_offset = Vector2(-796, -183)
+nodes/BLTAnimationNodeSampler/node = SubResource("BLTAnimationNodeSampler_wun1a")
+nodes/BLTAnimationNodeSampler/graph_offset = Vector2(-500, -80)
+node_connections = ["Output", 0, "BLTAnimationNodeSampler"]
+position = Vector2(559, 93)
+resource_name = "BLTBlendTree"
+
+[sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_utm3w"]
+transition_duration = 1.0
+blend_amount = 1.0
+resource_name = "BLTAnimationNodeSampler_to_BLTBlendTree"
+
+[sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_nv3rx"]
+transition_duration = 1.0
+blend_amount = 1.0
+resource_name = "BLTBlendTree_to_BLTAnimationNodeSampler"
+
+[sub_resource type="BLTStateMachine" id="BLTStateMachine_xperg"]
+states/BLTAnimationNodeSampler/node = SubResource("BLTAnimationNodeSampler_4napt")
+states/BLTAnimationNodeSampler/position = Vector2(180, 260)
+states/BLTBlendTree/node = SubResource("BLTBlendTree_wrlmb")
+states/BLTBlendTree/position = Vector2(559, 93)
+transitions = [SubResource("BLTAnimationNodeSampler_4napt"), SubResource("BLTBlendTree_wrlmb"), SubResource("BLTStateMachineTransition_utm3w"), SubResource("BLTBlendTree_wrlmb"), SubResource("BLTAnimationNodeSampler_4napt"), SubResource("BLTStateMachineTransition_nv3rx")]
+position = Vector2(-620, 0)
+resource_name = "BLTStateMachine"
+
+[sub_resource type="BLTBlendTree" id="BLTBlendTree_4napt"]
+graph_offset = Vector2(-872, -39)
+nodes/BLTAnimationNodeBlend2/node = SubResource("BLTAnimationNodeBlend2_dvpr4")
+nodes/BLTAnimationNodeBlend2/graph_offset = Vector2(-280, 40)
+"nodes/BLTAnimationNodeSampler 1/node" = SubResource("BLTAnimationNodeSampler_cjnx4")
+"nodes/BLTAnimationNodeSampler 1/graph_offset" = Vector2(-800, 180)
+nodes/BLTStateMachine/node = SubResource("BLTStateMachine_xperg")
+nodes/BLTStateMachine/graph_offset = Vector2(-620, 0)
+node_connections = ["Output", 0, "BLTAnimationNodeBlend2", "BLTAnimationNodeBlend2", 1, "BLTAnimationNodeSampler 1", "BLTAnimationNodeBlend2", 0, "BLTStateMachine"]
+resource_name = "Root"
+
+[node name="CharacterTest" type="Node3D" unique_id=584416199]
+
+[node name="MixamoAmy" parent="." unique_id=1155727332 instance=ExtResource("1_dvpr4")]
+
+[node name="Skeleton3D" parent="MixamoAmy/Armature" parent_id_path=PackedInt32Array(1155727332, 1791722621) index="0" unique_id=1831928682]
+bones/66/rotation = Quaternion(0.58282924, 0.01569575, 0.0033819587, 0.812436)
+
+[node name="AnimationPlayerMod" type="AnimationPlayer" parent="MixamoAmy" unique_id=1757187910]
+libraries/animation_library = ExtResource("2_cjnx4")
+
+[node name="BLTAnimationGraph" type="BLTAnimationGraph" parent="." unique_id=642044102]
+animation_player = NodePath("../MixamoAmy/AnimationPlayerMod")
+tree_root = SubResource("BLTBlendTree_4napt")
+skeleton = NodePath("../MixamoAmy/Armature/Skeleton3D")
+parameters/BLTAnimationNodeBlend2/blend_amount = 0.0
+parameters/BLTStateMachine/transition/BLTAnimationNodeSampler_to_BLTBlendTree/activate = false
+parameters/BLTStateMachine/transition/BLTBlendTree_to_BLTAnimationNodeSampler/activate = false
+
+[editable path="MixamoAmy"]
