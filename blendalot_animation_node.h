@@ -9,8 +9,8 @@
 #include <godot_cpp/classes/skeleton3d.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/core/defs.hpp>
-#include <godot_cpp/variant/string_name.hpp>
 #include <godot_cpp/variant/quaternion.hpp>
+#include <godot_cpp/variant/string_name.hpp>
 
 // Hack of a Hack (see comments in Animation::Track::get_unique_id()
 typedef uint64_t AnimationTrackUID;
@@ -189,15 +189,18 @@ struct AnimationData {
 		}
 	}
 
+	Animation::TrackType get_cache_type(Animation::TrackType p_type) {
+		if (p_type == Animation::TYPE_BEZIER) {
+			return Animation::TYPE_VALUE;
+		}
+		if (p_type == Animation::TYPE_ROTATION_3D || p_type == Animation::TYPE_SCALE_3D) {
+			return Animation::TYPE_POSITION_3D; // Reference them as position3D tracks, even if they modify rotation or scale.
+		}
+		return p_type;
+	}
+
 	AnimationTrackUID get_track_unique_id(const Ref<Animation> &animation, int32_t track_index) {
-#ifdef BLENDALOT_GDEXTENSION
-		Animation::TrackType track_type = animation->track_get_type(track_index);
-		StringName concatenated_path = StringName(animation->track_get_path(track_index));
-		AnimationTrackUID track_unique_id = (uintptr_t)(&concatenated_path) + track_type;
-		return track_unique_id;
-#else
-		return animation->track_get_unique_id(track_index);
-#endif
+		return animation->track_get_path(track_index).hash() * 10 + get_cache_type(animation->track_get_type(track_index));
 	}
 
 	void sample_from_animation(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d, double p_time);
@@ -394,7 +397,7 @@ public:
 	AnimationPlayer *animation_player = nullptr;
 
 	void set_animation_player(AnimationPlayer *p_player);
-	bool set_animation(const StringName &p_name);
+	bool set_animation(const String &p_name);
 	StringName get_animation() const;
 	AnimationPlayer *get_animation_player() const;
 

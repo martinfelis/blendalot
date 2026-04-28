@@ -221,7 +221,7 @@ void BLTAnimationNodeSampler::set_animation_player(AnimationPlayer *p_player) {
 	_node_changed();
 }
 
-bool BLTAnimationNodeSampler::set_animation(const StringName &p_name) {
+bool BLTAnimationNodeSampler::set_animation(const String &p_name) {
 	bool has_animation_name_changed = p_name != animation_name;
 	animation_name = p_name;
 
@@ -249,7 +249,7 @@ bool BLTAnimationNodeSampler::set_animation(const StringName &p_name) {
 	// Initialize Sync Track from marker
 	LocalVector<float> sync_markers;
 	int marker_index = 0;
-	StringName marker_name = itos(marker_index);
+	String marker_name = itos(marker_index);
 	while (animation->has_marker(marker_name)) {
 		sync_markers.push_back(animation->get_marker_time(marker_name));
 		marker_index++;

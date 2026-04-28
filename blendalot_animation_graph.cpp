@@ -19,7 +19,7 @@ static inline String PARAMETERS_BASE_PATH = Animation::PARAMETERS_BASE_PATH;
 #include "godot_cpp/classes/skeleton3d.hpp"
 #include "godot_cpp/classes/window.hpp"
 
-constexpr const char* PARAMETERS_BASE_PATH = "parameters/";
+constexpr const char *PARAMETERS_BASE_PATH = "parameters/";
 #endif
 
 void BLTAnimationGraph::_bind_methods() {
