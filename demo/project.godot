@@ -10,9 +10,9 @@ config_version=5
 
 [application]
 
-config/name="Synced Blend Tree Test"
+config/name="Blendalot Demo"
 run/main_scene="uid://svj53e2xoio"
-config/features=PackedStringArray("4.6", "Forward Plus")
+config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 
 [display]

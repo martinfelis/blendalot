@@ -1,0 +1,26 @@
+[gd_resource type="BLTBlendTree" format=3 uid="uid://cbgxucxxcd611"]
+
+[sub_resource type="BLTAnimationNodeBlend2" id="BLTAnimationNodeBlend2_dvpr4"]
+position = Vector2(-280, 40)
+resource_name = "BLTAnimationNodeBlend2"
+
+[sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_cjnx4"]
+animation = &"animation_library/Walk-InPlace"
+position = Vector2(-720, 180)
+resource_name = "BLTAnimationNodeSampler 1"
+
+[sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_4napt"]
+animation = &"animation_library/Run-InPlace"
+position = Vector2(-700, 0)
+resource_name = "BLTAnimationNodeSampler"
+
+[resource]
+graph_offset = Vector2(-755.4126, -61.658966)
+nodes/BLTAnimationNodeBlend2/node = SubResource("BLTAnimationNodeBlend2_dvpr4")
+nodes/BLTAnimationNodeBlend2/graph_offset = Vector2(-280, 40)
+"nodes/BLTAnimationNodeSampler 1/node" = SubResource("BLTAnimationNodeSampler_cjnx4")
+"nodes/BLTAnimationNodeSampler 1/graph_offset" = Vector2(-720, 180)
+nodes/BLTAnimationNodeSampler/node = SubResource("BLTAnimationNodeSampler_4napt")
+nodes/BLTAnimationNodeSampler/graph_offset = Vector2(-700, 0)
+node_connections = ["Output", 0, "BLTAnimationNodeBlend2", "BLTAnimationNodeBlend2", 0, "BLTAnimationNodeSampler", "BLTAnimationNodeBlend2", 1, "BLTAnimationNodeSampler 1"]
+resource_name = "Root"

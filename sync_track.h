@@ -2,8 +2,15 @@
 
 #include "blendalot_math_helper.h"
 
+#ifdef BLENDALOT_MODULE
 #include "core/math/math_funcs.h"
 #include "core/templates/local_vector.h"
+#endif
+
+#ifdef BLENDALOT_GDEXTENSION
+#include <godot_cpp/templates/local_vector.hpp>
+using namespace godot;
+#endif
 
 #include <cassert>
 #include <cmath>

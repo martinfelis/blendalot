@@ -1,12 +1,34 @@
 #pragma once
 
-#include "sync_track.h"
+#ifdef BLENDALOT_GDEXTENSION
+#include "gdextension_helper.h"
 
+#include <gdextension_interface.h>
+#include <godot_cpp/classes/animation.hpp>
+#include <godot_cpp/classes/animation_player.hpp>
+#include <godot_cpp/classes/skeleton3d.hpp>
+#include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/core/defs.hpp>
+#include <godot_cpp/variant/quaternion.hpp>
+#include <godot_cpp/variant/string_name.hpp>
+
+// Hack of a Hack (see comments in Animation::Track::get_unique_id()
+typedef uint64_t AnimationTrackUID;
+
+// Disable profiling
+#define GodotProfileZone(m_zone_name)
+#else
 #include "core/io/resource.h"
 #include "core/profiling/profiling.h"
 #include "scene/3d/skeleton_3d.h"
 #include "scene/animation/animation_player.h"
 #include "scene/resources/animation_library.h"
+
+// Hack of a Hack (see comments in Animation::Track::get_unique_id()
+typedef Animation::TrackCacheID AnimationTrackUID;
+#endif
+
+#include "sync_track.h"
 
 #include <cassert>
 
@@ -17,7 +39,7 @@
  * In general AnimationData objects should be obtained using the AnimationDataAllocator.
  *
  * The class consists of a buffer containing the data and a hashmap that resolves the
- * Animation::TrackCacheID of an Animation::Track to the corresponding AnimationData::TrackValue
+ * AnimationTrackUID of an Animation::Track to the corresponding AnimationData::TrackValue
  * block within the buffer.
  */
 struct AnimationData {
@@ -106,7 +128,7 @@ struct AnimationData {
 	}
 	AnimationData(AnimationData &&other) noexcept :
 			// We skip copying the offset as that should be identical for all nodes within a BLTAnimationGraph.
-			// value_buffer_offset(std::exchange(other.value_buffer_offset, AHashMap<Animation::TrackCacheID, size_t, HashHasher>())),
+			// value_buffer_offset(std::exchange(other.value_buffer_offset, AHashMap<AnimationTrackUID, size_t, HashHasher>())),
 			buffer(std::exchange(other.buffer, LocalVector<uint8_t>())) {
 	}
 	AnimationData &operator=(const AnimationData &other) {
@@ -121,27 +143,27 @@ struct AnimationData {
 		return *this;
 	}
 
-	void allocate_track_value(const Animation::Track *animation_track, const Skeleton3D *skeleton_3d);
+	void allocate_track_value(const Ref<Animation> &animation, int32_t track_index, const Skeleton3D *skeleton_3d);
 	void allocate_track_values(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d);
 
 	template <typename TrackValueType>
-	TrackValueType *get_value(const Animation::TrackCacheID &track_cache_id) {
+	TrackValueType *get_value(const AnimationTrackUID &track_cache_id) {
 		return reinterpret_cast<TrackValueType *>(&buffer[value_buffer_offset[track_cache_id]]);
 	}
 
 	template <typename TrackValueType>
-	const TrackValueType *get_value(const Animation::TrackCacheID &track_cache_id) const {
+	const TrackValueType *get_value(const AnimationTrackUID &track_cache_id) const {
 		return reinterpret_cast<const TrackValueType *>(&buffer[value_buffer_offset[track_cache_id]]);
 	}
 
 	bool has_same_tracks(const AnimationData &other) const {
-		HashSet<Animation::TrackCacheID> valid_track_hashes;
-		for (const KeyValue<Animation::TrackCacheID, size_t> &K : value_buffer_offset) {
+		HashSet<AnimationTrackUID> valid_track_hashes;
+		for (const KeyValue<AnimationTrackUID, size_t> &K : value_buffer_offset) {
 			valid_track_hashes.insert(K.key);
 		}
 
-		for (const KeyValue<Animation::TrackCacheID, size_t> &K : other.value_buffer_offset) {
-			if (HashSet<Animation::TrackCacheID>::Iterator entry = valid_track_hashes.find(K.key)) {
+		for (const KeyValue<AnimationTrackUID, size_t> &K : other.value_buffer_offset) {
+			if (HashSet<AnimationTrackUID>::Iterator entry = valid_track_hashes.find(K.key)) {
 				valid_track_hashes.remove(entry);
 			} else {
 				return false;
@@ -159,7 +181,7 @@ struct AnimationData {
 			return;
 		}
 
-		for (const KeyValue<Animation::TrackCacheID, size_t> &K : value_buffer_offset) {
+		for (const KeyValue<AnimationTrackUID, size_t> &K : value_buffer_offset) {
 			TrackValue *track_value = get_value<TrackValue>(K.key);
 			const TrackValue *other_track_value = to_data.get_value<TrackValue>(K.key);
 
@@ -167,9 +189,23 @@ struct AnimationData {
 		}
 	}
 
+	Animation::TrackType get_cache_type(Animation::TrackType p_type) {
+		if (p_type == Animation::TYPE_BEZIER) {
+			return Animation::TYPE_VALUE;
+		}
+		if (p_type == Animation::TYPE_ROTATION_3D || p_type == Animation::TYPE_SCALE_3D) {
+			return Animation::TYPE_POSITION_3D; // Reference them as position3D tracks, even if they modify rotation or scale.
+		}
+		return p_type;
+	}
+
+	AnimationTrackUID get_track_unique_id(const Ref<Animation> &animation, int32_t track_index) {
+		return animation->track_get_path(track_index).hash() * 10 + get_cache_type(animation->track_get_type(track_index));
+	}
+
 	void sample_from_animation(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d, double p_time);
 
-	AHashMap<Animation::TrackCacheID, size_t, HashHasher> value_buffer_offset;
+	AHashMap<AnimationTrackUID, size_t, HashHasher> value_buffer_offset;
 	LocalVector<uint8_t> buffer;
 };
 
@@ -361,7 +397,7 @@ public:
 	AnimationPlayer *animation_player = nullptr;
 
 	void set_animation_player(AnimationPlayer *p_player);
-	bool set_animation(const StringName &p_name);
+	bool set_animation(const String &p_name);
 	StringName get_animation() const;
 	AnimationPlayer *get_animation_player() const;
 
@@ -411,6 +447,8 @@ private:
 	}
 
 protected:
+	static void _bind_methods() {};
+
 	void _get_property_list(List<PropertyInfo> *p_list) const;
 	bool _get(const StringName &p_name, Variant &r_value) const;
 	bool _set(const StringName &p_name, const Variant &p_value);
@@ -426,6 +464,9 @@ public:
 	Vector<StringName> get_input_names() const override {
 		return { "Output" };
 	}
+
+protected:
+	static void _bind_methods() {};
 };
 
 class BLTAnimationNodeBlend2 : public BLTAnimationNode {

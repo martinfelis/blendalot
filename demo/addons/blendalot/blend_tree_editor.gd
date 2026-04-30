@@ -199,6 +199,7 @@ func _on_blend_tree_graph_edit_delete_nodes_request(nodes: Array[StringName]) ->
 		graph_node_to_blend_tree_node.erase(graph_node)
 		blend_tree_graph_edit.remove_child(graph_node)
 		_on_blend_tree_graph_edit_node_deselected(graph_node)
+		graph_node.queue_free()
 		
 		EditorInterface.get_inspector().edit(null)
 

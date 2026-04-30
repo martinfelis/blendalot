@@ -1,10 +1,10 @@
 #pragma once
 
-#include "blendalot_animation_node.h"
-
+#ifdef BLENDALOT_MODULE
 #include "scene/animation/animation_player.h"
+#endif
 
-class Skeleton3D;
+#include "blendalot_animation_node.h"
 
 class BLTAnimationGraph : public Node {
 	GDCLASS(BLTAnimationGraph, Node);

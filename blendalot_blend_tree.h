@@ -1,8 +1,10 @@
 #pragma once
 
-#include "blendalot_animation_node.h"
-
+#ifndef BLENDALOT_GDEXTENSION
 #include "core/object/callable_mp.h"
+#endif
+
+#include "blendalot_animation_node.h"
 
 class BLTBlendTree : public BLTAnimationNode {
 	GDCLASS(BLTBlendTree, BLTAnimationNode);
@@ -189,6 +191,7 @@ public:
 
 	void remove_node(const Ref<BLTAnimationNode> &node) {
 		if (tree_graph.remove_node(node)) {
+			is_evaluation_order_dirty = true;
 			_node_changed();
 		}
 	}
@@ -310,8 +313,10 @@ public:
 
 			const NodeRuntimeData &node_runtime_data = _node_runtime_data[i];
 
-			for (const Ref<BLTAnimationNode> &input_node : node_runtime_data.input_nodes) {
+			for (unsigned int j = 0; j < node_runtime_data.input_nodes.size(); j++) {
+				const Ref<BLTAnimationNode> &input_node = node_runtime_data.input_nodes[j];
 				if (!input_node.is_valid()) {
+					context.validation_messages.push_back(vformat("Invalid node %s: no valid node found at input index %d", node->node_path, j));
 					return false;
 				}
 			}
