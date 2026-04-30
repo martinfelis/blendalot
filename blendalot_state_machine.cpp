@@ -4,10 +4,6 @@
 #include "core/object/class_db.h"
 #endif
 
-#ifdef BLENDALOT_GDEXTENSION
-
-#endif
-
 //
 // BLTStateMachineTransition
 //

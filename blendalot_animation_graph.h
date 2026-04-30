@@ -4,10 +4,6 @@
 #include "scene/animation/animation_player.h"
 #endif
 
-#ifdef BLENDALOT_GDEXTENSION
-
-#endif
-
 #include "blendalot_animation_node.h"
 
 class BLTAnimationGraph : public Node {

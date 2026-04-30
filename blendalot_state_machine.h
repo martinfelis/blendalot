@@ -4,10 +4,6 @@
 #include "core/object/callable_mp.h"
 #endif
 
-#ifdef BLENDALOT_GDEXTENSION
-
-#endif
-
 #include "blendalot_animation_node.h"
 
 class BLTStateMachineTransition : public BLTAnimationNodeBlend2 {
