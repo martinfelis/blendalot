@@ -71,14 +71,9 @@ struct AnimationData {
 		bool operator!=(const TrackValue &other_value) const {
 			return !(*this == other_value);
 		}
-
-		virtual TrackValue *clone() const {
-			print_error(vformat("Cannot clone TrackValue of type %d: not yet implemented.", type));
-			return nullptr;
-		}
 	};
 
-	struct TransformTrackValue : public TrackValue {
+	struct TransformTrackValue final : public TrackValue {
 		int bone_idx = -1;
 
 		bool loc_used = false;
@@ -123,23 +118,23 @@ struct AnimationData {
 	~AnimationData() = default;
 
 	AnimationData(const AnimationData &other) {
-		value_buffer_offset = other.value_buffer_offset;
-		buffer = other.buffer;
+		track_value_index = other.track_value_index;
+		transform_values = other.transform_values;
 	}
 	AnimationData(AnimationData &&other) noexcept :
 			// We skip copying the offset as that should be identical for all nodes within a BLTAnimationGraph.
 			// value_buffer_offset(std::exchange(other.value_buffer_offset, AHashMap<AnimationTrackUID, size_t, HashHasher>())),
-			buffer(std::exchange(other.buffer, LocalVector<uint8_t>())) {
+			transform_values(std::exchange(other.transform_values, LocalVector<TransformTrackValue>())) {
 	}
 	AnimationData &operator=(const AnimationData &other) {
 		AnimationData temp(other);
-		std::swap(value_buffer_offset, temp.value_buffer_offset);
-		std::swap(buffer, temp.buffer);
+		std::swap(track_value_index, temp.track_value_index);
+		std::swap(transform_values, temp.transform_values);
 		return *this;
 	}
 	AnimationData &operator=(AnimationData &&other) noexcept {
-		std::swap(value_buffer_offset, other.value_buffer_offset);
-		std::swap(buffer, other.buffer);
+		std::swap(track_value_index, other.track_value_index);
+		std::swap(transform_values, other.transform_values);
 		return *this;
 	}
 
@@ -148,21 +143,21 @@ struct AnimationData {
 
 	template <typename TrackValueType>
 	TrackValueType *get_value(const AnimationTrackUID &track_cache_id) {
-		return reinterpret_cast<TrackValueType *>(&buffer[value_buffer_offset[track_cache_id]]);
+		return reinterpret_cast<TrackValueType *>(&transform_values[track_value_index[track_cache_id]]);
 	}
 
 	template <typename TrackValueType>
 	const TrackValueType *get_value(const AnimationTrackUID &track_cache_id) const {
-		return reinterpret_cast<const TrackValueType *>(&buffer[value_buffer_offset[track_cache_id]]);
+		return reinterpret_cast<const TrackValueType *>(&transform_values[track_value_index[track_cache_id]]);
 	}
 
 	bool has_same_tracks(const AnimationData &other) const {
 		HashSet<AnimationTrackUID> valid_track_hashes;
-		for (const KeyValue<AnimationTrackUID, size_t> &K : value_buffer_offset) {
+		for (const KeyValue<AnimationTrackUID, size_t> &K : track_value_index) {
 			valid_track_hashes.insert(K.key);
 		}
 
-		for (const KeyValue<AnimationTrackUID, size_t> &K : other.value_buffer_offset) {
+		for (const KeyValue<AnimationTrackUID, size_t> &K : other.track_value_index) {
 			if (HashSet<AnimationTrackUID>::Iterator entry = valid_track_hashes.find(K.key)) {
 				valid_track_hashes.remove(entry);
 			} else {
@@ -181,11 +176,8 @@ struct AnimationData {
 			return;
 		}
 
-		for (const KeyValue<AnimationTrackUID, size_t> &K : value_buffer_offset) {
-			TrackValue *track_value = get_value<TrackValue>(K.key);
-			const TrackValue *other_track_value = to_data.get_value<TrackValue>(K.key);
-
-			track_value->blend(*other_track_value, lambda);
+		for (unsigned int i = 0; i < transform_values.size(); i++) {
+			transform_values[i].blend(to_data.transform_values[i], lambda);
 		}
 	}
 
@@ -205,9 +197,19 @@ struct AnimationData {
 
 	void sample_from_animation(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d, double p_time);
 
-	AHashMap<AnimationTrackUID, size_t, HashHasher> value_buffer_offset;
-	LocalVector<uint8_t> buffer;
+	AHashMap<AnimationTrackUID, size_t, HashHasher> track_value_index;
+	LocalVector<TransformTrackValue> transform_values;
 };
+
+template <>
+inline AnimationData::TransformTrackValue *AnimationData::get_value<AnimationData::TransformTrackValue>(const AnimationTrackUID &track_cache_id) {
+	return &transform_values[track_value_index[track_cache_id]];
+}
+
+template <>
+inline const AnimationData::TransformTrackValue *AnimationData::get_value<AnimationData::TransformTrackValue>(const AnimationTrackUID &track_cache_id) const {
+	return &transform_values[track_value_index[track_cache_id]];
+}
 
 /**
  * @class AnimationDataAllocator
@@ -243,7 +245,7 @@ public:
 			allocated_data.pop_front();
 
 			// We copy the whole block as the assignment operator copies entries element wise.
-			memcpy(result->buffer.ptr(), default_data.buffer.ptr(), default_data.buffer.size());
+			memcpy(static_cast<void *>(result->transform_values.ptr()), static_cast<void *>(default_data.transform_values.ptr()), default_data.transform_values.size() * sizeof(AnimationData::TransformTrackValue));
 
 			return result;
 		}

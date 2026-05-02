@@ -269,7 +269,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot] Test AnimationData b
 	data_blended.blend(data_t1, 0.5);
 
 	REQUIRE(data_blended.has_same_tracks(data_t0_5));
-	for (const KeyValue<Animation::TrackCacheID, size_t> &K : data_blended.value_buffer_offset) {
+	for (const KeyValue<Animation::TrackCacheID, size_t> &K : data_blended.track_value_index) {
 		AnimationData::TrackValue *blended_value = data_blended.get_value<AnimationData::TrackValue>(K.key);
 		AnimationData::TrackValue *data_t0_5_value = data_t0_5.get_value<AnimationData::TrackValue>(K.key);
 		CHECK(*blended_value == *data_t0_5_value);
@@ -280,7 +280,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot] Test AnimationData b
 	data_blended.blend(data_t1, 0.3);
 
 	REQUIRE(data_blended.has_same_tracks(data_t0_5));
-	for (const KeyValue<Animation::TrackCacheID, size_t> &K : data_blended.value_buffer_offset) {
+	for (const KeyValue<Animation::TrackCacheID, size_t> &K : data_blended.track_value_index) {
 		AnimationData::TrackValue *blended_value = data_blended.get_value<AnimationData::TrackValue>(K.key);
 		AnimationData::TrackValue *data_t0_5_value = data_t0_5.get_value<AnimationData::TrackValue>(K.key);
 		CHECK(*blended_value != *data_t0_5_value);

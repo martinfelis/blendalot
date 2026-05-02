@@ -110,17 +110,16 @@ void AnimationData::allocate_track_value(const Ref<Animation> &animation, int32_
 	switch (track_type) {
 		case Animation::TrackType::TYPE_ROTATION_3D:
 		case Animation::TrackType::TYPE_POSITION_3D: {
-			size_t value_offset = 0;
+			size_t value_index = 0;
 			AnimationData::TransformTrackValue *transform_track_value = nullptr;
-			if (value_buffer_offset.has(track_unique_id)) {
-				value_offset = value_buffer_offset[track_unique_id];
-				transform_track_value = reinterpret_cast<AnimationData::TransformTrackValue *>(&buffer[value_offset]);
+			if (track_value_index.has(track_unique_id)) {
+				value_index = track_value_index[track_unique_id];
 			} else {
-				value_offset = buffer.size();
-				value_buffer_offset.insert(track_unique_id, buffer.size());
-				buffer.resize(buffer.size() + sizeof(AnimationData::TransformTrackValue));
-				transform_track_value = new (reinterpret_cast<AnimationData::TransformTrackValue *>(&buffer[value_offset])) AnimationData::TransformTrackValue();
+				value_index = transform_values.size();
+				track_value_index.insert(track_unique_id, value_index);
+				transform_values.push_back(AnimationData::TransformTrackValue());
 			}
+			transform_track_value = &transform_values[value_index];
 			assert(transform_track_value != nullptr);
 
 			const NodePath &track_node_path = animation->track_get_path(track_index);

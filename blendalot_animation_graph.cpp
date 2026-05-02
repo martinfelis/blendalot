@@ -345,30 +345,14 @@ void BLTAnimationGraph::_process_graph(double p_delta, bool p_update_only) {
 void BLTAnimationGraph::_apply_animation_data(const AnimationData &output_data) const {
 	GodotProfileZone("BLTAnimationGraph::_apply_animation_data");
 
-	for (const KeyValue<AnimationTrackUID, size_t> &K : output_data.value_buffer_offset) {
-		const AnimationData::TrackValue *track_value = output_data.get_value<AnimationData::TrackValue>(K.key);
-		switch (track_value->type) {
-			case AnimationData::TrackType::TYPE_POSITION_3D:
-			case AnimationData::TrackType::TYPE_ROTATION_3D: {
-				const AnimationData::TransformTrackValue *transform_track_value = static_cast<const AnimationData::TransformTrackValue *>(track_value);
-
-				if (transform_track_value->bone_idx != -1) {
-					if (transform_track_value->loc_used) {
-						graph_context.skeleton_3d->set_bone_pose_position(transform_track_value->bone_idx, transform_track_value->loc);
-					}
-
-					if (transform_track_value->rot_used) {
-						graph_context.skeleton_3d->set_bone_pose_rotation(transform_track_value->bone_idx, transform_track_value->rot);
-					}
-				} else {
-					assert(false && "Not yet implemented!");
-				}
-
-				break;
+	for (const AnimationData::TransformTrackValue &transform_value : output_data.transform_values) {
+		if (transform_value.bone_idx != -1) {
+			if (transform_value.loc_used) {
+				graph_context.skeleton_3d->set_bone_pose_position(transform_value.bone_idx, transform_value.loc);
 			}
-			default: {
-				print_line(vformat("Unsupported track type %d", track_value->type));
-				break;
+
+			if (transform_value.rot_used) {
+				graph_context.skeleton_3d->set_bone_pose_rotation(transform_value.bone_idx, transform_value.rot);
 			}
 		}
 	}
