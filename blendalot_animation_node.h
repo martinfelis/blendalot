@@ -181,7 +181,7 @@ struct AnimationData {
 		}
 	}
 
-	Animation::TrackType get_cache_type(Animation::TrackType p_type) {
+	static Animation::TrackType get_cache_type(Animation::TrackType p_type) {
 		if (p_type == Animation::TYPE_BEZIER) {
 			return Animation::TYPE_VALUE;
 		}
@@ -191,11 +191,19 @@ struct AnimationData {
 		return p_type;
 	}
 
-	AnimationTrackUID get_track_unique_id(const Ref<Animation> &animation, int32_t track_index) {
-		return animation->track_get_path(track_index).hash() * 10 + get_cache_type(animation->track_get_type(track_index));
+	static AnimationTrackUID create_track_uid(const NodePath &track_path, const Animation::TrackType &track_type) {
+		return track_path.hash() * 10 + get_cache_type(track_type);
 	}
 
 	void sample_from_animation(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d, double p_time);
+
+	int32_t get_track_index_from_unique_id(AnimationTrackUID track_uid) {
+		if (track_value_index.has(track_uid)) {
+			return static_cast<int32_t>(track_value_index[track_uid]);
+		}
+
+		return -1;
+	}
 
 	AHashMap<AnimationTrackUID, size_t, HashHasher> track_value_index;
 	LocalVector<TransformTrackValue> transform_values;
@@ -258,6 +266,10 @@ public:
 	void free(AnimationData *data) {
 		allocated_data.push_front(data);
 	}
+
+	int get_bone_transform_index(const NodePath &root_bone_path) {
+		return default_data.get_track_index_from_unique_id(AnimationData::create_track_uid(root_bone_path, Animation::TYPE_POSITION_3D));
+	}
 };
 
 struct GraphEvaluationContext {
@@ -265,6 +277,7 @@ struct GraphEvaluationContext {
 	Skeleton3D *skeleton_3d = nullptr;
 	AnimationDataAllocator animation_data_allocator;
 	LocalVector<String> validation_messages;
+	int root_bone_index = -1;
 	double graph_process_delta_time = 0.f;
 };
 

@@ -1128,4 +1128,49 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree][StateMach
 	}
 }
 
+TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][RootMotion] Test RootMotion") {
+	Ref<BLTBlendTree> blend_tree;
+	blend_tree.instantiate();
+
+	// Blend2
+	Ref<BLTAnimationNodeBlend2> blend2;
+	blend2.instantiate();
+	blend2->set_name("Blend2");
+	blend_tree->add_node(blend2);
+
+	// TestAnimationA
+	Ref<BLTAnimationNodeSampler> animation_sampler_node_a;
+	animation_sampler_node_a.instantiate();
+	animation_sampler_node_a->set_animation("animation_library/TestAnimationA");
+	animation_sampler_node_a->set_name("AnimA");
+	blend_tree->add_node(animation_sampler_node_a);
+
+	// TestAnimationB
+	Ref<BLTAnimationNodeSampler> animation_sampler_node_b;
+	animation_sampler_node_b.instantiate();
+	animation_sampler_node_b->set_animation("animation_library/TestAnimationB");
+	animation_sampler_node_b->set_name("AnimB");
+	blend_tree->add_node(animation_sampler_node_b);
+
+	blend_tree->add_connection(animation_sampler_node_a, blend2, "Input0");
+	blend_tree->add_connection(animation_sampler_node_b, blend2, "Input1");
+	blend_tree->add_connection(blend2, blend_tree->get_output_node(), "Output");
+
+	animation_graph->set_root_animation_node(blend_tree);
+
+	SUBCASE("Setting invalid root motion track") {
+		NodePath track_0_path = NodePath("root/");
+		animation_graph->set_root_motion_track(track_0_path);
+		GraphEvaluationContext &graph_context = animation_graph->get_context();
+		CHECK_EQ(graph_context.root_bone_index, -1);
+	}
+
+	SUBCASE("Setting valid root motion track") {
+		NodePath track_0_path = test_animation_a->track_get_path(0);
+		animation_graph->set_root_motion_track(track_0_path);
+		GraphEvaluationContext &graph_context = animation_graph->get_context();
+		CHECK_EQ(graph_context.root_bone_index, 0);
+	}
+}
+
 } //namespace TestBlendalotAnimationGraph

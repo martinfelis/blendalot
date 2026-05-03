@@ -43,6 +43,11 @@ protected:
 	bool processing = false;
 	bool active = true;
 
+	NodePath root_motion_track;
+	Vector3 root_motion_position;
+	Quaternion root_motion_rotation;
+	Vector3 root_motion_scale;
+
 public:
 	void _process_graph(double p_delta, bool p_update_only = false);
 	void _apply_animation_data(const AnimationData &output_data) const;
@@ -74,7 +79,13 @@ public:
 
 	void print_property_list() const;
 
-	BLTAnimationGraph();
+	/* ---- Root motion ---- */
+	void set_root_motion_track(const NodePath &p_track);
+	NodePath get_root_motion_track() const;
+
+	Vector3 get_root_motion_position() const;
+	Quaternion get_root_motion_rotation() const;
+	Vector3 get_root_motion_scale() const;
 
 private:
 	void _set_process(bool p_process, bool p_force = false);

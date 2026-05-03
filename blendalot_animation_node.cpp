@@ -64,15 +64,15 @@ void AnimationData::sample_from_animation(const Ref<Animation> &animation, const
 			continue;
 		}
 
-		Animation::TrackType ttype = animation->track_get_type(track_index);
-		AnimationTrackUID track_uid = get_track_unique_id(animation, track_index);
-		switch (ttype) {
+		Animation::TrackType track_type = animation->track_get_type(track_index);
+		AnimationTrackUID track_uid = create_track_uid(animation->track_get_path(track_index), track_type);
+		switch (track_type) {
 			case Animation::TYPE_POSITION_3D:
 			case Animation::TYPE_ROTATION_3D: {
 				TransformTrackValue *transform_track_value = get_value<TransformTrackValue>(track_uid);
 
 				if (transform_track_value->bone_idx != -1) {
-					switch (ttype) {
+					switch (track_type) {
 						case Animation::TYPE_POSITION_3D: {
 							transform_track_value->loc = animation->position_track_interpolate(track_index, p_time);
 							transform_track_value->loc_used = true;
@@ -105,7 +105,7 @@ void AnimationData::sample_from_animation(const Ref<Animation> &animation, const
 
 void AnimationData::allocate_track_value(const Ref<Animation> &animation, int32_t track_index, const Skeleton3D *skeleton_3d) {
 	Animation::TrackType track_type = animation->track_get_type(track_index);
-	AnimationTrackUID track_unique_id = get_track_unique_id(animation, track_index);
+	AnimationTrackUID track_unique_id = create_track_uid(animation->track_get_path(track_index), track_type);
 
 	switch (track_type) {
 		case Animation::TrackType::TYPE_ROTATION_3D:

@@ -258,6 +258,30 @@ void BLTAnimationGraph::print_property_list() const {
 	}
 }
 
+void BLTAnimationGraph::set_root_motion_track(const NodePath &p_track) {
+	const bool has_changed = root_motion_track != p_track;
+	root_motion_track = p_track;
+	if (has_changed) {
+		_setup_graph();
+	}
+}
+
+NodePath BLTAnimationGraph::get_root_motion_track() const {
+	return root_motion_track;
+}
+
+Vector3 BLTAnimationGraph::get_root_motion_position() const {
+	return root_motion_position;
+}
+
+Quaternion BLTAnimationGraph::get_root_motion_rotation() const {
+	return root_motion_rotation;
+}
+
+Vector3 BLTAnimationGraph::get_root_motion_scale() const {
+	return root_motion_scale;
+}
+
 void BLTAnimationGraph::set_animation_player(const NodePath &p_path) {
 	print_line(vformat("set_animation_player(%s) ", p_path));
 
@@ -412,8 +436,11 @@ void BLTAnimationGraph::_setup_graph() {
 		for (const String &message : graph_context.validation_messages) {
 			print_line(message);
 		}
-	}
-}
 
-BLTAnimationGraph::BLTAnimationGraph() {
+		return;
+	}
+
+	if (!root_motion_track.is_empty()) {
+		graph_context.root_bone_index = graph_context.animation_data_allocator.get_bone_transform_index(root_motion_track);
+	}
 }
