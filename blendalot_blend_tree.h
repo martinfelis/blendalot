@@ -370,10 +370,10 @@ public:
 		}
 	}
 
-	void update_time(double p_delta) override {
+	void update_time(const double p_delta, const double p_time = 0.0) override {
 		GodotProfileZone("BLTBlendTree::update_time");
 
-		BLTAnimationNode::update_time(p_delta);
+		BLTAnimationNode::update_time(p_delta, p_time);
 
 		tree_graph.nodes[0]->node_time_info.delta = node_time_info.delta;
 		tree_graph.nodes[0]->node_time_info.position = node_time_info.position;
@@ -390,7 +390,7 @@ public:
 			const Ref<BLTAnimationNode> &node_parent = tree_graph.nodes[node_connection_info.parent_node_index];
 
 			if (node->node_time_info.is_synced) {
-				node->update_time(node_parent->node_time_info.sync_position);
+				node->update_time(node_parent->node_time_info.delta, node_parent->node_time_info.sync_position);
 			} else {
 				node->update_time(node_parent->node_time_info.delta);
 			}

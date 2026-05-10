@@ -195,7 +195,9 @@ struct AnimationData {
 		return track_path.hash() * 10 + get_cache_type(track_type);
 	}
 
-	void sample_from_animation(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d, double p_time);
+	void sample_from_animation(const Ref<Animation> &animation, double p_time, double delta_time = -1, int root_bone_track_index = -1);
+
+	void sample_root_bone(const Ref<Animation> &animation, const int32_t track_index, const Animation::TrackType track_type, const int root_bone_index, const double &p_time, double delta_time, TransformTrackValue *transform_track_value);
 
 	int32_t get_track_index_from_unique_id(AnimationTrackUID track_uid) {
 		if (track_value_index.has(track_uid)) {
@@ -267,7 +269,7 @@ public:
 		allocated_data.push_front(data);
 	}
 
-	int get_bone_transform_index(const NodePath &root_bone_path) {
+	int get_bone_track_index(const NodePath &root_bone_path) {
 		return default_data.get_track_index_from_unique_id(AnimationData::create_track_uid(root_bone_path, Animation::TYPE_POSITION_3D));
 	}
 };
@@ -277,7 +279,7 @@ struct GraphEvaluationContext {
 	Skeleton3D *skeleton_3d = nullptr;
 	AnimationDataAllocator animation_data_allocator;
 	LocalVector<String> validation_messages;
-	int root_bone_index = -1;
+	int root_bone_track_index = -1;
 	double graph_process_delta_time = 0.f;
 };
 
@@ -354,12 +356,16 @@ public:
 		}
 	}
 
-	virtual void update_time(double p_time) {
+	/// Updates the node time, usually from the parent node.
+	/// \param p_delta is the time delta change of this BLTAnimationGraph update. For synced nodes this is the time delta of the sync root (e.g. a synced Blend2).
+	/// \param p_sync_position is the synced time position when the parent node is synced. For unsynced nodes this parameter is not used.
+	virtual void update_time(const double p_delta, const double p_sync_position = 0.0) {
 		if (node_time_info.is_synced) {
-			node_time_info.sync_position = p_time;
+			node_time_info.delta = p_delta;
+			node_time_info.sync_position = p_sync_position;
 		} else {
-			node_time_info.delta = p_time;
-			node_time_info.position += p_time;
+			node_time_info.delta = p_delta;
+			node_time_info.position += p_delta;
 		}
 	}
 
@@ -422,7 +428,7 @@ private:
 	Ref<Animation> animation;
 
 	bool initialize(GraphEvaluationContext &context) override;
-	void update_time(double p_time) override;
+	void update_time(const double p_delta, const double p_time = 0.0) override;
 	void evaluate(GraphEvaluationContext &context, const LocalVector<AnimationData *> &inputs, AnimationData &output) override;
 
 protected:
@@ -453,12 +459,12 @@ private:
 			node_time_info.sync_track.duration *= scale;
 		}
 	}
-	void update_time(double p_time) override {
+	void update_time(const double p_delta, const double p_time = 0.0) override {
 		if (node_time_info.is_synced) {
-			return;
+			BLTAnimationNode::update_time(p_delta, p_time);
 		}
 
-		BLTAnimationNode::update_time(p_time * scale);
+		BLTAnimationNode::update_time(p_delta * scale);
 	}
 
 protected:
@@ -539,8 +545,8 @@ public:
 		}
 	}
 
-	void update_time(double p_delta) override {
-		BLTAnimationNode::update_time(p_delta);
+	void update_time(const double p_delta, const double p_time = 0.0) override {
+		BLTAnimationNode::update_time(p_delta, p_time);
 
 		if (sync && !node_time_info.is_synced) {
 			if (node_time_info.loop_mode != Animation::LOOP_NONE) {
@@ -548,6 +554,9 @@ public:
 					if (!Math::is_zero_approx(node_time_info.sync_track.duration)) {
 						node_time_info.position = Math::fposmod(static_cast<float>(node_time_info.position), node_time_info.sync_track.duration);
 						node_time_info.sync_position = node_time_info.sync_track.calc_sync_from_abs_time(node_time_info.position);
+
+						// delta stays in the AnimationGraph time domain.
+						node_time_info.delta = p_delta;
 					}
 				} else {
 					assert(false && !"Loop mode ping-pong not yet supported");

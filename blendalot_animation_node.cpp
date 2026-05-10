@@ -55,7 +55,7 @@ void BLTAnimationNode::_animation_node_removed(const ObjectID &p_oid, const Stri
 	emit_signal(SNAME("animation_node_removed"), p_oid, p_node);
 }
 
-void AnimationData::sample_from_animation(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d, double p_time) {
+void AnimationData::sample_from_animation(const Ref<Animation> &animation, double p_time, const double delta_time, const int root_bone_track_index) {
 	GodotProfileZone("AnimationData::sample_from_animation");
 
 	int count = animation->get_track_count();
@@ -72,6 +72,10 @@ void AnimationData::sample_from_animation(const Ref<Animation> &animation, const
 				TransformTrackValue *transform_track_value = get_value<TransformTrackValue>(track_uid);
 
 				if (transform_track_value->bone_idx != -1) {
+					if (track_index == root_bone_track_index) {
+						sample_root_bone(animation, track_index, track_type, root_bone_track_index, p_time, delta_time, transform_track_value);
+						continue;
+					}
 					switch (track_type) {
 						case Animation::TYPE_POSITION_3D: {
 							transform_track_value->loc = animation->position_track_interpolate(track_index, p_time);
@@ -99,6 +103,51 @@ void AnimationData::sample_from_animation(const Ref<Animation> &animation, const
 				assert(false && !"Not yet implemented");
 				break;
 			}
+		}
+	}
+}
+
+void AnimationData::sample_root_bone(const Ref<Animation> &animation, const int32_t track_index, const Animation::TrackType track_type, const int root_bone_index, const double &p_time, double delta_time, AnimationData::TransformTrackValue *transform_track_value) {
+	bool has_looped = false;
+	const double animation_length = animation->get_length();
+	double end_remainder = 0.;
+	int loop_count = 0;
+
+	if (p_time - delta_time < 0.0) {
+		has_looped = true;
+		end_remainder = Math::fposmod(animation_length + (p_time - delta_time), animation_length);
+		loop_count = Math::floor((delta_time - animation_length) / animation_length);
+	}
+
+	switch (track_type) {
+		case Animation::TYPE_POSITION_3D: {
+			Vector3 curr_pos = animation->position_track_interpolate(track_index, p_time);
+			if (has_looped) {
+				Vector3 prev_pos = animation->position_track_interpolate(track_index, end_remainder);
+				Vector3 end_pos = animation->position_track_interpolate(track_index, animation_length);
+				Vector3 start_pos = animation->position_track_interpolate(track_index, 0.0);
+				Vector3 loop_delta(0., 0., 0.);
+
+				if (loop_count > 0) {
+					loop_delta = (end_pos - start_pos) * loop_count;
+				}
+
+				transform_track_value->loc = end_pos - prev_pos + curr_pos - start_pos + loop_delta;
+			} else {
+				Vector3 prev_pos = animation->position_track_interpolate(track_index, p_time - delta_time);
+				transform_track_value->loc = curr_pos - prev_pos;
+			}
+			break;
+		}
+		case Animation::TYPE_ROTATION_3D: {
+			break;
+		}
+		case Animation::TYPE_SCALE_3D: {
+			break;
+		}
+		default: {
+			assert(false && !"Invalid root motion track type");
+			break;
 		}
 	}
 }
@@ -187,12 +236,13 @@ bool BLTAnimationNodeSampler::initialize(GraphEvaluationContext &context) {
 	return true;
 }
 
-void BLTAnimationNodeSampler::update_time(double p_time) {
-	BLTAnimationNode::update_time(p_time);
+void BLTAnimationNodeSampler::update_time(const double p_delta, const double p_time) {
+	BLTAnimationNode::update_time(p_delta, p_time);
 
 	if (node_time_info.is_synced) {
 		// Convert the sync time to actual animation time.
 		node_time_info.position = node_time_info.sync_track.calc_ratio_from_sync_time(node_time_info.sync_position) * animation->get_length();
+		// Convert the delta into the corresponding animation time delta.
 		return;
 	}
 
@@ -212,7 +262,7 @@ void BLTAnimationNodeSampler::evaluate(GraphEvaluationContext &context, const Lo
 
 	assert(inputs.size() == 0);
 
-	output.sample_from_animation(animation, context.skeleton_3d, node_time_info.position);
+	output.sample_from_animation(animation, node_time_info.position, node_time_info.delta, context.root_bone_track_index);
 }
 
 void BLTAnimationNodeSampler::set_animation_player(AnimationPlayer *p_player) {

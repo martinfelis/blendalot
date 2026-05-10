@@ -255,15 +255,14 @@ TEST_CASE("[Blendalot][BlendTree] Test BlendTree construction") {
 TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot] Test AnimationData blending") {
 	AnimationData data_t0;
 	data_t0.allocate_track_values(test_animation_a, skeleton_node);
-	data_t0.sample_from_animation(test_animation_a, skeleton_node, 0.0);
-
+	data_t0.sample_from_animation(test_animation_a, 0.0);
 	AnimationData data_t1;
 	data_t1.allocate_track_values(test_animation_a, skeleton_node);
-	data_t1.sample_from_animation(test_animation_a, skeleton_node, 1.0);
+	data_t1.sample_from_animation(test_animation_a, 1.0);
 
 	AnimationData data_t0_5;
 	data_t0_5.allocate_track_values(test_animation_a, skeleton_node);
-	data_t0_5.sample_from_animation(test_animation_a, skeleton_node, 0.5);
+	data_t0_5.sample_from_animation(test_animation_a, 0.5);
 
 	AnimationData data_blended = data_t0;
 	data_blended.blend(data_t1, 0.5);
@@ -1162,14 +1161,49 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][RootMotion] Test Roo
 		NodePath track_0_path = NodePath("root/");
 		animation_graph->set_root_motion_track(track_0_path);
 		GraphEvaluationContext &graph_context = animation_graph->get_context();
-		CHECK_EQ(graph_context.root_bone_index, -1);
+		CHECK_EQ(graph_context.root_bone_track_index, -1);
 	}
 
 	SUBCASE("Setting valid root motion track") {
 		NodePath track_0_path = test_animation_a->track_get_path(0);
 		animation_graph->set_root_motion_track(track_0_path);
 		GraphEvaluationContext &graph_context = animation_graph->get_context();
-		CHECK_EQ(graph_context.root_bone_index, 0);
+		CHECK_EQ(graph_context.root_bone_track_index, 0);
+
+		graph_context.graph_process_delta_time = 0.01;
+
+		SUBCASE("Evaluate root motion for single sampler") {
+			blend2->blend_weight = 0.;
+
+			animation_graph->_process_graph(0.1);
+			Vector3 root_motion_delta = animation_graph->get_root_motion_position();
+			CHECK_EQ(Vector3(0.1, 0.2, 0.3), root_motion_delta);
+
+			// Evaluating it again, should yield the same value
+			animation_graph->_process_graph(0.1);
+			root_motion_delta = animation_graph->get_root_motion_position();
+			CHECK_EQ(Vector3(0.1, 0.2, 0.3), root_motion_delta);
+
+			// Evaluating it for a longer period should result in a larger value
+			animation_graph->_process_graph(0.7);
+			root_motion_delta = animation_graph->get_root_motion_position();
+			CHECK_EQ(Vector3(0.7, 1.4, 2.1), root_motion_delta);
+
+			// Ensure we handle looping properly
+			animation_graph->_process_graph(0.2);
+			root_motion_delta = animation_graph->get_root_motion_position();
+			CHECK(Vector3(0.2, 0.4, 0.6).is_equal_approx(root_motion_delta));
+
+			// Ensure we handle large deltas that loop multiple times.
+			animation_graph->_process_graph(2.0);
+			root_motion_delta = animation_graph->get_root_motion_position();
+			CHECK(Vector3(2.0, 4.0, 6.0).is_equal_approx(root_motion_delta));
+
+			// Ensure we handle large deltas that loop multiple times with fractions.
+			animation_graph->_process_graph(2.1);
+			root_motion_delta = animation_graph->get_root_motion_position();
+			CHECK(Vector3(2.1, 4.2, 6.3).is_equal_approx(root_motion_delta));
+		}
 	}
 }
 
