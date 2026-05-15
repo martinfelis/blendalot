@@ -42,8 +42,14 @@ func _reset_editor():
 		child.get_parent().remove_child(child)
 		child.queue_free()
 	
-	if is_instance_valid(state_machine) and state_machine.has_connections("node_changed"):
-		state_machine.disconnect("node_changed", _trigger_graph_changed)
+	if is_instance_valid(state_machine):
+		if state_machine.has_connections("node_changed"):
+			state_machine.disconnect("node_changed", _trigger_graph_changed)
+		
+		for state_node:BLTAnimationNode in state_node_to_editor_node.keys():
+			state_node.changed.disconnect(_on_state_node_changed.bind(state_node))
+	
+	state_machine_graph_edit.reset()
 	
 	state_machine = null
 	state_node_to_editor_node = {}
@@ -66,6 +72,7 @@ func edit_state_machine(blt_state_machine:BLTStateMachine):
 func _create_editor_nodes_from_state_machine():
 	for state_name in state_machine.get_state_names():
 		var state_node:BLTAnimationNode = state_machine.get_state(state_name)
+		state_node.changed.connect(_on_state_node_changed.bind(state_node))
 		var editor_node:GraphElement = create_editor_node_for_blt_node(state_node)
 		state_machine_graph_edit.add_child(editor_node)
 		
@@ -110,6 +117,13 @@ func create_editor_node_for_blt_node(blt_node: BLTAnimationNode) -> StateMachine
 				_on_animation_select(0, animation_sampler_node, animation_selector_button)
 	
 	return editor_node
+
+
+func _on_state_node_changed(state_node: BLTAnimationNode):
+	# TODO (performance): only update affected node and transitions.
+	var current_state_machine = state_machine
+	_reset_editor()
+	edit_state_machine(current_state_machine)
 
 
 func _trigger_graph_changed(_node_name):

@@ -44,6 +44,10 @@ var transition_lines = []
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
+	reset()
+
+
+func reset() -> void:
 	transition_lines = []
 	state_out_transitions = {}
 	state_in_transitions = {}
