@@ -185,3 +185,11 @@ func _on_gui_input(event: InputEvent) -> void:
 			if is_dragging_transition:
 				transition_drag_end.emit(mouse_button_event.position)
 				is_dragging_transition = false
+
+func get_content() -> Control:
+	var editor_node_content:Control = find_child("StateContentContainer", true, false) as Control
+	
+	if not is_instance_valid(editor_node_content):
+		push_error("Cannot find state content control for state %s" % self)
+	
+	return editor_node_content

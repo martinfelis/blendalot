@@ -79,9 +79,35 @@ func create_editor_node_for_blt_node(blt_node: BLTAnimationNode) -> StateMachine
 	editor_node.title = blt_node.resource_name
 	editor_node.transition_border_size = 10
 	editor_node.position_offset = blt_node.position
+	var editor_node_content = editor_node.get_content()
+	
+	if not is_instance_valid(editor_node_content):
+		return editor_node
 	
 	if blt_node.get_class() == "BLTBlendTree" or blt_node.get_class() == "BLTStateMachine":
 		editor_node.gui_input.connect(_on_node_gui_input.bind(editor_node))
+	
+	if blt_node.get_class() == "BLTAnimationNodeSampler":
+		var animation_sampler_node:BLTAnimationNodeSampler = blt_node as BLTAnimationNodeSampler
+		var animation_selector_button = OptionButton.new()
+		animation_selector_button.fit_to_longest_item = false
+		editor_node_content.add_child(animation_selector_button)
+
+		var animation_player:AnimationPlayer = animation_sampler_node.get_animation_player()
+		
+		if is_instance_valid(animation_player):
+			animation_selector_button.item_selected.connect(_on_animation_select.bind(animation_sampler_node, animation_selector_button))
+			
+			for animation_name in animation_player.get_animation_list():
+				animation_selector_button.add_item(animation_name)
+				if animation_name == animation_sampler_node.animation:
+					animation_selector_button.select(animation_selector_button.item_count - 1)
+			
+			# Select first animation by default.
+			if animation_sampler_node.animation == "" and animation_selector_button.item_count > 0:
+				# TODO: Need to manually trigger callable of the selection. Not sure why, though.
+				animation_selector_button.select(0)
+				_on_animation_select(0, animation_sampler_node, animation_selector_button)
 	
 	return editor_node
 
