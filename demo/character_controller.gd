@@ -8,7 +8,7 @@ enum AnimationSource {	AnimPlayer, AnimTree, AnimGraph }
 
 enum AnimationState { Idle, Walk, Run, Limp, TurnLeft90, TurnRight90}
 
-var active_animation_source:AnimationSource = AnimationSource.AnimTree
+var active_animation_source:AnimationSource = AnimationSource.AnimGraph
 var active_animation:AnimationState = AnimationState.Idle
 
 var root_motion_translation:Vector3 = Vector3.ZERO
@@ -54,6 +54,20 @@ func update_animation_state_machine():
 			animation_tree["parameters/StateMachine/conditions/to_turnleft"] = true
 		elif active_animation == AnimationState.TurnRight90:
 			animation_tree["parameters/StateMachine/conditions/to_turnright"] = true
+	elif active_animation_source == AnimationSource.AnimGraph:
+		animation_tree["parameters/BLTStateMachine/transition/to_idle"] = false
+		animation_tree["parameters/StateMachine/transition/to_walk"] = false
+		animation_tree["parameters/StateMachine/transition/to_turnright"] = false
+		animation_tree["parameters/StateMachine/transition/to_turnleft"] = false
+		
+		if active_animation == AnimationState.Idle:
+			animation_tree["parameters/BLTStateMachine/transition/to_idle"] = true
+		elif active_animation == AnimationState.Walk:
+			animation_tree["parameters/StateMachine/transition/to_walk"] = true
+		elif active_animation == AnimationState.TurnLeft90:
+			animation_tree["parameters/StateMachine/transition/to_turnright"] = true
+		elif active_animation == AnimationState.TurnRight90:
+			animation_tree["parameters/StateMachine/transition/to_turnleft"] = true
 	else:
 		animation_player_synced.play(animation_state_to_name[active_animation])
 
@@ -64,6 +78,9 @@ func query_root_motion_values():
 	elif active_animation_source == AnimationSource.AnimTree:
 		root_motion_translation = animation_tree.get_root_motion_position()
 		root_motion_rotation = animation_tree.get_root_motion_rotation()
+	elif active_animation_source == AnimationSource.AnimGraph:
+		root_motion_translation = blt_animation_graph.get_root_motion_position()
+		root_motion_rotation = blt_animation_graph.get_root_motion_rotation()
 	else:
 		root_motion_translation = Vector3.ZERO
 		root_motion_rotation = Quaternion.IDENTITY

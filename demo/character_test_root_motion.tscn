@@ -46,69 +46,80 @@ sky = SubResource("Sky_1omi5")
 tonemap_mode = 2
 glow_enabled = true
 
+[sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_jr5lb"]
+resource_name = "Idle"
+position = Vector2(-100, 100)
+animation = &"animation_library/Idle"
+
 [sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_1omi5"]
-resource_name = "BLTAnimationNodeSampler 1"
+resource_name = "TurnLeft90"
 position = Vector2(-100, -60)
 animation = &"animation_library/TurnLeft90"
 
 [sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_xhvkk"]
-resource_name = "BLTAnimationNodeSampler 2"
+resource_name = "TurnRight90"
 position = Vector2(-100, 260)
 animation = &"animation_library/TurnRight90"
 
 [sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_5evmn"]
-resource_name = "BLTAnimationNodeSampler 3"
+resource_name = "Walk"
 position = Vector2(260, 100)
 animation = &"animation_library/Walk"
-
-[sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_jr5lb"]
-resource_name = "BLTAnimationNodeSampler"
-position = Vector2(-100, 100)
-animation = &"animation_library/Idle"
 
 [sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_ywa6c"]
 resource_name = "BLTAnimationNodeSampler_to_BLTAnimationNodeSampler 1"
 blend_amount = 1.0
+advance_condition = &"to_turnleft"
 
 [sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_fkt1r"]
 resource_name = "BLTAnimationNodeSampler 1_to_BLTAnimationNodeSampler"
 blend_amount = 1.0
+advance_condition = &"to_idle"
 
 [sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_4lcw8"]
 resource_name = "BLTAnimationNodeSampler_to_BLTAnimationNodeSampler 2"
 blend_amount = 1.0
+advance_condition = &"to_turnright"
 
 [sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_6d65n"]
 resource_name = "BLTAnimationNodeSampler 2_to_BLTAnimationNodeSampler"
 blend_amount = 1.0
+advance_condition = &"to_idle"
 
 [sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_2c2kj"]
 resource_name = "BLTAnimationNodeSampler_to_BLTAnimationNodeSampler 3"
 blend_amount = 1.0
+advance_condition = &"to_walk"
 
 [sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_ta1m2"]
 resource_name = "BLTAnimationNodeSampler 3_to_BLTAnimationNodeSampler"
+blend_amount = 1.0
+advance_condition = &"to_idle"
 
 [sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_ir4l7"]
 resource_name = "BLTAnimationNodeSampler 1_to_BLTAnimationNodeSampler 3"
+blend_amount = 1.0
+advance_condition = &"to_walk"
 
 [sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_rqy0f"]
 resource_name = "BLTAnimationNodeSampler 2_to_BLTAnimationNodeSampler 3"
+blend_amount = 1.0
+advance_condition = &"to_walk"
 
 [sub_resource type="BLTStateMachine" id="BLTStateMachine_2ft8h"]
 resource_name = "BLTStateMachine"
 position = Vector2(-320, -40)
-graph_offset = Vector2(-395.36597, -26.492516)
-states/BLTAnimationNodeSampler/node = SubResource("BLTAnimationNodeSampler_jr5lb")
-states/BLTAnimationNodeSampler/position = Vector2(-100, 100)
-"states/BLTAnimationNodeSampler 1/node" = SubResource("BLTAnimationNodeSampler_1omi5")
-"states/BLTAnimationNodeSampler 1/position" = Vector2(-100, -60)
-"states/BLTAnimationNodeSampler 2/node" = SubResource("BLTAnimationNodeSampler_xhvkk")
-"states/BLTAnimationNodeSampler 2/position" = Vector2(-100, 260)
-"states/BLTAnimationNodeSampler 3/node" = SubResource("BLTAnimationNodeSampler_5evmn")
-"states/BLTAnimationNodeSampler 3/position" = Vector2(260, 100)
+graph_offset = Vector2(-365, -59)
+states/Idle/node = SubResource("BLTAnimationNodeSampler_jr5lb")
+states/Idle/position = Vector2(-100, 100)
+states/TurnLeft90/node = SubResource("BLTAnimationNodeSampler_1omi5")
+states/TurnLeft90/position = Vector2(-100, -60)
+states/TurnRight90/node = SubResource("BLTAnimationNodeSampler_xhvkk")
+states/TurnRight90/position = Vector2(-100, 260)
+states/Walk/node = SubResource("BLTAnimationNodeSampler_5evmn")
+states/Walk/position = Vector2(260, 100)
 transitions = [SubResource("BLTAnimationNodeSampler_jr5lb"), SubResource("BLTAnimationNodeSampler_1omi5"), SubResource("BLTStateMachineTransition_ywa6c"), SubResource("BLTAnimationNodeSampler_1omi5"), SubResource("BLTAnimationNodeSampler_jr5lb"), SubResource("BLTStateMachineTransition_fkt1r"), SubResource("BLTAnimationNodeSampler_jr5lb"), SubResource("BLTAnimationNodeSampler_xhvkk"), SubResource("BLTStateMachineTransition_4lcw8"), SubResource("BLTAnimationNodeSampler_xhvkk"), SubResource("BLTAnimationNodeSampler_jr5lb"), SubResource("BLTStateMachineTransition_6d65n"), SubResource("BLTAnimationNodeSampler_jr5lb"), SubResource("BLTAnimationNodeSampler_5evmn"), SubResource("BLTStateMachineTransition_2c2kj"), SubResource("BLTAnimationNodeSampler_5evmn"), SubResource("BLTAnimationNodeSampler_jr5lb"), SubResource("BLTStateMachineTransition_ta1m2"), SubResource("BLTAnimationNodeSampler_1omi5"), SubResource("BLTAnimationNodeSampler_5evmn"), SubResource("BLTStateMachineTransition_ir4l7"), SubResource("BLTAnimationNodeSampler_xhvkk"), SubResource("BLTAnimationNodeSampler_5evmn"), SubResource("BLTStateMachineTransition_rqy0f")]
-graph_offset = Vector2(-395.36597, -26.492516)
+graph_offset = Vector2(-365, -59)
 
 [sub_resource type="BLTBlendTree" id="BLTBlendTree_hp2c6"]
 resource_name = "Root"
@@ -188,6 +199,7 @@ transitions = ["Start", "animation_library_Idle", SubResource("AnimationNodeStat
 graph_offset = Vector2(-263, -136)
 
 [sub_resource type="AnimationNodeBlendTree" id="AnimationNodeBlendTree_jtffq"]
+graph_offset = Vector2(-737, -43)
 nodes/StateMachine/node = SubResource("AnimationNodeStateMachine_hp2c6")
 nodes/StateMachine/position = Vector2(-194.87173, 86.96755)
 node_connections = [&"output", 0, &"StateMachine"]
@@ -211,7 +223,7 @@ script = ExtResource("2_1omi5")
 
 [node name="Character" parent="CharacterController" unique_id=1155727332 instance=ExtResource("1_80vf3")]
 
-[node name="AnimationPlayer" parent="CharacterController/Character" index="1" unique_id=2131750678]
+[node name="AnimationPlayer" parent="CharacterController/Character" index="1" unique_id=2049220193]
 root_motion_track = NodePath("Armature/Skeleton3D:RootBone")
 libraries/ = ExtResource("2_bsv43")
 
@@ -221,27 +233,24 @@ fov = 76.23204
 
 [node name="AnimationPlayerSynced" type="AnimationPlayer" parent="CharacterController" unique_id=1757187910]
 unique_name_in_owner = true
+active = false
 root_node = NodePath("../Character")
 root_motion_track = NodePath("Armature/Skeleton3D:RootBone")
 libraries/animation_library = ExtResource("2_bsv43")
 
 [node name="BLTAnimationGraph" type="BLTAnimationGraph" parent="CharacterController" unique_id=642044102]
 unique_name_in_owner = true
-active = false
 animation_player = NodePath("../AnimationPlayerSynced")
 tree_root = SubResource("BLTBlendTree_hp2c6")
 skeleton = NodePath("../Character/Armature/Skeleton3D")
-"parameters/BLTStateMachine/transition/BLTAnimationNodeSampler_to_BLTAnimationNodeSampler 1/activate" = false
-"parameters/BLTStateMachine/transition/BLTAnimationNodeSampler 1_to_BLTAnimationNodeSampler/activate" = false
-"parameters/BLTStateMachine/transition/BLTAnimationNodeSampler_to_BLTAnimationNodeSampler 2/activate" = false
-"parameters/BLTStateMachine/transition/BLTAnimationNodeSampler 2_to_BLTAnimationNodeSampler/activate" = false
-"parameters/BLTStateMachine/transition/BLTAnimationNodeSampler_to_BLTAnimationNodeSampler 3/activate" = false
-"parameters/BLTStateMachine/transition/BLTAnimationNodeSampler 3_to_BLTAnimationNodeSampler/activate" = false
-"parameters/BLTStateMachine/transition/BLTAnimationNodeSampler 1_to_BLTAnimationNodeSampler 3/activate" = false
-"parameters/BLTStateMachine/transition/BLTAnimationNodeSampler 2_to_BLTAnimationNodeSampler 3/activate" = false
+parameters/BLTStateMachine/transition/to_idle = false
+parameters/BLTStateMachine/transition/to_turnleft = false
+parameters/BLTStateMachine/transition/to_turnright = false
+parameters/BLTStateMachine/transition/to_walk = false
 
 [node name="AnimationTree" type="AnimationTree" parent="CharacterController" unique_id=1995098675]
 unique_name_in_owner = true
+active = false
 root_node = NodePath("%AnimationTree/../Character")
 root_motion_track = NodePath("Armature/Skeleton3D:RootBone")
 tree_root = SubResource("AnimationNodeBlendTree_jtffq")
