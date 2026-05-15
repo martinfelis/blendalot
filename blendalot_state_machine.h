@@ -9,11 +9,13 @@
 class BLTStateMachineTransition : public BLTAnimationNodeBlend2 {
 	GDCLASS(BLTStateMachineTransition, BLTAnimationNodeBlend2);
 
-	StringName transition_duration_name = PNAME("transition_duration");
-
 	friend class BLTStateMachine;
 
-	bool is_transition_forced = false;
+	StringName transition_duration_name = PNAME("transition_duration");
+	StringName advance_condition_name = PNAME("advance_condition_name");
+
+	StringName advance_condition = PNAME("");
+	bool advance_condition_value = false;
 	double transition_time = 0.f;
 	double transition_duration = 0.1;
 
@@ -25,8 +27,8 @@ protected:
 	bool _set(const StringName &p_name, const Variant &p_value);
 
 public:
-	void force_transition(bool value) {
-		is_transition_forced = value;
+	void set_advance_condition_value(bool value) {
+		advance_condition_value = value;
 	}
 
 	void set_transition_duration(double value) {
@@ -41,18 +43,26 @@ public:
 		return transition_time;
 	}
 
-	bool evaluate_condition() {
-		if (is_transition_forced) {
-			is_transition_forced = false;
-			return true;
+	void set_advance_condition(StringName name) {
+		if (name == advance_condition) {
+			return;
 		}
 
-		return false;
+		advance_condition = name;
+		_node_changed();
+	}
+
+	StringName get_advance_condition() const {
+		return advance_condition;
+	}
+
+	bool evaluate_condition() {
+		return advance_condition_value;
 	}
 
 	void reset() {
 		transition_time = 0.f;
-		is_transition_forced = false;
+		advance_condition_value = false;
 		// TODO: We need to set it to LOOP_LINEAR here so that update_time() properly updates the sync position. Does this semantically make sense?
 		node_time_info.loop_mode = Animation::LOOP_LINEAR;
 	}
@@ -161,6 +171,8 @@ protected:
 	void _get_property_list(List<PropertyInfo> *p_list) const;
 	bool _set(const StringName &p_name, const Variant &p_value);
 	bool _get(const StringName &p_name, Variant &r_ret) const;
+
+	AHashMap<StringName, LocalVector<Ref<BLTStateMachineTransition>>> advance_condition_transitions;
 
 public:
 	Vector2 graph_offset;
@@ -338,7 +350,9 @@ public:
 	TransitionError add_transition(const Ref<BLTAnimationNode> &from_state, const Ref<BLTAnimationNode> &to_state, const Ref<BLTStateMachineTransition> &transition) {
 		const int64_t from_state_index = find_state_index(from_state);
 
-		transition->set_name(vformat("%s_to_%s", from_state->get_name(), to_state->get_name()));
+		if (transition->get_name().is_empty()) {
+			transition->set_name(vformat("%s_to_%s", from_state->get_name(), to_state->get_name()));
+		}
 
 		const TransitionError transition_error = is_transition_valid(from_state, to_state);
 		if (transition_error != TRANSITION_OK) {
@@ -352,8 +366,8 @@ public:
 
 		transitions.push_back(transition);
 		transition_states.push_back({ from_state, to_state });
-
 		state_leaving_transitions[from_state_index].push_back(transition);
+		transition->connect(SNAME("node_changed"), callable_mp(this, &BLTStateMachine::_state_machine_changed));
 
 		_node_changed();
 
@@ -441,6 +455,16 @@ public:
 		if (entry_state.is_null()) {
 			context.validation_messages.push_back(vformat("Invalid node %s: No valid entry state defined.", node_path));
 			return false;
+		}
+
+		advance_condition_transitions.clear();
+		for (const Ref<BLTStateMachineTransition> &transition : transitions) {
+			const StringName &advance_condition_name = transition->get_advance_condition();
+			if (!advance_condition_transitions.has(advance_condition_name)) {
+				advance_condition_transitions.insert(advance_condition_name, LocalVector<Ref<BLTStateMachineTransition>>({ transition }));
+			} else {
+				advance_condition_transitions[advance_condition_name].push_back(transition);
+			}
 		}
 
 		return !has_failed_state;

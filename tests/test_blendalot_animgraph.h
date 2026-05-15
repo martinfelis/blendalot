@@ -880,6 +880,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree][StateMach
 	Ref<BLTStateMachineTransition> transition_b_c;
 	transition_b_c.instantiate();
 	embedded_state_machine->add_transition(animation_sampler_node_b, animation_sampler_node_c, transition_b_c);
+	transition_b_c->set_advance_condition("AnimB_to_AnimC");
 
 	Ref<BLTStateMachineTransition> transition_c_b;
 	transition_c_b.instantiate();
@@ -927,7 +928,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree][StateMach
 			// Activate transition
 			transition_b_c->set_transition_duration(0.2);
 			transition_b_c->sync = false;
-			animation_graph->set("parameters/StateMachine/transition/AnimB_to_AnimC/activate", true);
+			animation_graph->set("parameters/StateMachine/conditions/AnimB_to_AnimC", true);
 
 			// To ensure that the is_synced flag is properly set we mess with the state here.
 			animation_sampler_node_a->node_time_info.is_synced = false;
@@ -958,7 +959,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree][StateMach
 			// Activate transition
 			transition_b_c->set_transition_duration(0.2);
 			transition_b_c->sync = true;
-			animation_graph->set("parameters/StateMachine/transition/AnimB_to_AnimC/activate", true);
+			animation_graph->set("parameters/StateMachine/conditions/AnimB_to_AnimC", true);
 
 			blend_tree->activate_inputs(LocalVector<Ref<BLTAnimationNode>>());
 			CHECK(!embedded_state_machine->node_time_info.is_synced);
@@ -999,7 +1000,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree][StateMach
 		// Activate transition
 		transition_b_c->set_transition_duration(0.2);
 		transition_b_c->sync = false;
-		animation_graph->set("parameters/StateMachine/transition/AnimB_to_AnimC/activate", true);
+		animation_graph->set("parameters/StateMachine/conditions/AnimB_to_AnimC", true);
 
 		// and evaluation
 		blend_tree->activate_inputs(LocalVector<Ref<BLTAnimationNode>>());
@@ -1042,7 +1043,7 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree][StateMach
 		// Activate transition
 		transition_b_c->set_transition_duration(0.2);
 		transition_b_c->sync = true;
-		animation_graph->set("parameters/StateMachine/transition/AnimB_to_AnimC/activate", true);
+		animation_graph->set("parameters/StateMachine/conditions/AnimB_to_AnimC", true);
 
 		// And perform another evaluation
 

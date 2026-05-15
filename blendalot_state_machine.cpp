@@ -8,7 +8,9 @@
 // BLTStateMachineTransition
 //
 void BLTStateMachineTransition::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("force_transition", "flag"), &BLTStateMachineTransition::force_transition);
+	ClassDB::bind_method(D_METHOD("set_advance_condition", "name"), &BLTStateMachineTransition::set_advance_condition);
+	ClassDB::bind_method(D_METHOD("get_advance_condition"), &BLTStateMachineTransition::get_advance_condition);
+	ADD_PROPERTY(PropertyInfo(Variant::STRING_NAME, PNAME("advance_condition"), PROPERTY_HINT_TYPE_STRING), "set_advance_condition", "get_advance_condition");
 }
 
 void BLTStateMachineTransition::_get_property_list(List<PropertyInfo> *p_list) const {
@@ -22,6 +24,11 @@ bool BLTStateMachineTransition::_get(const StringName &p_name, Variant &r_value)
 		return true;
 	}
 
+	if (prop_name == advance_condition_name) {
+		r_value = advance_condition;
+		return true;
+	}
+
 	return false;
 }
 
@@ -29,6 +36,10 @@ bool BLTStateMachineTransition::_set(const StringName &p_name, const Variant &p_
 	String prop_name = p_name;
 	if (prop_name == transition_duration_name) {
 		transition_duration = p_value;
+		return true;
+	}
+	if (prop_name == advance_condition_name) {
+		advance_condition = p_value;
 		return true;
 	}
 
@@ -59,24 +70,31 @@ void BLTStateMachine::_bind_methods() {
 	BIND_CONSTANT(TRANSITION_ERROR_ALREADY_EXISTS);
 }
 
-void BLTStateMachine::get_parameter_list(List<PropertyInfo> *p_list) const {
+void BLTStateMachine::get_parameter_list(List<PropertyInfo> *r_list) const {
+	List<StringName> advance_conditions;
 	for (const Ref<BLTStateMachineTransition> &transition : transitions) {
-		String parameter_name = vformat("transition/%s/activate", transition->get_name());
-		p_list->push_back(PropertyInfo(Variant::BOOL, parameter_name));
+		const StringName &advance_condition_name = transition->get_advance_condition();
+		if (advance_conditions.find(advance_condition_name) == nullptr) {
+			advance_conditions.push_back(advance_condition_name);
+		}
+	}
+
+	advance_conditions.sort_custom<StringName::AlphCompare>();
+	for (const StringName &E : advance_conditions) {
+		r_list->push_back(PropertyInfo(Variant::BOOL, vformat("conditions/%s", E)));
 	}
 }
 
 void BLTStateMachine::set_parameter(const StringName &p_name, const Variant &p_value) {
 	String prop_name = p_name;
-	if (prop_name.begins_with("transition/")) {
-		String transition_name = prop_name.get_slicec('/', 1);
-		String transition_parameter = prop_name.get_slicec('/', 2);
-		int transition_index = find_transition_index_by_name(transition_name);
+	if (prop_name.begins_with("conditions/")) {
+		String advance_condition_name = prop_name.get_slicec('/', 1);
 
-		if (transition_parameter == "activate") {
-			if (transition_index != -1) {
-				transitions[transition_index]->force_transition(p_value);
-				return;
+		if (advance_condition_transitions.has(advance_condition_name)) {
+			const LocalVector<Ref<BLTStateMachineTransition>> &condition_transitions = advance_condition_transitions[advance_condition_name];
+
+			for (const Ref<BLTStateMachineTransition> &transition : condition_transitions) {
+				transition->set_advance_condition_value(p_value);
 			}
 		}
 	}
@@ -84,16 +102,14 @@ void BLTStateMachine::set_parameter(const StringName &p_name, const Variant &p_v
 
 Variant BLTStateMachine::get_parameter(const StringName &p_name) const {
 	String prop_name = p_name;
-	if (prop_name.begins_with("transition/")) {
-		String transition_name = prop_name.get_slicec('/', 1);
-		String transition_parameter = prop_name.get_slicec('/', 2);
-		int transition_index = find_transition_index_by_name(transition_name);
+	if (prop_name.begins_with("conditions/")) {
+		String advance_condition_name = prop_name.get_slicec('/', 1);
 
-		if (transition_parameter == "activate") {
-			if (transition_index != -1) {
-				return transitions[transition_index]->is_transition_forced;
-			}
+		if (advance_condition_transitions.has(advance_condition_name)) {
+			return advance_condition_transitions[advance_condition_name][0]->advance_condition_value;
 		}
+
+		return false;
 	}
 
 	return Variant();
@@ -101,15 +117,11 @@ Variant BLTStateMachine::get_parameter(const StringName &p_name) const {
 
 Variant BLTStateMachine::get_parameter_default_value(const StringName &p_parameter) const {
 	String prop_name = p_parameter;
-	if (prop_name.begins_with("transition/")) {
-		String transition_name = prop_name.get_slicec('/', 1);
-		String transition_parameter = prop_name.get_slicec('/', 2);
-		int transition_index = find_transition_index_by_name(transition_name);
+	if (prop_name.begins_with("conditions/")) {
+		String advance_condition_name = prop_name.get_slicec('/', 1);
 
-		if (transition_parameter == "activate") {
-			if (transition_index != -1) {
-				return false;
-			}
+		if (advance_condition_transitions.has(advance_condition_name)) {
+			return false;
 		}
 	}
 

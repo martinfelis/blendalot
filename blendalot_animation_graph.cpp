@@ -153,13 +153,13 @@ void BLTAnimationGraph::_graph_changed(const StringName &node_name) {
 		return;
 	}
 
+	properties_dirty = true;
+
 #ifdef BLENDALOT_MODULE
 	// TODO (2026-04-26, GDExtension refactor): this somehow causes errors when compiling as GDExtension.
 	callable_mp(this, &BLTAnimationGraph::_update_properties).call_deferred();
 #endif
 	callable_mp(this, &BLTAnimationGraph::_setup_graph).call_deferred();
-
-	properties_dirty = true;
 }
 
 void BLTAnimationGraph::_notification(int p_what) {

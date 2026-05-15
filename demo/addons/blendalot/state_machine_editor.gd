@@ -49,6 +49,12 @@ func _reset_editor():
 		for state_node:BLTAnimationNode in state_node_to_editor_node.keys():
 			state_node.changed.disconnect(_on_state_node_changed.bind(state_node))
 	
+		var transitions_array = state_machine.get_transitions()
+
+		for i in range(len(transitions_array) / 3):
+			var transition:BLTStateMachineTransition = transitions_array[i * 3 + 2]
+			transition.changed.disconnect(_on_transition_changed.bind(transition))
+	
 	state_machine_graph_edit.reset()
 	
 	state_machine = null
@@ -120,10 +126,18 @@ func create_editor_node_for_blt_node(blt_node: BLTAnimationNode) -> StateMachine
 
 
 func _on_state_node_changed(state_node: BLTAnimationNode):
+	# Handle renaming of Transitions
 	# TODO (performance): only update affected node and transitions.
+	var state_node_name = state_node.resource_name
 	var current_state_machine = state_machine
 	_reset_editor()
 	edit_state_machine(current_state_machine)
+	_trigger_graph_changed(state_node_name)
+
+
+func _on_transition_changed(transition_node: BLTStateMachineTransition):
+	var transition_node_name = transition_node.resource_name
+	_trigger_graph_changed(transition_node_name)
 
 
 func _trigger_graph_changed(_node_name):
@@ -138,6 +152,8 @@ func _create_editor_transitions_from_state_machine():
 		var from_state:BLTAnimationNode = transitions_array[i * 3]
 		var to_state:BLTAnimationNode = transitions_array[i * 3 + 1]
 		var transition:BLTStateMachineTransition = transitions_array[i * 3 + 2]
+
+		transition.changed.connect(_on_transition_changed.bind(transition))
 		
 		var from_state_node = state_node_to_editor_node[from_state]
 		

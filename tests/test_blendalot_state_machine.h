@@ -191,7 +191,7 @@ TEST_CASE_FIXTURE(StateMachineFixture, "[SceneTree][Blendalot][StateMachine] Non
 
 	// activate transition
 	transition->set_transition_duration(0.2);
-	transition->force_transition(true);
+	transition->set_advance_condition_value(true);
 
 	// Perform evaluation
 	delta = 0.1;
