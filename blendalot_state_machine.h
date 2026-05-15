@@ -81,7 +81,8 @@ public:
 		TRANSITION_OK,
 		TRANSITION_ERROR_NO_FROM_STATE,
 		TRANSITION_ERROR_NO_TO_STATE,
-		TRANSITION_ERROR_ALREADY_EXISTS
+		TRANSITION_ERROR_ALREADY_EXISTS,
+		TRANSITION_ERROR_TRANSITION_TO_SELF
 	};
 
 private:
@@ -324,6 +325,11 @@ public:
 		if (find_transition_index(from_state, to_state) != -1) {
 			print_error(vformat("Cannot add transition from %s to %s: transition already exists.", from_state->get_name(), to_state->get_name()));
 			return TRANSITION_ERROR_ALREADY_EXISTS;
+		}
+
+		if (from_state == to_state) {
+			print_error(vformat("Cannot add transition from %s to %s: from_state and to_state are the same state.", from_state->get_name(), to_state->get_name()));
+			return TRANSITION_ERROR_TRANSITION_TO_SELF;
 		}
 
 		return TRANSITION_OK;

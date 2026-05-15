@@ -256,7 +256,8 @@ func on_transition_drag_end(position:Vector2):
 
 
 func on_state_mouse_entered(state:StateMachineState):
-	hovered_state = state
+	if state != transition_drag_start_state:
+		hovered_state = state
 
 
 func on_state_mouse_exited(state:StateMachineState):
