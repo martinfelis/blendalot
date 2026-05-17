@@ -435,7 +435,7 @@ public:
 				int child_node_index = tree_graph.node_connection_info[i].connected_child_node_index_at_port[j];
 				if (tree_graph.nodes[child_node_index]->active) {
 					context.animation_data_allocator.free(_node_runtime_data[child_node_index].output_data);
-					tree_graph.nodes[j]->active = false;
+					tree_graph.nodes[child_node_index]->active = false;
 				} else {
 					node_runtime_data.input_data[j] = nullptr;
 				}

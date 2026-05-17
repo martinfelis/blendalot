@@ -730,6 +730,33 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 		blend_tree_node->calculate_sync_track(LocalVector<Ref<BLTAnimationNode>>());
 		blend_tree_node->update_time(0.825);
 		blend_tree_node->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
+
+		graph_context.animation_data_allocator.free(graph_output);
+
+		SUBCASE("Evaluation of a blend2 cascade with two blend2 nodes") {
+			blend_tree_node->add_node(blend2_node_b);
+
+			REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_node->remove_connection(animation_sampler_node_b, blend2_node_a, "Input0"));
+
+			REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_a, blend2_node_b, "Input0"));
+			REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_b, blend2_node_b, "Input1"));
+			REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_node->add_connection(blend2_node_b, blend2_node_a, "Input0"));
+
+			CHECK(blend_tree_node->initialize(graph_context) == true);
+
+			graph_output = graph_context.animation_data_allocator.allocate();
+
+			blend_tree_node->activate_inputs(LocalVector<Ref<BLTAnimationNode>>());
+			blend_tree_node->calculate_sync_track(LocalVector<Ref<BLTAnimationNode>>());
+			blend_tree_node->update_time(0.1);
+			blend_tree_node->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
+
+			CHECK_EQ(graph_output->transform_values[0].loc[0], doctest::Approx(0.075));
+			CHECK_EQ(graph_output->transform_values[0].loc[1], doctest::Approx(0.15));
+			CHECK_EQ(graph_output->transform_values[0].loc[2], doctest::Approx(0.225));
+
+			graph_context.animation_data_allocator.free(graph_output);
+		}
 	}
 
 	SUBCASE("Check node removal when evaluation order of nodes changes.") {
