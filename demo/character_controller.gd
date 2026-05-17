@@ -8,7 +8,7 @@ enum AnimationSource {	AnimPlayer, AnimTree, AnimGraph }
 
 enum AnimationState { Idle, Walk, Run, Limp, TurnLeft90, TurnRight90}
 
-var active_animation_source:AnimationSource = AnimationSource.AnimGraph
+var active_animation_source:AnimationSource = AnimationSource.AnimTree
 var active_animation:AnimationState = AnimationState.Idle
 
 var root_motion_translation:Vector3 = Vector3.ZERO

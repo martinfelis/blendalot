@@ -123,6 +123,7 @@ graph_offset = Vector2(-365, -59)
 
 [sub_resource type="BLTBlendTree" id="BLTBlendTree_hp2c6"]
 resource_name = "Root"
+graph_offset = Vector2(0, -23)
 nodes/Output/graph_offset = Vector2(140, -40)
 nodes/StateMachine/node = SubResource("BLTStateMachine_2ft8h")
 nodes/StateMachine/graph_offset = Vector2(-320, -40)
@@ -221,7 +222,7 @@ script = ExtResource("2_1omi5")
 
 [node name="Character" parent="CharacterController" unique_id=1155727332 instance=ExtResource("1_80vf3")]
 
-[node name="AnimationPlayer" parent="CharacterController/Character" index="1" unique_id=1200390065]
+[node name="AnimationPlayer" parent="CharacterController/Character" index="1" unique_id=1461025937]
 root_motion_track = NodePath("Armature/Skeleton3D:RootBone")
 libraries/ = ExtResource("2_bsv43")
 
