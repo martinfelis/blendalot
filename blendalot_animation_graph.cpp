@@ -53,6 +53,9 @@ void BLTAnimationGraph::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_root_motion_position"), &BLTAnimationGraph::get_root_motion_position);
 	ClassDB::bind_method(D_METHOD("get_root_motion_rotation"), &BLTAnimationGraph::get_root_motion_rotation);
 	ClassDB::bind_method(D_METHOD("get_root_motion_scale"), &BLTAnimationGraph::get_root_motion_scale);
+
+	ADD_GROUP("Root Motion", "root_motion_");
+	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "root_motion_track"), "set_root_motion_track", "get_root_motion_track");
 }
 
 void BLTAnimationGraph::_update_properties_for_node(const String &p_base_path, Ref<BLTAnimationNode> p_node) const {
