@@ -107,7 +107,7 @@ blend_amount = 1.0
 advance_condition = &"to_walk"
 
 [sub_resource type="BLTStateMachine" id="BLTStateMachine_2ft8h"]
-resource_name = "BLTStateMachine"
+resource_name = "StateMachine"
 position = Vector2(-320, -40)
 graph_offset = Vector2(-365, -59)
 states/Idle/node = SubResource("BLTAnimationNodeSampler_jr5lb")
@@ -123,11 +123,10 @@ graph_offset = Vector2(-365, -59)
 
 [sub_resource type="BLTBlendTree" id="BLTBlendTree_hp2c6"]
 resource_name = "Root"
-graph_offset = Vector2(-660, -183)
 nodes/Output/graph_offset = Vector2(140, -40)
-nodes/BLTStateMachine/node = SubResource("BLTStateMachine_2ft8h")
-nodes/BLTStateMachine/graph_offset = Vector2(-320, -40)
-node_connections = ["Output", 0, "BLTStateMachine"]
+nodes/StateMachine/node = SubResource("BLTStateMachine_2ft8h")
+nodes/StateMachine/graph_offset = Vector2(-320, -40)
+node_connections = ["Output", 0, "StateMachine"]
 
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_1omi5"]
 animation = &"animation_library/Idle"
@@ -199,7 +198,6 @@ transitions = ["Start", "animation_library_Idle", SubResource("AnimationNodeStat
 graph_offset = Vector2(-263, -136)
 
 [sub_resource type="AnimationNodeBlendTree" id="AnimationNodeBlendTree_jtffq"]
-graph_offset = Vector2(-737, -43)
 nodes/StateMachine/node = SubResource("AnimationNodeStateMachine_hp2c6")
 nodes/StateMachine/position = Vector2(-194.87173, 86.96755)
 node_connections = [&"output", 0, &"StateMachine"]
@@ -223,7 +221,7 @@ script = ExtResource("2_1omi5")
 
 [node name="Character" parent="CharacterController" unique_id=1155727332 instance=ExtResource("1_80vf3")]
 
-[node name="AnimationPlayer" parent="CharacterController/Character" index="1" unique_id=2049220193]
+[node name="AnimationPlayer" parent="CharacterController/Character" index="1" unique_id=1200390065]
 root_motion_track = NodePath("Armature/Skeleton3D:RootBone")
 libraries/ = ExtResource("2_bsv43")
 
@@ -243,10 +241,11 @@ unique_name_in_owner = true
 animation_player = NodePath("../AnimationPlayerSynced")
 tree_root = SubResource("BLTBlendTree_hp2c6")
 skeleton = NodePath("../Character/Armature/Skeleton3D")
-parameters/BLTStateMachine/transition/to_idle = false
-parameters/BLTStateMachine/transition/to_turnleft = false
-parameters/BLTStateMachine/transition/to_turnright = false
-parameters/BLTStateMachine/transition/to_walk = false
+root_motion_track = NodePath("Armature/Skeleton3D:RootBone")
+parameters/StateMachine/conditions/to_idle = false
+parameters/StateMachine/conditions/to_turnleft = false
+parameters/StateMachine/conditions/to_turnright = false
+parameters/StateMachine/conditions/to_walk = false
 
 [node name="AnimationTree" type="AnimationTree" parent="CharacterController" unique_id=1995098675]
 unique_name_in_owner = true

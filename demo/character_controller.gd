@@ -32,6 +32,10 @@ func activate_animation_source(animation_source:AnimationSource):
 		animation_player_synced.active = false
 		blt_animation_graph.active = false
 		animation_tree.active = true
+	elif animation_source == AnimationSource.AnimGraph:
+		animation_player_synced.active = true
+		blt_animation_graph.active = false
+		animation_tree.active = false		
 	else:
 		animation_player_synced.active = true
 		blt_animation_graph.active = false
@@ -55,19 +59,19 @@ func update_animation_state_machine():
 		elif active_animation == AnimationState.TurnRight90:
 			animation_tree["parameters/StateMachine/conditions/to_turnright"] = true
 	elif active_animation_source == AnimationSource.AnimGraph:
-		animation_tree["parameters/BLTStateMachine/transition/to_idle"] = false
-		animation_tree["parameters/StateMachine/transition/to_walk"] = false
-		animation_tree["parameters/StateMachine/transition/to_turnright"] = false
-		animation_tree["parameters/StateMachine/transition/to_turnleft"] = false
+		blt_animation_graph["parameters/StateMachine/conditions/to_idle"] = false
+		blt_animation_graph["parameters/StateMachine/conditions/to_walk"] = false
+		blt_animation_graph["parameters/StateMachine/conditions/to_turnright"] = false
+		blt_animation_graph["parameters/StateMachine/conditions/to_turnleft"] = false
 		
 		if active_animation == AnimationState.Idle:
-			animation_tree["parameters/BLTStateMachine/transition/to_idle"] = true
+			blt_animation_graph["parameters/StateMachine/conditions/to_idle"] = true
 		elif active_animation == AnimationState.Walk:
-			animation_tree["parameters/StateMachine/transition/to_walk"] = true
+			blt_animation_graph["parameters/StateMachine/conditions/to_walk"] = true
 		elif active_animation == AnimationState.TurnLeft90:
-			animation_tree["parameters/StateMachine/transition/to_turnright"] = true
+			blt_animation_graph["parameters/StateMachine/conditions/to_turnright"] = true
 		elif active_animation == AnimationState.TurnRight90:
-			animation_tree["parameters/StateMachine/transition/to_turnleft"] = true
+			blt_animation_graph["parameters/StateMachine/conditions/to_turnleft"] = true
 	else:
 		animation_player_synced.play(animation_state_to_name[active_animation])
 
