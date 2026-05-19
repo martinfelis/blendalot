@@ -8,7 +8,7 @@ enum AnimationSource {	AnimPlayer, AnimTree, AnimGraph }
 
 enum AnimationState { Idle, Walk, Run, Limp, TurnLeft90, TurnRight90}
 
-var active_animation_source:AnimationSource = AnimationSource.AnimTree
+var active_animation_source:AnimationSource = AnimationSource.AnimGraph
 var active_animation:AnimationState = AnimationState.Idle
 
 var root_motion_translation:Vector3 = Vector3.ZERO
@@ -33,8 +33,8 @@ func activate_animation_source(animation_source:AnimationSource):
 		blt_animation_graph.active = false
 		animation_tree.active = true
 	elif animation_source == AnimationSource.AnimGraph:
-		animation_player_synced.active = true
-		blt_animation_graph.active = false
+		animation_player_synced.active = false
+		blt_animation_graph.active = true
 		animation_tree.active = false		
 	else:
 		animation_player_synced.active = true
