@@ -6,7 +6,7 @@ const BLENDALOT_AUTOLOAD_NAME = "Blendalot"
 
 var editor_dock:EditorDock = null
 var animation_graph_editor:AnimationGraphEditor = null
-
+var animation_graph_inspector_plugin:AnimationGraphInspectorPlugin = null
 
 func _enable_plugin() -> void:
 	pass
@@ -22,9 +22,14 @@ func _enter_tree() -> void:
 	animation_graph_editor = preload ("res://addons/blendalot/animation_graph_editor.tscn").instantiate()
 	editor_dock.add_child(animation_graph_editor)
 	add_dock(editor_dock)
+	
+	animation_graph_inspector_plugin = preload("res://addons/blendalot/utils/animation_graph_inspector_plugin.gd").new()
+	add_inspector_plugin(animation_graph_inspector_plugin)
 
 
 func _exit_tree() -> void:
+	remove_inspector_plugin(animation_graph_inspector_plugin)
+	
 	remove_dock(editor_dock)
 	editor_dock.queue_free()
 	editor_dock = null
