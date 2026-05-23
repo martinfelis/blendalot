@@ -262,7 +262,7 @@ void BLTAnimationNodeSampler::evaluate(GraphEvaluationContext &context, const Lo
 
 	assert(inputs.size() == 0);
 
-	output.sample_from_animation(animation, node_time_info.position, node_time_info.delta, context.root_bone_track_index);
+	output.sample_from_animation(animation, node_time_info.position, node_time_info.delta, context.root_bone_track_uid);
 }
 
 void BLTAnimationNodeSampler::set_animation_player(AnimationPlayer *p_player) {

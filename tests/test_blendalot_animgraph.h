@@ -1161,14 +1161,14 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][RootMotion] Test Roo
 		NodePath track_0_path = NodePath("root/");
 		animation_graph->set_root_motion_track(track_0_path);
 		GraphEvaluationContext &graph_context = animation_graph->get_context();
-		CHECK_EQ(graph_context.root_bone_track_index, -1);
+		CHECK_EQ(graph_context.root_bone_track_uid, -1);
 	}
 
 	SUBCASE("Setting valid root motion track") {
 		NodePath track_0_path = test_animation_a->track_get_path(0);
 		animation_graph->set_root_motion_track(track_0_path);
 		GraphEvaluationContext &graph_context = animation_graph->get_context();
-		CHECK_EQ(graph_context.root_bone_track_index, 0);
+		CHECK_EQ(graph_context.root_bone_track_uid, 0);
 
 		graph_context.graph_process_delta_time = 0.01;
 

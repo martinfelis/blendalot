@@ -273,7 +273,7 @@ void BLTAnimationGraph::set_root_motion_track(const NodePath &p_track) {
 	const bool has_changed = root_motion_track != p_track;
 	root_motion_track = p_track;
 	if (has_changed) {
-		_setup_graph();
+		_graph_changed(StringName("RootMotionTrack"));
 	}
 }
 
@@ -372,8 +372,8 @@ void BLTAnimationGraph::_process_graph(double p_delta, bool p_update_only) {
 	root_animation_node->update_time(p_delta);
 	root_animation_node->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
 
-	if (graph_context.root_bone_track_index != -1) {
-		AnimationData::TransformTrackValue *root_bone_transform = graph_output->get_value<AnimationData::TransformTrackValue>(graph_context.root_bone_track_index);
+	if (graph_context.root_bone_track_uid != 0) {
+		AnimationData::TransformTrackValue *root_bone_transform = graph_output->get_value<AnimationData::TransformTrackValue>(graph_context.root_bone_track_uid);
 		root_motion_position = root_bone_transform->loc;
 
 		// And we also reset the transform of the bone, as root_motion_position already contains the information we need.
@@ -459,7 +459,9 @@ void BLTAnimationGraph::_setup_graph() {
 		return;
 	}
 
-	if (!root_motion_track.is_empty()) {
-		graph_context.root_bone_track_index = graph_context.animation_data_allocator.get_bone_track_index(root_motion_track);
+	if (root_motion_track.is_empty()) {
+		graph_context.root_bone_track_uid = 0;
+	} else {
+		graph_context.root_bone_track_uid = AnimationData::create_track_uid(root_motion_track, Animation::TYPE_POSITION_3D);
 	}
 }

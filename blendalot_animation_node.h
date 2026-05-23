@@ -279,7 +279,7 @@ struct GraphEvaluationContext {
 	Skeleton3D *skeleton_3d = nullptr;
 	AnimationDataAllocator animation_data_allocator;
 	LocalVector<String> validation_messages;
-	int root_bone_track_index = -1;
+	AnimationTrackUID root_bone_track_uid = 0;
 	double graph_process_delta_time = 0.f;
 };
 
