@@ -3,12 +3,13 @@ extends Node3D
 @onready var blt_animation_graph: BLTAnimationGraph = %BLTAnimationGraph
 @onready var animation_tree: AnimationTree = %AnimationTree
 @onready var animation_player_synced: AnimationPlayer = %AnimationPlayerSynced
+@onready var animation_source_option_button: OptionButton = %AnimationSourceOptionButton
 
-enum AnimationSource {	AnimPlayer, AnimTree, AnimGraph }
+enum AnimationSource {AnimPlayer, AnimTree, AnimGraph }
 
 enum AnimationState { Idle, Walk, Run, Limp, TurnLeft90, TurnRight90}
 
-var active_animation_source:AnimationSource = AnimationSource.AnimGraph
+var active_animation_source:AnimationSource = AnimationSource.AnimTree
 var active_animation:AnimationState = AnimationState.Idle
 
 var root_motion_translation:Vector3 = Vector3.ZERO
@@ -25,7 +26,8 @@ var animation_state_to_name:Dictionary[AnimationState, String] = {
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-	activate_animation_source(active_animation_source)
+	_on_animation_source_option_button_item_selected(animation_source_option_button.selected)
+
 
 func activate_animation_source(animation_source:AnimationSource):
 	if animation_source == AnimationSource.AnimTree:
@@ -106,3 +108,14 @@ func _process(delta: float) -> void:
 	
 	transform = transform.translated(get_quaternion() * root_motion_translation.rotated(Vector3.RIGHT, 3.141592 * 0.5) * 0.01)
 	set_quaternion(get_quaternion() * root_motion_rotation)
+
+
+func _on_animation_source_option_button_item_selected(index: int) -> void:
+	var item_text = animation_source_option_button.get_item_text(index)
+	
+	if item_text == "Animation Tree":
+		activate_animation_source(AnimationSource.AnimTree)
+	elif item_text == "Animation Graph":
+		activate_animation_source(AnimationSource.AnimGraph)
+	else:
+		activate_animation_source(AnimationSource.AnimPlayer)

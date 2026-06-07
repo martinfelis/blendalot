@@ -49,10 +49,12 @@ glow_enabled = true
 [sub_resource type="BLTAnimationNodeBlend2" id="BLTAnimationNodeBlend2_1omi5"]
 resource_name = "BLTAnimationNodeBlend2 1"
 position = Vector2(180, -180)
+sync = false
 
 [sub_resource type="BLTAnimationNodeBlend2" id="BLTAnimationNodeBlend2_xhvkk"]
 resource_name = "BLTAnimationNodeBlend2"
 position = Vector2(-80, 0)
+sync = false
 
 [sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_ywa6c"]
 resource_name = "BLTAnimationNodeSampler 1"
@@ -120,11 +122,13 @@ advance_condition = &"to_idle"
 
 [sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_2c2kj"]
 resource_name = "BLTAnimationNodeSampler_to_BLTAnimationNodeSampler 3"
+sync = false
 blend_amount = 1.0
 advance_condition = &"to_walk"
 
 [sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_ta1m2"]
 resource_name = "BLTAnimationNodeSampler 3_to_BLTAnimationNodeSampler"
+sync = false
 blend_amount = 1.0
 advance_condition = &"to_idle"
 
@@ -142,36 +146,42 @@ advance_condition = &"to_walk"
 
 [sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_2ft8h"]
 resource_name = "Walk_to_BLTAnimationNodeSampler"
+sync = false
 blend_amount = 1.0
 advance_condition = &"to_run"
 transition_duration = 0.5
 
 [sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_hp2c6"]
 resource_name = "BLTAnimationNodeSampler_to_Walk"
+sync = false
 blend_amount = 1.0
 advance_condition = &"to_walk"
 transition_duration = 0.5
 
 [sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_jtffq"]
 resource_name = "Walk_to_BLTAnimationNodeSampler 1"
+sync = false
 blend_amount = 1.0
 advance_condition = &"to_limping"
 transition_duration = 0.5
 
 [sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_1eubj"]
 resource_name = "BLTAnimationNodeSampler_to_BLTAnimationNodeSampler 1"
+sync = false
 blend_amount = 1.0
 advance_condition = &"to_limping"
 transition_duration = 0.5
 
 [sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_uq2ha"]
 resource_name = "BLTAnimationNodeSampler 1_to_Walk"
+sync = false
 blend_amount = 1.0
 advance_condition = &"to_walk"
 transition_duration = 0.5
 
 [sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_ld2t0"]
 resource_name = "BLTAnimationNodeSampler 1_to_BLTAnimationNodeSampler"
+sync = false
 blend_amount = 1.0
 advance_condition = &"to_run"
 transition_duration = 0.5
@@ -179,7 +189,7 @@ transition_duration = 0.5
 [sub_resource type="BLTStateMachine" id="BLTStateMachine_2ft8h"]
 resource_name = "StateMachine"
 position = Vector2(-60, -240)
-graph_offset = Vector2(-253, -43)
+graph_offset = Vector2(-407.17938, -100.08373)
 states/Idle/node = SubResource("BLTAnimationNodeSampler_jr5lb")
 states/Idle/position = Vector2(-220, 160)
 states/TurnLeft90/node = SubResource("BLTAnimationNodeSampler_1omi5")
@@ -193,11 +203,11 @@ states/BLTAnimationNodeSampler/position = Vector2(540, 380)
 "states/BLTAnimationNodeSampler 1/node" = SubResource("BLTAnimationNodeSampler_6d65n")
 "states/BLTAnimationNodeSampler 1/position" = Vector2(540, -20)
 transitions = [SubResource("BLTAnimationNodeSampler_jr5lb"), SubResource("BLTAnimationNodeSampler_1omi5"), SubResource("BLTStateMachineTransition_ywa6c"), SubResource("BLTAnimationNodeSampler_1omi5"), SubResource("BLTAnimationNodeSampler_jr5lb"), SubResource("BLTStateMachineTransition_fkt1r"), SubResource("BLTAnimationNodeSampler_jr5lb"), SubResource("BLTAnimationNodeSampler_xhvkk"), SubResource("BLTStateMachineTransition_4lcw8"), SubResource("BLTAnimationNodeSampler_xhvkk"), SubResource("BLTAnimationNodeSampler_jr5lb"), SubResource("BLTStateMachineTransition_6d65n"), SubResource("BLTAnimationNodeSampler_jr5lb"), SubResource("BLTAnimationNodeSampler_5evmn"), SubResource("BLTStateMachineTransition_2c2kj"), SubResource("BLTAnimationNodeSampler_5evmn"), SubResource("BLTAnimationNodeSampler_jr5lb"), SubResource("BLTStateMachineTransition_ta1m2"), SubResource("BLTAnimationNodeSampler_1omi5"), SubResource("BLTAnimationNodeSampler_5evmn"), SubResource("BLTStateMachineTransition_ir4l7"), SubResource("BLTAnimationNodeSampler_xhvkk"), SubResource("BLTAnimationNodeSampler_5evmn"), SubResource("BLTStateMachineTransition_rqy0f"), SubResource("BLTAnimationNodeSampler_5evmn"), SubResource("BLTAnimationNodeSampler_4lcw8"), SubResource("BLTStateMachineTransition_2ft8h"), SubResource("BLTAnimationNodeSampler_4lcw8"), SubResource("BLTAnimationNodeSampler_5evmn"), SubResource("BLTStateMachineTransition_hp2c6"), SubResource("BLTAnimationNodeSampler_5evmn"), SubResource("BLTAnimationNodeSampler_6d65n"), SubResource("BLTStateMachineTransition_jtffq"), SubResource("BLTAnimationNodeSampler_4lcw8"), SubResource("BLTAnimationNodeSampler_6d65n"), SubResource("BLTStateMachineTransition_1eubj"), SubResource("BLTAnimationNodeSampler_6d65n"), SubResource("BLTAnimationNodeSampler_5evmn"), SubResource("BLTStateMachineTransition_uq2ha"), SubResource("BLTAnimationNodeSampler_6d65n"), SubResource("BLTAnimationNodeSampler_4lcw8"), SubResource("BLTStateMachineTransition_ld2t0")]
-graph_offset = Vector2(-253, -43)
+graph_offset = Vector2(-407.17938, -100.08373)
 
 [sub_resource type="BLTBlendTree" id="BLTBlendTree_hp2c6"]
 resource_name = "Root"
-graph_offset = Vector2(-854, -345)
+graph_offset = Vector2(-426.87204, -234.378)
 nodes/Output/graph_offset = Vector2(480, -240)
 "nodes/BLTAnimationNodeBlend2 1/node" = SubResource("BLTAnimationNodeBlend2_1omi5")
 "nodes/BLTAnimationNodeBlend2 1/graph_offset" = Vector2(180, -180)
@@ -287,6 +297,41 @@ nodes/StateMachine/position = Vector2(-430, 20)
 node_connections = [&"output", 0, &"StateMachine"]
 
 [node name="CharacterTest" type="Node3D" unique_id=584416199]
+
+[node name="UICanvasLayer" type="CanvasLayer" parent="." unique_id=964618785]
+
+[node name="MarginContainer" type="MarginContainer" parent="UICanvasLayer" unique_id=1085178451]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 51.0
+grow_horizontal = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="PanelContainer" type="PanelContainer" parent="UICanvasLayer/MarginContainer" unique_id=406551810]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="UICanvasLayer/MarginContainer/PanelContainer" unique_id=362949885]
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Label" type="Label" parent="UICanvasLayer/MarginContainer/PanelContainer/HBoxContainer" unique_id=1062617706]
+layout_mode = 2
+text = "Animation Source"
+
+[node name="AnimationSourceOptionButton" type="OptionButton" parent="UICanvasLayer/MarginContainer/PanelContainer/HBoxContainer" unique_id=283418740]
+unique_name_in_owner = true
+layout_mode = 2
+selected = 1
+item_count = 3
+popup/item_0/text = "Animation Player"
+popup/item_0/id = 0
+popup/item_1/text = "Animation Tree"
+popup/item_1/id = 1
+popup/item_2/text = "Animation Graph"
+popup/item_2/id = 2
 
 [node name="StaticScene" type="Node" parent="." unique_id=362199840]
 
@@ -463,5 +508,7 @@ parameters/StateMachine/conditions/to_idle = false
 parameters/StateMachine/conditions/to_turnleft = false
 parameters/StateMachine/conditions/to_turnright = false
 parameters/StateMachine/conditions/to_walk = true
+
+[connection signal="item_selected" from="UICanvasLayer/MarginContainer/PanelContainer/HBoxContainer/AnimationSourceOptionButton" to="CharacterController" method="_on_animation_source_option_button_item_selected"]
 
 [editable path="CharacterController/Character"]
