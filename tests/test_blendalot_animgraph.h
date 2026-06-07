@@ -269,8 +269,8 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot] Test AnimationData b
 
 	REQUIRE(data_blended.has_same_tracks(data_t0_5));
 	for (const KeyValue<Animation::TrackCacheID, size_t> &K : data_blended.track_value_index) {
-		AnimationData::TrackValue *blended_value = data_blended.get_value<AnimationData::TrackValue>(K.key);
-		AnimationData::TrackValue *data_t0_5_value = data_t0_5.get_value<AnimationData::TrackValue>(K.key);
+		AnimationData::TrackValue *blended_value = data_blended.get_value_at_index<AnimationData::TrackValue>(K.value);
+		AnimationData::TrackValue *data_t0_5_value = data_t0_5.get_value_at_index<AnimationData::TrackValue>(K.value);
 		CHECK(*blended_value == *data_t0_5_value);
 	}
 
@@ -280,8 +280,8 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot] Test AnimationData b
 
 	REQUIRE(data_blended.has_same_tracks(data_t0_5));
 	for (const KeyValue<Animation::TrackCacheID, size_t> &K : data_blended.track_value_index) {
-		AnimationData::TrackValue *blended_value = data_blended.get_value<AnimationData::TrackValue>(K.key);
-		AnimationData::TrackValue *data_t0_5_value = data_t0_5.get_value<AnimationData::TrackValue>(K.key);
+		AnimationData::TrackValue *blended_value = data_blended.get_value_at_index<AnimationData::TrackValue>(K.value);
+		AnimationData::TrackValue *data_t0_5_value = data_t0_5.get_value_at_index<AnimationData::TrackValue>(K.value);
 		CHECK(*blended_value != *data_t0_5_value);
 	}
 }
@@ -838,7 +838,11 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Embe
 		blend_tree->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
 
 		// Check values
-		AnimationData::TransformTrackValue *hip_transform_value = graph_output->get_value<AnimationData::TransformTrackValue>(test_animation_a->get_tracks()[0]->get_unique_id());
+		AnimationTrackUID hip_track_uid = graph_output->create_track_uid(test_animation_a->get_tracks()[0]->path, Animation::TrackType::TYPE_POSITION_3D);
+		int32_t hip_value_index = graph_output->get_value_index_from_unique_id(hip_track_uid);
+		REQUIRE(hip_value_index != -1);
+		AnimationData::TransformTrackValue *hip_transform_value = graph_output->get_value_at_index<AnimationData::TransformTrackValue>(hip_value_index);
+
 		CHECK(hip_transform_value->loc[0] == doctest::Approx(0.15));
 		CHECK(hip_transform_value->loc[1] == doctest::Approx(0.3));
 		CHECK(hip_transform_value->loc[2] == doctest::Approx(0.45));
@@ -862,7 +866,11 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Embe
 		blend_tree->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
 
 		// Check values
-		AnimationData::TransformTrackValue *hip_transform_value = graph_output->get_value<AnimationData::TransformTrackValue>(test_animation_a->get_tracks()[0]->get_unique_id());
+		AnimationTrackUID hip_track_uid = graph_output->create_track_uid(test_animation_a->get_tracks()[0]->path, Animation::TrackType::TYPE_POSITION_3D);
+		int32_t hip_value_index = graph_output->get_value_index_from_unique_id(hip_track_uid);
+		REQUIRE(hip_value_index != -1);
+		AnimationData::TransformTrackValue *hip_transform_value = graph_output->get_value_at_index<AnimationData::TransformTrackValue>(hip_value_index);
+
 		CHECK(hip_transform_value->loc[0] == doctest::Approx(1.5));
 		CHECK(hip_transform_value->loc[1] == doctest::Approx(3.0));
 		CHECK(hip_transform_value->loc[2] == doctest::Approx(4.5));
@@ -1161,14 +1169,14 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][RootMotion] Test Roo
 		NodePath track_0_path = NodePath("root/");
 		animation_graph->set_root_motion_track(track_0_path);
 		GraphEvaluationContext &graph_context = animation_graph->get_context();
-		CHECK_EQ(graph_context.root_bone_track_uid, -1);
+		CHECK_EQ(graph_context.root_bone_value_index, -1);
 	}
 
 	SUBCASE("Setting valid root motion track") {
 		NodePath track_0_path = test_animation_a->track_get_path(0);
 		animation_graph->set_root_motion_track(track_0_path);
 		GraphEvaluationContext &graph_context = animation_graph->get_context();
-		CHECK_EQ(graph_context.root_bone_track_uid, 0);
+		CHECK_EQ(graph_context.root_bone_value_index, 0);
 
 		graph_context.graph_process_delta_time = 0.01;
 

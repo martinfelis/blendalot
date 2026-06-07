@@ -69,7 +69,7 @@ void AnimationData::sample_from_animation(const Ref<Animation> &animation, doubl
 		switch (track_type) {
 			case Animation::TYPE_POSITION_3D:
 			case Animation::TYPE_ROTATION_3D: {
-				TransformTrackValue *transform_track_value = get_value<TransformTrackValue>(track_uid);
+				TransformTrackValue *transform_track_value = get_value_at_index<TransformTrackValue>(get_value_index_from_unique_id(track_uid));
 
 				if (transform_track_value->bone_idx != -1) {
 					if (track_index == root_bone_track_index) {
@@ -262,7 +262,7 @@ void BLTAnimationNodeSampler::evaluate(GraphEvaluationContext &context, const Lo
 
 	assert(inputs.size() == 0);
 
-	output.sample_from_animation(animation, node_time_info.position, node_time_info.delta, context.root_bone_track_uid);
+	output.sample_from_animation(animation, node_time_info.position, node_time_info.delta, context.root_bone_value_index);
 }
 
 void BLTAnimationNodeSampler::set_animation_player(AnimationPlayer *p_player) {

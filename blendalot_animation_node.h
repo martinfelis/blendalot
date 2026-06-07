@@ -142,13 +142,25 @@ struct AnimationData {
 	void allocate_track_values(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d);
 
 	template <typename TrackValueType>
-	TrackValueType *get_value(const AnimationTrackUID &track_cache_id) {
-		return reinterpret_cast<TrackValueType *>(&transform_values[track_value_index[track_cache_id]]);
+	TrackValueType *get_value_at_index(const int32_t &value_index) {
+		return reinterpret_cast<TrackValueType *>(&transform_values[value_index]);
 	}
 
 	template <typename TrackValueType>
-	const TrackValueType *get_value(const AnimationTrackUID &track_cache_id) const {
-		return reinterpret_cast<const TrackValueType *>(&transform_values[track_value_index[track_cache_id]]);
+	const TrackValueType *get_value_at_index(const int32_t &value_index) const {
+		return reinterpret_cast<const TrackValueType *>(&transform_values[value_index]);
+	}
+
+	template <typename TrackValueType>
+	TrackValueType *get_value_for_track_uid(const AnimationTrackUID &track_uid) {
+		int32_t value_index = get_value_index_from_unique_id(track_uid);
+		return get_value_at_index<TrackValueType>(value_index);
+	}
+
+	template <typename TrackValueType>
+	const TrackValueType *get_value_for_track_uid(const AnimationTrackUID &track_uid) const {
+		int32_t value_index = get_value_index_from_unique_id(track_uid);
+		return get_value_at_index<TrackValueType>(value_index);
 	}
 
 	bool has_same_tracks(const AnimationData &other) const {
@@ -199,7 +211,7 @@ struct AnimationData {
 
 	void sample_root_bone(const Ref<Animation> &animation, const int32_t track_index, const Animation::TrackType track_type, const int root_bone_index, const double &p_time, double delta_time, TransformTrackValue *transform_track_value);
 
-	int32_t get_track_index_from_unique_id(AnimationTrackUID track_uid) {
+	int32_t get_value_index_from_unique_id(AnimationTrackUID track_uid) const {
 		if (track_value_index.has(track_uid)) {
 			return static_cast<int32_t>(track_value_index[track_uid]);
 		}
@@ -212,13 +224,13 @@ struct AnimationData {
 };
 
 template <>
-inline AnimationData::TransformTrackValue *AnimationData::get_value<AnimationData::TransformTrackValue>(const AnimationTrackUID &track_cache_id) {
-	return &transform_values[track_value_index[track_cache_id]];
+inline AnimationData::TransformTrackValue *AnimationData::get_value_at_index<AnimationData::TransformTrackValue>(const int32_t &value_index) {
+	return &transform_values[value_index];
 }
 
 template <>
-inline const AnimationData::TransformTrackValue *AnimationData::get_value<AnimationData::TransformTrackValue>(const AnimationTrackUID &track_cache_id) const {
-	return &transform_values[track_value_index[track_cache_id]];
+inline const AnimationData::TransformTrackValue *AnimationData::get_value_at_index<AnimationData::TransformTrackValue>(const int32_t &value_index) const {
+	return &transform_values[value_index];
 }
 
 /**
@@ -270,7 +282,7 @@ public:
 	}
 
 	int get_bone_track_index(const NodePath &root_bone_path) {
-		return default_data.get_track_index_from_unique_id(AnimationData::create_track_uid(root_bone_path, Animation::TYPE_POSITION_3D));
+		return default_data.get_value_index_from_unique_id(AnimationData::create_track_uid(root_bone_path, Animation::TYPE_POSITION_3D));
 	}
 };
 
@@ -279,7 +291,7 @@ struct GraphEvaluationContext {
 	Skeleton3D *skeleton_3d = nullptr;
 	AnimationDataAllocator animation_data_allocator;
 	LocalVector<String> validation_messages;
-	AnimationTrackUID root_bone_track_uid = 0;
+	int32_t root_bone_value_index = -1;
 	double graph_process_delta_time = 0.f;
 };
 
