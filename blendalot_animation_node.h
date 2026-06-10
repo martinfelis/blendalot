@@ -209,7 +209,7 @@ struct AnimationData {
 
 	void sample_from_animation(const Ref<Animation> &animation, double p_time, double delta_time = -1, int root_bone_track_index = -1);
 
-	void sample_root_bone(const Ref<Animation> &animation, const int32_t track_index, const Animation::TrackType track_type, const int root_bone_index, const double &p_time, double delta_time, TransformTrackValue *transform_track_value);
+	void sample_root_bone(const Ref<Animation> &animation, const int32_t track_index, const Animation::TrackType track_type, const double &p_time, double delta_time, TransformTrackValue *transform_track_value);
 
 	int32_t get_value_index_from_unique_id(AnimationTrackUID track_uid) const {
 		if (track_value_index.has(track_uid)) {

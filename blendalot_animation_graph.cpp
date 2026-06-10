@@ -375,9 +375,12 @@ void BLTAnimationGraph::_process_graph(double p_delta, bool p_update_only) {
 	if (graph_context.root_bone_value_index != -1) {
 		AnimationData::TransformTrackValue *root_bone_transform = graph_output->get_value_at_index<AnimationData::TransformTrackValue>(graph_context.root_bone_value_index);
 		root_motion_position = root_bone_transform->loc;
+		root_motion_rotation = root_bone_transform->rot;
 
 		// And we also reset the transform of the bone, as root_motion_position already contains the information we need.
 		root_bone_transform->loc = Vector3(0., 0., 0.);
+		root_bone_transform->rot = Quaternion(0., 0., 0., 1.);
+		root_bone_transform->scale = Vector3(1., 1., 1.);
 	}
 
 	_apply_animation_data(*graph_output);

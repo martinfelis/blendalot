@@ -71,9 +71,9 @@ func update_animation_state_machine():
 		elif active_animation == AnimationState.Walk:
 			blt_animation_graph["parameters/StateMachine/conditions/to_walk"] = true
 		elif active_animation == AnimationState.TurnLeft90:
-			blt_animation_graph["parameters/StateMachine/conditions/to_turnright"] = true
-		elif active_animation == AnimationState.TurnRight90:
 			blt_animation_graph["parameters/StateMachine/conditions/to_turnleft"] = true
+		elif active_animation == AnimationState.TurnRight90:
+			blt_animation_graph["parameters/StateMachine/conditions/to_turnright"] = true
 	else:
 		animation_player_synced.play(animation_state_to_name[active_animation])
 
