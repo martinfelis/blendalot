@@ -4,6 +4,7 @@ extends Node3D
 @onready var animation_tree: AnimationTree = %AnimationTree
 @onready var animation_player_synced: AnimationPlayer = %AnimationPlayerSynced
 @onready var animation_source_option_button: OptionButton = %AnimationSourceOptionButton
+@onready var root_motion_label: Label = %RootMotionLabel
 
 enum AnimationSource {AnimPlayer, AnimTree, AnimGraph }
 
@@ -105,9 +106,14 @@ func _process(delta: float) -> void:
 	update_animation_state_machine()
 	
 	query_root_motion_values()
+
+	# Fix orientation and scale from model
+	root_motion_translation = root_motion_translation.rotated(Vector3.RIGHT, PI * 0.0) * 0.01
+
+	root_motion_label.text = "t = %v rot = (w = %v angle = %f)" % [root_motion_translation, root_motion_rotation.get_axis(), root_motion_rotation.get_angle()]
 	
-	transform = transform.translated(get_quaternion() * root_motion_translation.rotated(Vector3.RIGHT, 3.141592 * 0.5) * 0.01)
 	set_quaternion(get_quaternion() * root_motion_rotation)
+	transform = transform.translated(get_quaternion() * root_motion_translation)
 
 
 func _on_animation_source_option_button_item_selected(index: int) -> void:
