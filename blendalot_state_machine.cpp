@@ -79,7 +79,7 @@ void BLTStateMachine::get_parameter_list(List<PropertyInfo> *r_list) const {
 		}
 	}
 
-	advance_conditions.sort_custom<StringName::AlphCompare>();
+	advance_conditions.sort();
 	for (const StringName &E : advance_conditions) {
 		r_list->push_back(PropertyInfo(Variant::BOOL, vformat("conditions/%s", E)));
 	}
