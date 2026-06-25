@@ -45,6 +45,17 @@ void BLTAnimationGraph::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_skeleton"), &BLTAnimationGraph::get_skeleton);
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "skeleton", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Skeleton3D"), "set_skeleton", "get_skeleton");
 	ADD_SIGNAL(MethodInfo(SNAME("skeleton_changed")));
+
+	/* ---- Root motion accumulator for Skeleton3D ---- */
+	ClassDB::bind_method(D_METHOD("set_root_motion_track", "path"), &BLTAnimationGraph::set_root_motion_track);
+	ClassDB::bind_method(D_METHOD("get_root_motion_track"), &BLTAnimationGraph::get_root_motion_track);
+
+	ClassDB::bind_method(D_METHOD("get_root_motion_position"), &BLTAnimationGraph::get_root_motion_position);
+	ClassDB::bind_method(D_METHOD("get_root_motion_rotation"), &BLTAnimationGraph::get_root_motion_rotation);
+	ClassDB::bind_method(D_METHOD("get_root_motion_scale"), &BLTAnimationGraph::get_root_motion_scale);
+
+	ADD_GROUP("Root Motion", "root_motion_");
+	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "root_motion_track"), "set_root_motion_track", "get_root_motion_track");
 }
 
 void BLTAnimationGraph::_update_properties_for_node(const String &p_base_path, Ref<BLTAnimationNode> p_node) const {
@@ -258,6 +269,30 @@ void BLTAnimationGraph::print_property_list() const {
 	}
 }
 
+void BLTAnimationGraph::set_root_motion_track(const NodePath &p_track) {
+	const bool has_changed = root_motion_track != p_track;
+	root_motion_track = p_track;
+	if (has_changed) {
+		_setup_graph();
+	}
+}
+
+NodePath BLTAnimationGraph::get_root_motion_track() const {
+	return root_motion_track;
+}
+
+Vector3 BLTAnimationGraph::get_root_motion_position() const {
+	return root_motion_position;
+}
+
+Quaternion BLTAnimationGraph::get_root_motion_rotation() const {
+	return root_motion_rotation;
+}
+
+Vector3 BLTAnimationGraph::get_root_motion_scale() const {
+	return root_motion_scale;
+}
+
 void BLTAnimationGraph::set_animation_player(const NodePath &p_path) {
 	print_line(vformat("set_animation_player(%s) ", p_path));
 
@@ -337,6 +372,17 @@ void BLTAnimationGraph::_process_graph(double p_delta, bool p_update_only) {
 	root_animation_node->update_time(p_delta);
 	root_animation_node->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
 
+	if (graph_context.root_bone_value_index != -1) {
+		AnimationData::TransformTrackValue *root_bone_transform = graph_output->get_value_at_index<AnimationData::TransformTrackValue>(graph_context.root_bone_value_index);
+		root_motion_position = root_bone_transform->loc;
+		root_motion_rotation = root_bone_transform->rot;
+
+		// And we also reset the transform of the bone, as root_motion_position already contains the information we need.
+		root_bone_transform->loc = Vector3(0., 0., 0.);
+		root_bone_transform->rot = Quaternion(0., 0., 0., 1.);
+		root_bone_transform->scale = Vector3(1., 1., 1.);
+	}
+
 	_apply_animation_data(*graph_output);
 
 	graph_context.animation_data_allocator.free(graph_output);
@@ -412,8 +458,15 @@ void BLTAnimationGraph::_setup_graph() {
 		for (const String &message : graph_context.validation_messages) {
 			print_line(message);
 		}
-	}
-}
 
-BLTAnimationGraph::BLTAnimationGraph() {
+		return;
+	}
+
+	if (root_motion_track.is_empty()) {
+		graph_context.root_bone_value_index = -1;
+	} else {
+		AnimationData *animation_data = graph_context.animation_data_allocator.allocate();
+		graph_context.root_bone_value_index = animation_data->get_value_index_from_unique_id(AnimationData::create_track_uid(root_motion_track, Animation::TYPE_POSITION_3D));
+		graph_context.animation_data_allocator.free(animation_data);
+	}
 }

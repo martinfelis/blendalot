@@ -13,66 +13,36 @@
 #include "gdextension_helper.h"
 #endif
 
-void BLTAnimationNode::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("set_position", "position"), &BLTAnimationNode::set_position);
-	ClassDB::bind_method(D_METHOD("get_position"), &BLTAnimationNode::get_position);
-	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "position", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_position", "get_position");
-	ADD_SIGNAL(MethodInfo("animation_node_renamed", PropertyInfo(Variant::INT, "object_id"), PropertyInfo(Variant::STRING, "old_name"), PropertyInfo(Variant::STRING, "new_name")));
-	ADD_SIGNAL(MethodInfo("animation_node_removed", PropertyInfo(Variant::INT, "object_id"), PropertyInfo(Variant::STRING, "name")));
-	ADD_SIGNAL(MethodInfo(SNAME("node_changed"), PropertyInfo(Variant::STRING_NAME, "node_name")));
-	ClassDB::bind_method(D_METHOD("get_input_names"), &BLTAnimationNode::get_input_names_as_typed_array);
-	ClassDB::bind_method(D_METHOD("get_input_count"), &BLTAnimationNode::get_input_count);
-	ClassDB::bind_method(D_METHOD("get_input_index", "node"), &BLTAnimationNode::get_input_index);
-}
-
-void BLTAnimationNode::get_parameter_list(List<PropertyInfo> *r_list) const {
-}
-
-Variant BLTAnimationNode::get_parameter_default_value(const StringName &p_parameter) const {
-	return Variant();
-}
-
-bool BLTAnimationNode::is_parameter_read_only(const StringName &p_parameter) const {
-	return false;
-}
-
-void BLTAnimationNode::set_parameter(const StringName &p_name, const Variant &p_value) {
-}
-
-Variant BLTAnimationNode::get_parameter(const StringName &p_name) const {
-	return Variant();
-}
-
-void BLTAnimationNode::_node_changed() {
-	emit_signal(SNAME("node_changed"), get_name());
-}
-
-void BLTAnimationNode::_animation_node_renamed(const ObjectID &p_oid, const String &p_old_name, const String &p_new_name) {
-	emit_signal(SNAME("animation_node_renamed"), p_oid, p_old_name, p_new_name);
-}
-
-void BLTAnimationNode::_animation_node_removed(const ObjectID &p_oid, const StringName &p_node) {
-	emit_signal(SNAME("animation_node_removed"), p_oid, p_node);
-}
-
-void AnimationData::sample_from_animation(const Ref<Animation> &animation, const Skeleton3D *skeleton_3d, double p_time) {
+//
+// AnimationData
+//
+void AnimationData::sample_from_animation(const Ref<Animation> &animation, double p_time, const double delta_time, const int root_bone_track_index) {
 	GodotProfileZone("AnimationData::sample_from_animation");
 
 	int count = animation->get_track_count();
+	AnimationTrackUID root_bone_track_uid = -1;
+	if (root_bone_track_index != -1) {
+		root_bone_track_uid = create_track_uid(animation->track_get_path(root_bone_track_index), Animation::TYPE_POSITION_3D);
+	}
+
 	for (int32_t track_index = 0; track_index < count; track_index++) {
 		if (!animation->track_is_enabled(track_index)) {
 			continue;
 		}
 
-		Animation::TrackType ttype = animation->track_get_type(track_index);
-		AnimationTrackUID track_uid = get_track_unique_id(animation, track_index);
-		switch (ttype) {
+		Animation::TrackType track_type = animation->track_get_type(track_index);
+		AnimationTrackUID track_uid = create_track_uid(animation->track_get_path(track_index), track_type);
+		switch (track_type) {
 			case Animation::TYPE_POSITION_3D:
 			case Animation::TYPE_ROTATION_3D: {
-				TransformTrackValue *transform_track_value = get_value<TransformTrackValue>(track_uid);
+				TransformTrackValue *transform_track_value = get_value_at_index<TransformTrackValue>(get_value_index_from_unique_id(track_uid));
 
 				if (transform_track_value->bone_idx != -1) {
-					switch (ttype) {
+					if (track_uid == root_bone_track_uid) {
+						sample_root_bone(animation, track_index, track_type, p_time, delta_time, transform_track_value);
+						continue;
+					}
+					switch (track_type) {
 						case Animation::TYPE_POSITION_3D: {
 							transform_track_value->loc = animation->position_track_interpolate(track_index, p_time);
 							transform_track_value->loc_used = true;
@@ -103,9 +73,70 @@ void AnimationData::sample_from_animation(const Ref<Animation> &animation, const
 	}
 }
 
+void AnimationData::sample_root_bone(const Ref<Animation> &animation, const int32_t track_index, const Animation::TrackType track_type, const double &p_time, double delta_time, AnimationData::TransformTrackValue *transform_track_value) {
+	bool has_looped = false;
+	const double animation_length = animation->get_length();
+	double end_remainder = 0.;
+	int loop_count = 0;
+
+	if (p_time - delta_time < 0.0) {
+		has_looped = true;
+		end_remainder = Math::fposmod(animation_length + (p_time - delta_time), animation_length);
+		loop_count = Math::floor((delta_time - animation_length) / animation_length);
+	}
+
+	switch (track_type) {
+		case Animation::TYPE_POSITION_3D: {
+			Vector3 curr_pos = animation->position_track_interpolate(track_index, p_time);
+			if (has_looped) {
+				Vector3 prev_pos = animation->position_track_interpolate(track_index, end_remainder);
+				Vector3 end_pos = animation->position_track_interpolate(track_index, animation_length);
+				Vector3 start_pos = animation->position_track_interpolate(track_index, 0.0);
+				Vector3 loop_delta(0., 0., 0.);
+
+				if (loop_count > 0) {
+					loop_delta = (end_pos - start_pos) * loop_count;
+				}
+
+				transform_track_value->loc = end_pos - prev_pos + curr_pos - start_pos + loop_delta;
+			} else {
+				Vector3 prev_pos = animation->position_track_interpolate(track_index, p_time - delta_time);
+				transform_track_value->loc = curr_pos - prev_pos;
+			}
+			break;
+		}
+		case Animation::TYPE_ROTATION_3D: {
+			Quaternion curr_rot = animation->rotation_track_interpolate(track_index, p_time);
+			if (has_looped) {
+				Quaternion prev_rot = animation->rotation_track_interpolate(track_index, end_remainder);
+				Quaternion end_rot = animation->rotation_track_interpolate(track_index, animation_length);
+				Quaternion start_rot = animation->rotation_track_interpolate(track_index, 0.0);
+				Quaternion loop_delta(0., 0., 0., 1.);
+
+				if (loop_count > 0) {
+					loop_delta = (start_rot.inverse() * end_rot) * loop_count;
+				}
+
+				transform_track_value->rot = (prev_rot.inverse() * end_rot * start_rot.inverse() * curr_rot * loop_delta).normalized();
+			} else {
+				Quaternion prev_rot = animation->rotation_track_interpolate(track_index, p_time - delta_time);
+				transform_track_value->rot = (prev_rot.inverse() * curr_rot).normalized();
+			}
+			break;
+		}
+		case Animation::TYPE_SCALE_3D: {
+			break;
+		}
+		default: {
+			assert(false && !"Invalid root motion track type");
+			break;
+		}
+	}
+}
+
 void AnimationData::allocate_track_value(const Ref<Animation> &animation, int32_t track_index, const Skeleton3D *skeleton_3d) {
 	Animation::TrackType track_type = animation->track_get_type(track_index);
-	AnimationTrackUID track_unique_id = get_track_unique_id(animation, track_index);
+	AnimationTrackUID track_unique_id = create_track_uid(animation->track_get_path(track_index), track_type);
 
 	switch (track_type) {
 		case Animation::TrackType::TYPE_ROTATION_3D:
@@ -158,6 +189,51 @@ void AnimationDataAllocator::register_track_values(const Ref<Animation> &animati
 }
 
 //
+// BLTAnimationNode
+//
+void BLTAnimationNode::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_position", "position"), &BLTAnimationNode::set_position);
+	ClassDB::bind_method(D_METHOD("get_position"), &BLTAnimationNode::get_position);
+	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "position", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_position", "get_position");
+	ADD_SIGNAL(MethodInfo("animation_node_renamed", PropertyInfo(Variant::INT, "object_id"), PropertyInfo(Variant::STRING, "old_name"), PropertyInfo(Variant::STRING, "new_name")));
+	ADD_SIGNAL(MethodInfo("animation_node_removed", PropertyInfo(Variant::INT, "object_id"), PropertyInfo(Variant::STRING, "name")));
+	ADD_SIGNAL(MethodInfo(SNAME("node_changed"), PropertyInfo(Variant::STRING_NAME, "node_name")));
+	ClassDB::bind_method(D_METHOD("get_input_names"), &BLTAnimationNode::get_input_names_as_typed_array);
+	ClassDB::bind_method(D_METHOD("get_input_count"), &BLTAnimationNode::get_input_count);
+	ClassDB::bind_method(D_METHOD("get_input_index", "node"), &BLTAnimationNode::get_input_index);
+}
+
+void BLTAnimationNode::get_parameter_list(List<PropertyInfo> *r_list) const {
+}
+
+Variant BLTAnimationNode::get_parameter_default_value(const StringName &p_parameter) const {
+	return Variant();
+}
+
+bool BLTAnimationNode::is_parameter_read_only(const StringName &p_parameter) const {
+	return false;
+}
+
+void BLTAnimationNode::set_parameter(const StringName &p_name, const Variant &p_value) {
+}
+
+Variant BLTAnimationNode::get_parameter(const StringName &p_name) const {
+	return Variant();
+}
+
+void BLTAnimationNode::_node_changed() {
+	emit_signal(SNAME("node_changed"), get_name());
+}
+
+void BLTAnimationNode::_animation_node_renamed(const ObjectID &p_oid, const String &p_old_name, const String &p_new_name) {
+	emit_signal(SNAME("animation_node_renamed"), p_oid, p_old_name, p_new_name);
+}
+
+void BLTAnimationNode::_animation_node_removed(const ObjectID &p_oid, const StringName &p_node) {
+	emit_signal(SNAME("animation_node_removed"), p_oid, p_node);
+}
+
+//
 // BLTAnimationNodeSampler
 //
 bool BLTAnimationNodeSampler::initialize(GraphEvaluationContext &context) {
@@ -187,12 +263,13 @@ bool BLTAnimationNodeSampler::initialize(GraphEvaluationContext &context) {
 	return true;
 }
 
-void BLTAnimationNodeSampler::update_time(double p_time) {
-	BLTAnimationNode::update_time(p_time);
+void BLTAnimationNodeSampler::update_time(const double p_delta, const double p_time) {
+	BLTAnimationNode::update_time(p_delta, p_time);
 
 	if (node_time_info.is_synced) {
 		// Convert the sync time to actual animation time.
 		node_time_info.position = node_time_info.sync_track.calc_ratio_from_sync_time(node_time_info.sync_position) * animation->get_length();
+		// Convert the delta into the corresponding animation time delta.
 		return;
 	}
 
@@ -212,7 +289,7 @@ void BLTAnimationNodeSampler::evaluate(GraphEvaluationContext &context, const Lo
 
 	assert(inputs.size() == 0);
 
-	output.sample_from_animation(animation, context.skeleton_3d, node_time_info.position);
+	output.sample_from_animation(animation, node_time_info.position, node_time_info.delta, context.root_bone_value_index);
 }
 
 void BLTAnimationNodeSampler::set_animation_player(AnimationPlayer *p_player) {

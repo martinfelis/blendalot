@@ -1,0 +1,418 @@
+[gd_scene format=3 uid="uid://dvsfentccdsq2"]
+
+[ext_resource type="PackedScene" uid="uid://ts5bkjf0vj8s" path="res://assets/MixamoAmy.gltf" id="1_80vf3"]
+[ext_resource type="Script" uid="uid://kkecllll1a83" path="res://character_controller.gd" id="2_1omi5"]
+[ext_resource type="AnimationLibrary" uid="uid://dwubn740aqx51" path="res://animation_library.res" id="2_bsv43"]
+[ext_resource type="Shader" uid="uid://c1r26mxtvhvpw" path="res://best_darn_grid_shader.gdshader" id="3_bsv43"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_1omi5"]
+render_priority = 0
+shader = ExtResource("3_bsv43")
+shader_parameter/subdivisions = 100.0
+shader_parameter/grid_width = 0.01999999955296
+shader_parameter/background_color = Color(0.2, 0.2, 0.2, 1)
+shader_parameter/background_color_two = Color(0.1, 0.1, 0.1, 1)
+shader_parameter/grid_color = Color(0.5, 0.5, 0.5, 1)
+shader_parameter/dashed_scale_x = 0.02
+shader_parameter/dashed_scale_y = 0.02
+shader_parameter/dashed_count_x = 1.0
+shader_parameter/dashed_count_y = 1.0
+shader_parameter/point_width = 0.021
+shader_parameter/point_color = Color(0, 0, 0, 1)
+shader_parameter/point_scale_x = 0.05
+shader_parameter/point_scale_y = 0.05
+shader_parameter/inside_width = 0.01
+shader_parameter/inside_subdivisions = 6.0
+shader_parameter/inside_color = Color(0.4, 0.4, 0.4, 1)
+shader_parameter/in_dashed_scale_x = 0.3
+shader_parameter/in_dashed_scale_y = 0.3
+shader_parameter/in_dashed_count_x = 6.0
+shader_parameter/in_dashed_count_y = 6.0
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_xhvkk"]
+material = SubResource("ShaderMaterial_1omi5")
+size = Vector2(100, 100)
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_bsv43"]
+sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+ground_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+
+[sub_resource type="Sky" id="Sky_1omi5"]
+sky_material = SubResource("ProceduralSkyMaterial_bsv43")
+
+[sub_resource type="Environment" id="Environment_xhvkk"]
+background_mode = 2
+sky = SubResource("Sky_1omi5")
+tonemap_mode = 2
+glow_enabled = true
+
+[sub_resource type="BLTAnimationNodeBlend2" id="BLTAnimationNodeBlend2_1omi5"]
+resource_name = "BLTAnimationNodeBlend2 1"
+position = Vector2(180, -180)
+sync = false
+
+[sub_resource type="BLTAnimationNodeBlend2" id="BLTAnimationNodeBlend2_xhvkk"]
+resource_name = "BLTAnimationNodeBlend2"
+position = Vector2(-80, 0)
+blend_amount = 1.0
+
+[sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_ywa6c"]
+resource_name = "BLTAnimationNodeSampler 1"
+position = Vector2(-520, 140)
+animation = &"animation_library/Limping"
+
+[sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_fkt1r"]
+resource_name = "BLTAnimationNodeSampler"
+position = Vector2(-500, -80)
+animation = &"animation_library/Run"
+
+[sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_6d65n"]
+resource_name = "BLTAnimationNodeSampler 1"
+position = Vector2(540, -20)
+animation = &"animation_library/Limping"
+
+[sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_4lcw8"]
+resource_name = "BLTAnimationNodeSampler"
+position = Vector2(540, 380)
+animation = &"animation_library/Run"
+
+[sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_jr5lb"]
+resource_name = "Idle"
+position = Vector2(-220, 160)
+animation = &"animation_library/Idle"
+
+[sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_1omi5"]
+resource_name = "TurnLeft90"
+position = Vector2(-240, -80)
+animation = &"animation_library/TurnLeft90"
+
+[sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_xhvkk"]
+resource_name = "TurnRight90"
+position = Vector2(-240, 460)
+animation = &"animation_library/TurnRight90"
+
+[sub_resource type="BLTAnimationNodeSampler" id="BLTAnimationNodeSampler_5evmn"]
+resource_name = "Walk"
+position = Vector2(260, 180)
+animation = &"animation_library/Walk"
+
+[sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_ywa6c"]
+resource_name = "BLTAnimationNodeSampler_to_BLTAnimationNodeSampler 1"
+sync = false
+blend_amount = 1.0
+advance_condition = &"to_turnleft"
+
+[sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_fkt1r"]
+resource_name = "BLTAnimationNodeSampler 1_to_BLTAnimationNodeSampler"
+sync = false
+blend_amount = 1.0
+advance_condition = &"to_idle"
+
+[sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_4lcw8"]
+resource_name = "BLTAnimationNodeSampler_to_BLTAnimationNodeSampler 2"
+sync = false
+blend_amount = 1.0
+advance_condition = &"to_turnright"
+
+[sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_6d65n"]
+resource_name = "BLTAnimationNodeSampler 2_to_BLTAnimationNodeSampler"
+sync = false
+blend_amount = 1.0
+advance_condition = &"to_idle"
+
+[sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_2c2kj"]
+resource_name = "BLTAnimationNodeSampler_to_BLTAnimationNodeSampler 3"
+sync = false
+blend_amount = 1.0
+advance_condition = &"to_walk"
+
+[sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_ta1m2"]
+resource_name = "BLTAnimationNodeSampler 3_to_BLTAnimationNodeSampler"
+sync = false
+blend_amount = 1.0
+advance_condition = &"to_idle"
+
+[sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_ir4l7"]
+resource_name = "BLTAnimationNodeSampler 1_to_BLTAnimationNodeSampler 3"
+sync = false
+blend_amount = 1.0
+advance_condition = &"to_walk"
+
+[sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_rqy0f"]
+resource_name = "BLTAnimationNodeSampler 2_to_BLTAnimationNodeSampler 3"
+sync = false
+blend_amount = 1.0
+advance_condition = &"to_walk"
+
+[sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_2ft8h"]
+resource_name = "Walk_to_BLTAnimationNodeSampler"
+blend_amount = 1.0
+advance_condition = &"to_run"
+transition_duration = 1.0
+
+[sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_hp2c6"]
+resource_name = "BLTAnimationNodeSampler_to_Walk"
+blend_amount = 1.0
+advance_condition = &"to_walk"
+transition_duration = 1.0
+
+[sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_jtffq"]
+resource_name = "Walk_to_BLTAnimationNodeSampler 1"
+blend_amount = 1.0
+advance_condition = &"to_limping"
+transition_duration = 1.0
+
+[sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_1eubj"]
+resource_name = "BLTAnimationNodeSampler_to_BLTAnimationNodeSampler 1"
+blend_amount = 1.0
+advance_condition = &"to_limping"
+transition_duration = 1.0
+
+[sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_uq2ha"]
+resource_name = "BLTAnimationNodeSampler 1_to_Walk"
+blend_amount = 1.0
+advance_condition = &"to_walk"
+transition_duration = 1.0
+
+[sub_resource type="BLTStateMachineTransition" id="BLTStateMachineTransition_ld2t0"]
+resource_name = "BLTAnimationNodeSampler 1_to_BLTAnimationNodeSampler"
+blend_amount = 1.0
+advance_condition = &"to_run"
+transition_duration = 1.0
+
+[sub_resource type="BLTStateMachine" id="BLTStateMachine_2ft8h"]
+resource_name = "StateMachine"
+position = Vector2(-60, -240)
+graph_offset = Vector2(-211.28787, 35.87683)
+states/Idle/node = SubResource("BLTAnimationNodeSampler_jr5lb")
+states/Idle/position = Vector2(-220, 160)
+states/TurnLeft90/node = SubResource("BLTAnimationNodeSampler_1omi5")
+states/TurnLeft90/position = Vector2(-240, -80)
+states/TurnRight90/node = SubResource("BLTAnimationNodeSampler_xhvkk")
+states/TurnRight90/position = Vector2(-240, 460)
+states/Walk/node = SubResource("BLTAnimationNodeSampler_5evmn")
+states/Walk/position = Vector2(260, 180)
+states/BLTAnimationNodeSampler/node = SubResource("BLTAnimationNodeSampler_4lcw8")
+states/BLTAnimationNodeSampler/position = Vector2(540, 380)
+"states/BLTAnimationNodeSampler 1/node" = SubResource("BLTAnimationNodeSampler_6d65n")
+"states/BLTAnimationNodeSampler 1/position" = Vector2(540, -20)
+transitions = [SubResource("BLTAnimationNodeSampler_jr5lb"), SubResource("BLTAnimationNodeSampler_1omi5"), SubResource("BLTStateMachineTransition_ywa6c"), SubResource("BLTAnimationNodeSampler_1omi5"), SubResource("BLTAnimationNodeSampler_jr5lb"), SubResource("BLTStateMachineTransition_fkt1r"), SubResource("BLTAnimationNodeSampler_jr5lb"), SubResource("BLTAnimationNodeSampler_xhvkk"), SubResource("BLTStateMachineTransition_4lcw8"), SubResource("BLTAnimationNodeSampler_xhvkk"), SubResource("BLTAnimationNodeSampler_jr5lb"), SubResource("BLTStateMachineTransition_6d65n"), SubResource("BLTAnimationNodeSampler_jr5lb"), SubResource("BLTAnimationNodeSampler_5evmn"), SubResource("BLTStateMachineTransition_2c2kj"), SubResource("BLTAnimationNodeSampler_5evmn"), SubResource("BLTAnimationNodeSampler_jr5lb"), SubResource("BLTStateMachineTransition_ta1m2"), SubResource("BLTAnimationNodeSampler_1omi5"), SubResource("BLTAnimationNodeSampler_5evmn"), SubResource("BLTStateMachineTransition_ir4l7"), SubResource("BLTAnimationNodeSampler_xhvkk"), SubResource("BLTAnimationNodeSampler_5evmn"), SubResource("BLTStateMachineTransition_rqy0f"), SubResource("BLTAnimationNodeSampler_5evmn"), SubResource("BLTAnimationNodeSampler_4lcw8"), SubResource("BLTStateMachineTransition_2ft8h"), SubResource("BLTAnimationNodeSampler_4lcw8"), SubResource("BLTAnimationNodeSampler_5evmn"), SubResource("BLTStateMachineTransition_hp2c6"), SubResource("BLTAnimationNodeSampler_5evmn"), SubResource("BLTAnimationNodeSampler_6d65n"), SubResource("BLTStateMachineTransition_jtffq"), SubResource("BLTAnimationNodeSampler_4lcw8"), SubResource("BLTAnimationNodeSampler_6d65n"), SubResource("BLTStateMachineTransition_1eubj"), SubResource("BLTAnimationNodeSampler_6d65n"), SubResource("BLTAnimationNodeSampler_5evmn"), SubResource("BLTStateMachineTransition_uq2ha"), SubResource("BLTAnimationNodeSampler_6d65n"), SubResource("BLTAnimationNodeSampler_4lcw8"), SubResource("BLTStateMachineTransition_ld2t0")]
+graph_offset = Vector2(-211.28787, 35.87683)
+
+[sub_resource type="BLTBlendTree" id="BLTBlendTree_hp2c6"]
+resource_name = "Root"
+graph_offset = Vector2(-480.25244, -242)
+nodes/Output/graph_offset = Vector2(480, -240)
+"nodes/BLTAnimationNodeBlend2 1/node" = SubResource("BLTAnimationNodeBlend2_1omi5")
+"nodes/BLTAnimationNodeBlend2 1/graph_offset" = Vector2(180, -180)
+nodes/BLTAnimationNodeBlend2/node = SubResource("BLTAnimationNodeBlend2_xhvkk")
+nodes/BLTAnimationNodeBlend2/graph_offset = Vector2(-80, 0)
+"nodes/BLTAnimationNodeSampler 1/node" = SubResource("BLTAnimationNodeSampler_ywa6c")
+"nodes/BLTAnimationNodeSampler 1/graph_offset" = Vector2(-520, 140)
+nodes/BLTAnimationNodeSampler/node = SubResource("BLTAnimationNodeSampler_fkt1r")
+nodes/BLTAnimationNodeSampler/graph_offset = Vector2(-500, -80)
+nodes/StateMachine/node = SubResource("BLTStateMachine_2ft8h")
+nodes/StateMachine/graph_offset = Vector2(-60, -240)
+node_connections = ["BLTAnimationNodeBlend2", 0, "BLTAnimationNodeSampler", "BLTAnimationNodeBlend2", 1, "BLTAnimationNodeSampler 1", "BLTAnimationNodeBlend2 1", 0, "StateMachine", "Output", 0, "BLTAnimationNodeBlend2 1", "BLTAnimationNodeBlend2 1", 1, "BLTAnimationNodeBlend2"]
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_1omi5"]
+animation = &"animation_library/Idle"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_xhvkk"]
+animation = &"animation_library/TurnLeft90"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_5evmn"]
+animation = &"animation_library/TurnRight90"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_jr5lb"]
+animation = &"animation_library/Walk"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_ywa6c"]
+advance_mode = 2
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_fkt1r"]
+xfade_time = 0.1
+advance_mode = 2
+advance_condition = &"to_walk"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_4lcw8"]
+xfade_time = 0.1
+advance_mode = 2
+advance_condition = &"to_turnleft"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_6d65n"]
+xfade_time = 0.1
+advance_mode = 2
+advance_condition = &"to_turnright"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_2c2kj"]
+xfade_time = 0.1
+advance_mode = 2
+advance_condition = &"to_idle"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_ta1m2"]
+xfade_time = 0.1
+advance_mode = 2
+advance_condition = &"to_idle"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_ir4l7"]
+xfade_time = 0.1
+advance_mode = 2
+advance_condition = &"to_idle"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_rqy0f"]
+xfade_time = 0.1
+advance_mode = 2
+advance_condition = &"to_walk"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_2ft8h"]
+xfade_time = 0.1
+advance_mode = 2
+advance_condition = &"to_walk"
+
+[sub_resource type="AnimationNodeStateMachine" id="AnimationNodeStateMachine_hp2c6"]
+states/End/position = Vector2(898, 94)
+states/Start/position = Vector2(185, 94)
+states/animation_library_Idle/node = SubResource("AnimationNodeAnimation_1omi5")
+states/animation_library_Idle/position = Vector2(402, 94)
+states/animation_library_TurnLeft90/node = SubResource("AnimationNodeAnimation_xhvkk")
+states/animation_library_TurnLeft90/position = Vector2(402, -95)
+states/animation_library_TurnRight90/node = SubResource("AnimationNodeAnimation_5evmn")
+states/animation_library_TurnRight90/position = Vector2(402, 289)
+states/animation_library_Walk/node = SubResource("AnimationNodeAnimation_jr5lb")
+states/animation_library_Walk/position = Vector2(729, 94)
+transitions = ["Start", "animation_library_Idle", SubResource("AnimationNodeStateMachineTransition_ywa6c"), "animation_library_Idle", "animation_library_Walk", SubResource("AnimationNodeStateMachineTransition_fkt1r"), "animation_library_Idle", "animation_library_TurnLeft90", SubResource("AnimationNodeStateMachineTransition_4lcw8"), "animation_library_Idle", "animation_library_TurnRight90", SubResource("AnimationNodeStateMachineTransition_6d65n"), "animation_library_Walk", "animation_library_Idle", SubResource("AnimationNodeStateMachineTransition_2c2kj"), "animation_library_TurnLeft90", "animation_library_Idle", SubResource("AnimationNodeStateMachineTransition_ta1m2"), "animation_library_TurnRight90", "animation_library_Idle", SubResource("AnimationNodeStateMachineTransition_ir4l7"), "animation_library_TurnLeft90", "animation_library_Walk", SubResource("AnimationNodeStateMachineTransition_rqy0f"), "animation_library_TurnRight90", "animation_library_Walk", SubResource("AnimationNodeStateMachineTransition_2ft8h")]
+graph_offset = Vector2(105, -187)
+
+[sub_resource type="AnimationNodeBlendTree" id="AnimationNodeBlendTree_jtffq"]
+nodes/output/position = Vector2(320, 200)
+nodes/StateMachine/node = SubResource("AnimationNodeStateMachine_hp2c6")
+nodes/StateMachine/position = Vector2(-430, 20)
+node_connections = [&"output", 0, &"StateMachine"]
+
+[node name="CharacterTest" type="Node3D" unique_id=584416199]
+
+[node name="UICanvasLayer" type="CanvasLayer" parent="." unique_id=964618785]
+
+[node name="MarginContainer" type="MarginContainer" parent="UICanvasLayer" unique_id=1085178451]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 51.0
+grow_horizontal = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="PanelContainer" type="PanelContainer" parent="UICanvasLayer/MarginContainer" unique_id=406551810]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="UICanvasLayer/MarginContainer/PanelContainer" unique_id=362949885]
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Label" type="Label" parent="UICanvasLayer/MarginContainer/PanelContainer/HBoxContainer" unique_id=1062617706]
+layout_mode = 2
+text = "Animation Source"
+
+[node name="AnimationSourceOptionButton" type="OptionButton" parent="UICanvasLayer/MarginContainer/PanelContainer/HBoxContainer" unique_id=283418740]
+unique_name_in_owner = true
+layout_mode = 2
+selected = 1
+item_count = 3
+popup/item_0/text = "Animation Player"
+popup/item_0/id = 0
+popup/item_1/text = "Animation Tree"
+popup/item_1/id = 1
+popup/item_2/text = "Animation Graph"
+popup/item_2/id = 2
+
+[node name="MarginContainer2" type="MarginContainer" parent="UICanvasLayer" unique_id=321970052]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -40.0
+offset_right = 40.0
+grow_vertical = 0
+size_flags_horizontal = 0
+size_flags_vertical = 8
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="PanelContainer" type="PanelContainer" parent="UICanvasLayer/MarginContainer2" unique_id=1124317977]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="UICanvasLayer/MarginContainer2/PanelContainer" unique_id=361657980]
+layout_mode = 2
+
+[node name="Label2" type="Label" parent="UICanvasLayer/MarginContainer2/PanelContainer/HBoxContainer" unique_id=480455315]
+layout_mode = 2
+text = "Root Motion: "
+
+[node name="RootMotionLabel" type="Label" parent="UICanvasLayer/MarginContainer2/PanelContainer/HBoxContainer" unique_id=1844128549]
+unique_name_in_owner = true
+layout_mode = 2
+text = "t = (0, 0, 0) q = (0, 0, 0, 0)"
+
+[node name="StaticScene" type="Node" parent="." unique_id=362199840]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="StaticScene" unique_id=1179434876]
+mesh = SubResource("PlaneMesh_xhvkk")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="StaticScene" unique_id=427216782]
+transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 0, 0)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="StaticScene" unique_id=1860346848]
+environment = SubResource("Environment_xhvkk")
+
+[node name="CharacterController" type="Node3D" parent="." unique_id=773268058]
+script = ExtResource("2_1omi5")
+
+[node name="Character" parent="CharacterController" unique_id=625427514 instance=ExtResource("1_80vf3")]
+
+[node name="AnimationPlayer" parent="CharacterController/Character" index="1" unique_id=251286299]
+libraries/ = ExtResource("2_bsv43")
+
+[node name="Camera3D" type="Camera3D" parent="CharacterController" unique_id=968378959]
+transform = Transform3D(-1, 2.3877442e-08, -8.4098815e-08, 1.52139e-10, 0.9624521, 0.27145156, 8.742265e-08, 0.27145156, -0.9624521, 0, 1.3467586, -1.4773138)
+fov = 76.23204
+
+[node name="AnimationPlayerSynced" type="AnimationPlayer" parent="CharacterController" unique_id=2043444412]
+unique_name_in_owner = true
+root_node = NodePath("../Character")
+root_motion_track = NodePath("Armature/Skeleton3D:RootBone")
+libraries/animation_library = ExtResource("2_bsv43")
+
+[node name="BLTAnimationGraph" type="BLTAnimationGraph" parent="CharacterController" unique_id=642044102]
+unique_name_in_owner = true
+animation_player = NodePath("../AnimationPlayerSynced")
+tree_root = SubResource("BLTBlendTree_hp2c6")
+skeleton = NodePath("../Character/Armature/Skeleton3D")
+root_motion_track = NodePath("Armature/Skeleton3D:RootBone")
+"parameters/BLTAnimationNodeBlend2 1/blend_amount" = 0.0
+parameters/BLTAnimationNodeBlend2/blend_amount = 1.0
+parameters/StateMachine/conditions/to_idle = false
+parameters/StateMachine/conditions/to_limping = false
+parameters/StateMachine/conditions/to_run = false
+parameters/StateMachine/conditions/to_turnleft = false
+parameters/StateMachine/conditions/to_turnright = false
+parameters/StateMachine/conditions/to_walk = false
+
+[node name="AnimationTree" type="AnimationTree" parent="CharacterController" unique_id=1995098675]
+unique_name_in_owner = true
+active = false
+root_node = NodePath("%AnimationTree/../Character")
+root_motion_track = NodePath("Armature/Skeleton3D:RootBone")
+tree_root = SubResource("AnimationNodeBlendTree_jtffq")
+anim_player = NodePath("../AnimationPlayerSynced")
+parameters/StateMachine/conditions/to_idle = false
+parameters/StateMachine/conditions/to_turnleft = false
+parameters/StateMachine/conditions/to_turnright = false
+parameters/StateMachine/conditions/to_walk = true
+
+[connection signal="item_selected" from="UICanvasLayer/MarginContainer/PanelContainer/HBoxContainer/AnimationSourceOptionButton" to="CharacterController" method="_on_animation_source_option_button_item_selected"]
+
+[editable path="CharacterController/Character"]

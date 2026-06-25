@@ -520,30 +520,30 @@ public:
 		}
 	}
 
-	void update_time(double p_delta) override {
+	void update_time(const double p_delta, const double p_time = 0.0) override {
 		GodotProfileZone("BLTStateMachine::update_time");
 
-		BLTAnimationNode::update_time(p_delta);
+		BLTAnimationNode::update_time(p_delta, p_time);
 
 		if (active_transition.is_valid()) {
-			active_transition->update_time(p_delta);
+			active_transition->update_time(p_delta, p_time);
 
-			double delta;
-			if (!node_time_info.is_synced && !active_transition->sync) {
-				delta = active_transition->node_time_info.delta;
+			double time_position;
+			if (node_time_info.is_synced || active_transition->sync) {
+				time_position = active_transition->node_time_info.sync_position;
 			} else {
-				delta = active_transition->node_time_info.sync_position;
+				time_position = p_time;
 			}
 
 			if (previous_state->active) {
-				previous_state->update_time(delta);
+				previous_state->update_time(p_delta, time_position);
 			}
 
 			if (active_state->active) {
-				active_state->update_time(delta);
+				active_state->update_time(p_delta, time_position);
 			}
 		} else {
-			active_state->update_time(p_delta);
+			active_state->update_time(p_delta, p_time);
 		}
 	}
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "blendalot_test_utils.h"
+
 #include "../blendalot_animation_graph.h"
 #include "../blendalot_blend_tree.h"
 #include "../blendalot_state_machine.h"
@@ -66,76 +68,112 @@ struct BlendTreeFixture {
 	}
 
 	void setup_animations() {
+		animation_library.instantiate();
+
+		//
+		// Animations without sync markers
+		//
 		test_animation_a = memnew(Animation);
-		int track_index = test_animation_a->add_track(Animation::TYPE_POSITION_3D);
-		CHECK(track_index == 0);
-		test_animation_a->track_insert_key(track_index, 0.0, Vector3(0., 0., 0.));
-		test_animation_a->track_insert_key(track_index, 1.0, Vector3(1., 2., 3.));
-		test_animation_a->track_set_path(track_index, NodePath(vformat("%s:%s", skeleton_node->get_path().get_concatenated_names(), "Hips")));
 		test_animation_a->set_loop_mode(Animation::LOOP_LINEAR);
 
-		animation_library.instantiate();
+		int pos_track_index = test_animation_a->add_track(Animation::TYPE_POSITION_3D);
+		CHECK(pos_track_index == 0);
+		test_animation_a->track_insert_key(pos_track_index, 0.0, Vector3(0., 0., 0.));
+		test_animation_a->track_insert_key(pos_track_index, 1.0, Vector3(1., 2., 3.));
+		test_animation_a->track_set_path(pos_track_index, NodePath(vformat("%s:%s", skeleton_node->get_path().get_concatenated_names(), "Hips")));
+
+		int rot_track_index = test_animation_a->add_track(Animation::TYPE_ROTATION_3D);
+		test_animation_a->track_insert_key(rot_track_index, 0.0, Quaternion::from_euler(Vector3(0., 0., 0.)));
+		test_animation_a->track_insert_key(rot_track_index, 1.0, Quaternion::from_euler(Vector3(0., -0.33, 0.25)));
+		test_animation_a->track_set_path(rot_track_index, NodePath(vformat("%s:%s", skeleton_node->get_path().get_concatenated_names(), "Hips")));
+
 		animation_library->add_animation("TestAnimationA", test_animation_a);
 
 		test_animation_b = memnew(Animation);
-		track_index = test_animation_b->add_track(Animation::TYPE_POSITION_3D);
-		CHECK(track_index == 0);
-		test_animation_b->track_insert_key(track_index, 0.0, Vector3(0., 0., 0.));
-		test_animation_b->track_insert_key(track_index, 1.0, Vector3(2., 4., 6.));
-		test_animation_b->track_set_path(track_index, NodePath(vformat("%s:%s", skeleton_node->get_path().get_concatenated_names(), "Hips")));
 		test_animation_b->set_loop_mode(Animation::LOOP_LINEAR);
+
+		pos_track_index = test_animation_b->add_track(Animation::TYPE_POSITION_3D);
+		CHECK(pos_track_index == 0);
+		test_animation_b->track_insert_key(pos_track_index, 0.0, Vector3(0., 0., 0.));
+		test_animation_b->track_insert_key(pos_track_index, 1.0, Vector3(2., 4., 6.));
+		test_animation_b->track_set_path(pos_track_index, NodePath(vformat("%s:%s", skeleton_node->get_path().get_concatenated_names(), "Hips")));
+
+		rot_track_index = test_animation_b->add_track(Animation::TYPE_ROTATION_3D);
+		test_animation_b->track_insert_key(rot_track_index, 0.0, Quaternion::from_euler(Vector3(0., 0., 0.)));
+		test_animation_b->track_insert_key(rot_track_index, 0.5, Quaternion::from_euler(Vector3(0.5, -0.63, 0.)));
+		test_animation_b->track_insert_key(rot_track_index, 1.0, Quaternion::from_euler(Vector3(1.0, 1.33, 0.)));
+		test_animation_b->track_set_path(rot_track_index, NodePath(vformat("%s:%s", skeleton_node->get_path().get_concatenated_names(), "Hips")));
 
 		animation_library->add_animation("TestAnimationB", test_animation_b);
 
 		test_animation_c = memnew(Animation);
-		track_index = test_animation_c->add_track(Animation::TYPE_POSITION_3D);
-		CHECK(track_index == 0);
-		test_animation_c->track_insert_key(track_index, 0.0, Vector3(0., 0., 0.));
-		test_animation_c->track_insert_key(track_index, 3.0, Vector3(2., 4., 6.));
-		test_animation_c->track_set_path(track_index, NodePath(vformat("%s:%s", skeleton_node->get_path().get_concatenated_names(), "Hips")));
 		test_animation_c->set_loop_mode(Animation::LOOP_LINEAR);
+
+		pos_track_index = test_animation_c->add_track(Animation::TYPE_POSITION_3D);
+		CHECK(pos_track_index == 0);
+		test_animation_c->track_insert_key(pos_track_index, 0.0, Vector3(0., 0., 0.));
+		test_animation_c->track_insert_key(pos_track_index, 3.0, Vector3(2., 4., 6.));
+		test_animation_c->track_set_path(pos_track_index, NodePath(vformat("%s:%s", skeleton_node->get_path().get_concatenated_names(), "Hips")));
+
+		rot_track_index = test_animation_c->add_track(Animation::TYPE_ROTATION_3D);
+		test_animation_c->track_insert_key(rot_track_index, 0.0, Quaternion::from_euler(Vector3(0., 0., 0.)));
+		test_animation_c->track_insert_key(rot_track_index, 1.5, Quaternion::from_euler(Vector3(-0.1, -1.63, 0.)));
+		test_animation_c->track_insert_key(rot_track_index, 3.0, Quaternion::from_euler(Vector3(2.0, 2.0, 0.)));
+		test_animation_c->track_set_path(rot_track_index, NodePath(vformat("%s:%s", skeleton_node->get_path().get_concatenated_names(), "Hips")));
 
 		animation_library->add_animation("TestAnimationC", test_animation_c);
 
+		//
+		// Animations with sync markers
+		//
 		test_animation_sync_a = memnew(Animation);
-		track_index = test_animation_sync_a->add_track(Animation::TYPE_POSITION_3D);
-		CHECK(track_index == 0);
-		test_animation_sync_a->track_insert_key(track_index, 0.0, Vector3(0., 0., 0.));
-		test_animation_sync_a->track_insert_key(track_index, 0.4, Vector3(1., 2., 3.));
+		test_animation_sync_a->set_loop_mode(Animation::LOOP_LINEAR);
 		test_animation_sync_a->set_length(2.0);
-		test_animation_sync_a->track_set_path(track_index, NodePath(vformat("%s:%s", skeleton_node->get_path().get_concatenated_names(), "Hips")));
+
+		pos_track_index = test_animation_sync_a->add_track(Animation::TYPE_POSITION_3D);
+		CHECK(pos_track_index == 0);
+		test_animation_sync_a->track_insert_key(pos_track_index, 0.0, Vector3(0., 0., 0.));
+		test_animation_sync_a->track_insert_key(pos_track_index, 0.4, Vector3(1., 2., 3.));
+
+		test_animation_sync_a->track_set_path(pos_track_index, NodePath(vformat("%s:%s", skeleton_node->get_path().get_concatenated_names(), "Hips")));
+		test_animation_sync_a->track_set_interpolation_type(pos_track_index, Animation::INTERPOLATION_LINEAR);
+
 		test_animation_sync_a->add_marker("0", 0.0);
 		test_animation_sync_a->add_marker("1", 0.4);
-		test_animation_sync_a->track_set_interpolation_type(track_index, Animation::INTERPOLATION_LINEAR);
-		test_animation_sync_a->set_loop_mode(Animation::LOOP_LINEAR);
 
 		animation_library->add_animation("TestAnimationSyncA", test_animation_sync_a);
 
 		test_animation_sync_b = memnew(Animation);
-		track_index = test_animation_sync_b->add_track(Animation::TYPE_POSITION_3D);
-		CHECK(track_index == 0);
-		test_animation_sync_b->track_insert_key(track_index, 0.1, Vector3(2., 4., 6.));
-		test_animation_sync_b->track_insert_key(track_index, 0.2, Vector3(0., 0., 0.));
+		test_animation_sync_b->set_loop_mode(Animation::LOOP_LINEAR);
 		test_animation_sync_b->set_length(1.0);
-		test_animation_sync_b->track_set_path(track_index, NodePath(vformat("%s:%s", skeleton_node->get_path().get_concatenated_names(), "Hips")));
+
+		pos_track_index = test_animation_sync_b->add_track(Animation::TYPE_POSITION_3D);
+		CHECK(pos_track_index == 0);
+		test_animation_sync_b->track_insert_key(pos_track_index, 0.1, Vector3(2., 4., 6.));
+		test_animation_sync_b->track_insert_key(pos_track_index, 0.2, Vector3(0., 0., 0.));
+
+		test_animation_sync_b->track_set_path(pos_track_index, NodePath(vformat("%s:%s", skeleton_node->get_path().get_concatenated_names(), "Hips")));
+		test_animation_sync_b->track_set_interpolation_type(pos_track_index, Animation::INTERPOLATION_LINEAR);
+
 		test_animation_sync_b->add_marker("1", 0.1);
 		test_animation_sync_b->add_marker("0", 0.2);
-		test_animation_sync_b->track_set_interpolation_type(track_index, Animation::INTERPOLATION_LINEAR);
-		test_animation_sync_b->set_loop_mode(Animation::LOOP_LINEAR);
 
 		animation_library->add_animation("TestAnimationSyncB", test_animation_sync_b);
 
 		test_animation_sync_c = memnew(Animation);
-		track_index = test_animation_sync_c->add_track(Animation::TYPE_POSITION_3D);
-		CHECK(track_index == 0);
-		test_animation_sync_c->track_insert_key(track_index, 0.3, Vector3(0., 2., 3.));
-		test_animation_sync_c->track_insert_key(track_index, 0.8, Vector3(-10., 0., -2.));
+		test_animation_sync_c->set_loop_mode(Animation::LOOP_LINEAR);
 		test_animation_sync_c->set_length(1.5);
-		test_animation_sync_c->track_set_path(track_index, NodePath(vformat("%s:%s", skeleton_node->get_path().get_concatenated_names(), "Hips")));
+
+		pos_track_index = test_animation_sync_c->add_track(Animation::TYPE_POSITION_3D);
+		CHECK(pos_track_index == 0);
+		test_animation_sync_c->track_insert_key(pos_track_index, 0.3, Vector3(0., 2., 3.));
+		test_animation_sync_c->track_insert_key(pos_track_index, 0.8, Vector3(-10., 0., -2.));
+
+		test_animation_sync_c->track_set_interpolation_type(pos_track_index, Animation::INTERPOLATION_LINEAR);
+		test_animation_sync_c->track_set_path(pos_track_index, NodePath(vformat("%s:%s", skeleton_node->get_path().get_concatenated_names(), "Hips")));
+
 		test_animation_sync_c->add_marker("0", 0.3);
 		test_animation_sync_c->add_marker("1", 0.8);
-		test_animation_sync_c->track_set_interpolation_type(track_index, Animation::INTERPOLATION_LINEAR);
-		test_animation_sync_c->set_loop_mode(Animation::LOOP_LINEAR);
 
 		animation_library->add_animation("TestAnimationSyncC", test_animation_sync_c);
 
@@ -255,24 +293,23 @@ TEST_CASE("[Blendalot][BlendTree] Test BlendTree construction") {
 TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot] Test AnimationData blending") {
 	AnimationData data_t0;
 	data_t0.allocate_track_values(test_animation_a, skeleton_node);
-	data_t0.sample_from_animation(test_animation_a, skeleton_node, 0.0);
-
+	data_t0.sample_from_animation(test_animation_a, 0.0);
 	AnimationData data_t1;
 	data_t1.allocate_track_values(test_animation_a, skeleton_node);
-	data_t1.sample_from_animation(test_animation_a, skeleton_node, 1.0);
+	data_t1.sample_from_animation(test_animation_a, 1.0);
 
 	AnimationData data_t0_5;
 	data_t0_5.allocate_track_values(test_animation_a, skeleton_node);
-	data_t0_5.sample_from_animation(test_animation_a, skeleton_node, 0.5);
+	data_t0_5.sample_from_animation(test_animation_a, 0.5);
 
 	AnimationData data_blended = data_t0;
 	data_blended.blend(data_t1, 0.5);
 
 	REQUIRE(data_blended.has_same_tracks(data_t0_5));
 	for (const KeyValue<Animation::TrackCacheID, size_t> &K : data_blended.track_value_index) {
-		AnimationData::TrackValue *blended_value = data_blended.get_value<AnimationData::TrackValue>(K.key);
-		AnimationData::TrackValue *data_t0_5_value = data_t0_5.get_value<AnimationData::TrackValue>(K.key);
-		CHECK(*blended_value == *data_t0_5_value);
+		AnimationData::TrackValue *blended_value = data_blended.get_value_at_index<AnimationData::TrackValue>(K.value);
+		AnimationData::TrackValue *data_t0_5_value = data_t0_5.get_value_at_index<AnimationData::TrackValue>(K.value);
+		CHECK(BLTEqualApproxReport(*blended_value, *data_t0_5_value));
 	}
 
 	// And also check that values do not match
@@ -281,8 +318,8 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot] Test AnimationData b
 
 	REQUIRE(data_blended.has_same_tracks(data_t0_5));
 	for (const KeyValue<Animation::TrackCacheID, size_t> &K : data_blended.track_value_index) {
-		AnimationData::TrackValue *blended_value = data_blended.get_value<AnimationData::TrackValue>(K.key);
-		AnimationData::TrackValue *data_t0_5_value = data_t0_5.get_value<AnimationData::TrackValue>(K.key);
+		AnimationData::TrackValue *blended_value = data_blended.get_value_at_index<AnimationData::TrackValue>(K.value);
+		AnimationData::TrackValue *data_t0_5_value = data_t0_5.get_value_at_index<AnimationData::TrackValue>(K.value);
 		CHECK(*blended_value != *data_t0_5_value);
 	}
 }
@@ -730,6 +767,33 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Chan
 		blend_tree_node->calculate_sync_track(LocalVector<Ref<BLTAnimationNode>>());
 		blend_tree_node->update_time(0.825);
 		blend_tree_node->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
+
+		graph_context.animation_data_allocator.free(graph_output);
+
+		SUBCASE("Evaluation of a blend2 cascade with two blend2 nodes") {
+			blend_tree_node->add_node(blend2_node_b);
+
+			REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_node->remove_connection(animation_sampler_node_b, blend2_node_a, "Input0"));
+
+			REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_a, blend2_node_b, "Input0"));
+			REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_node->add_connection(animation_sampler_node_b, blend2_node_b, "Input1"));
+			REQUIRE(BLTBlendTree::CONNECTION_OK == blend_tree_node->add_connection(blend2_node_b, blend2_node_a, "Input0"));
+
+			CHECK(blend_tree_node->initialize(graph_context) == true);
+
+			graph_output = graph_context.animation_data_allocator.allocate();
+
+			blend_tree_node->activate_inputs(LocalVector<Ref<BLTAnimationNode>>());
+			blend_tree_node->calculate_sync_track(LocalVector<Ref<BLTAnimationNode>>());
+			blend_tree_node->update_time(0.1);
+			blend_tree_node->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
+
+			CHECK_EQ(graph_output->transform_values[0].loc[0], doctest::Approx(0.075));
+			CHECK_EQ(graph_output->transform_values[0].loc[1], doctest::Approx(0.15));
+			CHECK_EQ(graph_output->transform_values[0].loc[2], doctest::Approx(0.225));
+
+			graph_context.animation_data_allocator.free(graph_output);
+		}
 	}
 
 	SUBCASE("Check node removal when evaluation order of nodes changes.") {
@@ -812,7 +876,11 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Embe
 		blend_tree->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
 
 		// Check values
-		AnimationData::TransformTrackValue *hip_transform_value = graph_output->get_value<AnimationData::TransformTrackValue>(test_animation_a->get_tracks()[0]->get_unique_id());
+		AnimationTrackUID hip_track_uid = graph_output->create_track_uid(test_animation_a->get_tracks()[0]->path, Animation::TrackType::TYPE_POSITION_3D);
+		int32_t hip_value_index = graph_output->get_value_index_from_unique_id(hip_track_uid);
+		REQUIRE(hip_value_index != -1);
+		AnimationData::TransformTrackValue *hip_transform_value = graph_output->get_value_at_index<AnimationData::TransformTrackValue>(hip_value_index);
+
 		CHECK(hip_transform_value->loc[0] == doctest::Approx(0.15));
 		CHECK(hip_transform_value->loc[1] == doctest::Approx(0.3));
 		CHECK(hip_transform_value->loc[2] == doctest::Approx(0.45));
@@ -836,7 +904,11 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTreeGraph][Embe
 		blend_tree->evaluate(graph_context, LocalVector<AnimationData *>(), *graph_output);
 
 		// Check values
-		AnimationData::TransformTrackValue *hip_transform_value = graph_output->get_value<AnimationData::TransformTrackValue>(test_animation_a->get_tracks()[0]->get_unique_id());
+		AnimationTrackUID hip_track_uid = graph_output->create_track_uid(test_animation_a->get_tracks()[0]->path, Animation::TrackType::TYPE_POSITION_3D);
+		int32_t hip_value_index = graph_output->get_value_index_from_unique_id(hip_track_uid);
+		REQUIRE(hip_value_index != -1);
+		AnimationData::TransformTrackValue *hip_transform_value = graph_output->get_value_at_index<AnimationData::TransformTrackValue>(hip_value_index);
+
 		CHECK(hip_transform_value->loc[0] == doctest::Approx(1.5));
 		CHECK(hip_transform_value->loc[1] == doctest::Approx(3.0));
 		CHECK(hip_transform_value->loc[2] == doctest::Approx(4.5));
@@ -1098,6 +1170,114 @@ TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][BlendTree][StateMach
 		}
 
 		graph_context.animation_data_allocator.free(graph_output);
+	}
+}
+
+TEST_CASE_FIXTURE(BlendTreeFixture, "[SceneTree][Blendalot][RootMotion] Test RootMotion") {
+	Ref<BLTBlendTree> blend_tree;
+	blend_tree.instantiate();
+
+	// Blend2
+	Ref<BLTAnimationNodeBlend2> blend2;
+	blend2.instantiate();
+	blend2->set_name("Blend2");
+	blend_tree->add_node(blend2);
+
+	// TestAnimationA
+	Ref<BLTAnimationNodeSampler> animation_sampler_node_a;
+	animation_sampler_node_a.instantiate();
+	animation_sampler_node_a->set_animation("animation_library/TestAnimationA");
+	animation_sampler_node_a->set_name("AnimA");
+	blend_tree->add_node(animation_sampler_node_a);
+
+	// TestAnimationB
+	Ref<BLTAnimationNodeSampler> animation_sampler_node_b;
+	animation_sampler_node_b.instantiate();
+	animation_sampler_node_b->set_animation("animation_library/TestAnimationB");
+	animation_sampler_node_b->set_name("AnimB");
+	blend_tree->add_node(animation_sampler_node_b);
+
+	blend_tree->add_connection(animation_sampler_node_a, blend2, "Input0");
+	blend_tree->add_connection(animation_sampler_node_b, blend2, "Input1");
+	blend_tree->add_connection(blend2, blend_tree->get_output_node(), "Output");
+
+	animation_graph->set_root_animation_node(blend_tree);
+
+	SUBCASE("Setting invalid root motion track") {
+		NodePath track_0_path = NodePath("root/");
+		animation_graph->set_root_motion_track(track_0_path);
+		GraphEvaluationContext &graph_context = animation_graph->get_context();
+		CHECK_EQ(graph_context.root_bone_value_index, -1);
+	}
+
+	SUBCASE("Setting valid root motion track") {
+		NodePath track_0_path = test_animation_a->track_get_path(0);
+		animation_graph->set_root_motion_track(track_0_path);
+		GraphEvaluationContext &graph_context = animation_graph->get_context();
+		CHECK_EQ(graph_context.root_bone_value_index, 0);
+
+		graph_context.graph_process_delta_time = 0.01;
+
+		Quaternion animation_rotation_t0;
+		test_animation_a->try_rotation_track_interpolate(1, 0., &animation_rotation_t0);
+		Quaternion animation_rotation_t1;
+		test_animation_a->try_rotation_track_interpolate(1, 1., &animation_rotation_t1);
+
+		SUBCASE("Sample root motion directly with looping") {
+			AnimationData *animation_data = graph_context.animation_data_allocator.allocate();
+
+			animation_data->sample_from_animation(test_animation_a, 0.1, 0.2, graph_context.root_bone_value_index);
+			const AnimationData::TransformTrackValue *transform_value = animation_data->get_value_at_index<AnimationData::TransformTrackValue>(0);
+			CHECK(BLTEqualApproxReport(Vector3(0.2, 0.4, 0.6), transform_value->loc));
+			CHECK(BLTEqualApproxReport(animation_rotation_t0.slerp(animation_rotation_t1, 0.2), transform_value->rot));
+
+			graph_context.animation_data_allocator.free(animation_data);
+		}
+
+		SUBCASE("Evaluate root motion for single sampler") {
+			blend2->blend_weight = 0.;
+
+			animation_graph->_process_graph(0.1);
+			Vector3 root_motion_delta = animation_graph->get_root_motion_position();
+			CHECK_EQ(Vector3(0.1, 0.2, 0.3), root_motion_delta);
+			Quaternion root_motion_rotation = animation_graph->get_root_motion_rotation();
+			CHECK(BLTEqualApproxReport(animation_rotation_t0.slerp(animation_rotation_t1, 0.1), root_motion_rotation));
+
+			// Evaluating it again, should yield the same value
+			animation_graph->_process_graph(0.1);
+			root_motion_delta = animation_graph->get_root_motion_position();
+			CHECK_EQ(Vector3(0.1, 0.2, 0.3), root_motion_delta);
+			root_motion_rotation = animation_graph->get_root_motion_rotation();
+			CHECK(BLTEqualApproxReport(animation_rotation_t0.slerp(animation_rotation_t1, 0.1), root_motion_rotation));
+
+			// Evaluating it for a longer period should result in a larger value
+			animation_graph->_process_graph(0.7);
+			root_motion_delta = animation_graph->get_root_motion_position();
+			CHECK_EQ(Vector3(0.7, 1.4, 2.1), root_motion_delta);
+			root_motion_rotation = animation_graph->get_root_motion_rotation();
+			CHECK(BLTEqualApproxReport(animation_rotation_t0.slerp(animation_rotation_t1, 0.7), root_motion_rotation));
+
+			// Ensure we handle looping properly
+			animation_graph->_process_graph(0.2);
+			root_motion_delta = animation_graph->get_root_motion_position();
+			CHECK(Vector3(0.2, 0.4, 0.6).is_equal_approx(root_motion_delta));
+			root_motion_rotation = animation_graph->get_root_motion_rotation();
+			CHECK(BLTEqualApproxReport(animation_rotation_t0.slerp(animation_rotation_t1, 0.2), root_motion_rotation));
+
+			// Ensure we handle large deltas that loop multiple times.
+			animation_graph->_process_graph(2.0);
+			root_motion_delta = animation_graph->get_root_motion_position();
+			CHECK(Vector3(2.0, 4.0, 6.0).is_equal_approx(root_motion_delta));
+			root_motion_rotation = animation_graph->get_root_motion_rotation();
+			CHECK(BLTEqualApproxReport(animation_rotation_t0.slerp(animation_rotation_t1, 2.0), root_motion_rotation));
+
+			// Ensure we handle large deltas that loop multiple times with fractions.
+			animation_graph->_process_graph(2.1);
+			root_motion_delta = animation_graph->get_root_motion_position();
+			CHECK(Vector3(2.1, 4.2, 6.3).is_equal_approx(root_motion_delta));
+			root_motion_rotation = animation_graph->get_root_motion_rotation();
+			CHECK(BLTEqualApproxReport(animation_rotation_t0.slerp(animation_rotation_t1, 2.1), root_motion_rotation));
+		}
 	}
 }
 

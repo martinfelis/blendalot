@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://svj53e2xoio"]
 
-[ext_resource type="PackedScene" uid="uid://d1xcqdqr1qeu6" path="res://assets/MixamoAmy.glb" id="1_0xm2m"]
+[ext_resource type="PackedScene" uid="uid://ts5bkjf0vj8s" path="res://assets/MixamoAmy.gltf" id="1_0xm2m"]
 [ext_resource type="Script" uid="uid://bjvgqujpqumj7" path="res://main.gd" id="1_1bvp3"]
 [ext_resource type="AnimationLibrary" uid="uid://dwubn740aqx51" path="res://animation_library.res" id="3_1bvp3"]
 [ext_resource type="AnimationNodeBlendTree" uid="uid://dqy0dgwsm8t46" path="res://animation_tree_walk_limp.tres" id="3_272bh"]
