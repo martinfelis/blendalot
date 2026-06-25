@@ -164,10 +164,8 @@ func _update_property():
 	assign_button.tooltip_text = value
 	
 	if value.is_empty():
-		assign_button.icon = Texture2D.new()
 		assign_button.text = "Assign..."
 		assign_button.flat = false
 		return
 	
-	assign_button.icon = Texture2D.new()
 	assign_button.text = value

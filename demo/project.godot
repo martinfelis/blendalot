@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Blendalot Demo"
-run/main_scene="uid://svj53e2xoio"
+run/main_scene="uid://dvsfentccdsq2"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 

@@ -29,7 +29,8 @@ func _enter_tree() -> void:
 
 func _exit_tree() -> void:
 	remove_inspector_plugin(animation_graph_inspector_plugin)
-	
+	animation_graph_inspector_plugin = null
+
 	remove_dock(editor_dock)
 	editor_dock.queue_free()
 	editor_dock = null
